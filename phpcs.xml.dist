@@ -1,0 +1,101 @@
+<?xml version="1.0"?>
+<ruleset name="MPCommerceFulfillment">
+	<description>Coding standards for the Commerce Fulfillment plugin.</description>
+
+	<file>mp-commerce-fulfillment.php</file>
+	<file>uninstall.php</file>
+	<file>src</file>
+	<file>tests</file>
+
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/tests/tmp/*</exclude-pattern>
+	<!-- Vendored MPDS source (src/Vendor/Mpds/) is a pinned, drift-guarded
+	     copy of an external repo (see docs/CONSUMING.md there and
+	     MpdsVendorGuardTest here) — it is not this plugin's own style to
+	     police, and hand-editing it to satisfy a local sniff would be
+	     exactly the kind of drift the vendor guard exists to catch. -->
+	<exclude-pattern>*/src/Vendor/*</exclude-pattern>
+
+	<arg value="sp"/>
+	<arg name="extensions" value="php"/>
+	<arg name="parallel" value="4"/>
+
+	<config name="minimum_wp_version" value="6.5"/>
+	<config name="testVersion" value="8.1-"/>
+
+	<rule ref="WordPress-Extra">
+		<!-- PSR-4 class files (src/Plugin.php) instead of class-plugin.php. -->
+		<exclude name="WordPress.Files.FileName"/>
+	</rule>
+
+	<rule ref="WooCommerce-Core">
+		<exclude name="WordPress.Files.FileName"/>
+	</rule>
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="mp-commerce-fulfillment"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="mpcf"/>
+				<element value="MPCF"/>
+			</property>
+		</properties>
+		<!-- "mpcf"/"MPCF" is the PO-approved internal prefix (docs/); accepted
+		     despite being under 4 chars, same as the sibling plugins' prefixes. -->
+		<exclude name="WordPress.NamingConventions.PrefixAllGlobals.ShortPrefixPassed"/>
+	</rule>
+
+	<!-- Test method names are self-describing; don't demand full docblocks
+	     there. Data-provider annotations still require a docblock, so relax the
+	     short-description and param-tag requirements for test files only. -->
+	<rule ref="Squiz.Commenting.FunctionComment.Missing">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="Squiz.Commenting.FunctionComment.MissingParamTag">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="Generic.Commenting.DocComment.MissingShort">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WooCommerce.Commenting.CommentHooks.MissingHookComment">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="Squiz.Commenting.FunctionComment.WrongStyle">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.PHP.DiscouragedPHPFunctions">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+
+	<!-- Test files legitimately override globals and load files dynamically. -->
+	<rule ref="WordPress.WP.GlobalVariablesOverride">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+
+	<!-- Structural guard tests and the vendor-manifest test read local source
+	     files directly. -->
+	<rule ref="WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+		<exclude-pattern>*/bin/*</exclude-pattern>
+	</rule>
+
+	<!-- Domain/Engine/Application are WordPress-free by invariant I6, so
+	     esc_html() is unavailable there; their exceptions are developer
+	     diagnostics, never browser output. Empty today (M0 ships no
+	     Domain/Engine/Application classes yet) — the exclusion is declared
+	     up front so it does not require a phpcs.xml.dist edit the moment
+	     Milestone 1 adds the first one. -->
+	<rule ref="WordPress.Security.EscapeOutput.ExceptionNotEscaped">
+		<exclude-pattern>*src/Domain/*</exclude-pattern>
+		<exclude-pattern>*src/Engine/*</exclude-pattern>
+		<exclude-pattern>*src/Application/*</exclude-pattern>
+		<exclude-pattern>*src/Exceptions/*</exclude-pattern>
+	</rule>
+</ruleset>
