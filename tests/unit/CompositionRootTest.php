@@ -76,17 +76,28 @@ final class CompositionRootTest extends TestCase {
 		self::assertSame( array( 'booted', 'instance' ), $names );
 	}
 
-	public function test_no_service_is_constructed_in_the_main_class_file_yet(): void {
+	/**
+	 * Milestone 0's only wired service is the migration framework itself
+	 * (`Migrator`, constructed inline in `init()`'s drift-check closure and
+	 * in `activate()` — never stored as a property, so the class still owns
+	 * no service-holding state). Any other instantiation is a placeholder
+	 * service added ahead of the milestone that needs it, which this test
+	 * exists to catch. Extending this allowlist must be a conscious edit,
+	 * not an accumulation of "just in case" construction.
+	 */
+	public function test_no_unapproved_service_is_constructed_in_the_main_class_file(): void {
 		$source = (string) file_get_contents( __DIR__ . '/../../src/Plugin.php' );
 
-		// `new self()` is the singleton pattern itself, not a wired service —
-		// excluded so this guard tracks service construction specifically.
-		preg_match_all( '/\bnew\s+(?!self\s*\()[A-Za-z_\\\\]+/', $source, $matches );
+		// `new self()` is the singleton pattern itself, not a wired service.
+		preg_match_all( '/\bnew\s+(?!self\s*\()([A-Za-z_\\\\]+)/', $source, $matches );
+
+		$allowed    = array( 'Migrator' );
+		$disallowed = array_values( array_diff( $matches[1], $allowed ) );
 
 		self::assertSame(
 			array(),
-			$matches[0],
-			'Plugin.php should not instantiate any service until the milestone that needs it does so deliberately.'
+			$disallowed,
+			'Plugin.php should not instantiate any service beyond the Milestone 0 allowlist until the milestone that needs it does so deliberately.'
 		);
 	}
 }

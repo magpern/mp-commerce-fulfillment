@@ -9,15 +9,15 @@ declare( strict_types=1 );
 
 namespace MPCF;
 
+use MPCF\Infrastructure\Database\Migrator;
+use MPCF\Infrastructure\Database\Schema;
+
 /**
  * Single source of truth for every option, table, capability and role this
  * plugin creates — the authoritative list `uninstall.php` removes when
  * `remove_data_on_uninstall` is enabled, and the list `PersistedKeysInventoryTest`
  * binds to `docs/PERSISTED_DATA.md` so the two can never silently drift
  * apart (house convention, copied from the sibling plugins' `PersistedKeys`).
- *
- * Milestone 0 has no tables yet — `tables()` is extended once
- * `Infrastructure\Database\Schema` exists.
  */
 final class PersistedKeys {
 
@@ -27,7 +27,16 @@ final class PersistedKeys {
 	 * @return list<string>
 	 */
 	public static function option_keys(): array {
-		return array( Settings::OPTION );
+		return array( Settings::OPTION, Migrator::OPTION );
+	}
+
+	/**
+	 * Every table this plugin owns. Empty in Milestone 0.
+	 *
+	 * @return list<string>
+	 */
+	public static function tables(): array {
+		return Schema::all_tables();
 	}
 
 	/**
@@ -56,6 +65,7 @@ final class PersistedKeys {
 	public static function inventory(): array {
 		return array(
 			'options'      => self::option_keys(),
+			'tables'       => self::tables(),
 			'capabilities' => self::capabilities(),
 			'roles'        => self::roles(),
 		);

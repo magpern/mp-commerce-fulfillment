@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace MPCF;
 
+use MPCF\Infrastructure\Database\Migrator;
+
 /**
  * Wires the object graph by hand and lets each service register its own
  * hooks. There is no container (house convention, see the sibling plugins'
@@ -62,17 +64,24 @@ final class Plugin {
 				load_plugin_textdomain( 'mp-commerce-fulfillment', false, dirname( plugin_basename( MPCF_PLUGIN_FILE ) ) . '/languages' );
 			}
 		);
+
+		// Bind-mount deployments update files in place and never fire the
+		// activation hook, so schema drift has to be caught on its own (see
+		// Infrastructure\Database\Migrator).
+		add_action(
+			'admin_init',
+			static function () {
+				( new Migrator() )->maybe_migrate();
+			}
+		);
 	}
 
 	/**
-	 * Runs on plugin activation.
-	 *
-	 * Milestone 0 has no schema yet — the migration call arrives in a later
-	 * Milestone 0 commit (Infrastructure\Database\Migrator) and this method
-	 * grows to include it, matching the sibling plugins' activation-hook
-	 * convention.
+	 * Creates/updates the schema and grants capabilities/roles.
 	 */
 	public static function activate(): void {
+		( new Migrator() )->migrate();
+
 		Capabilities::activate();
 	}
 }

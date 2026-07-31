@@ -11,6 +11,8 @@ declare( strict_types=1 );
 namespace MPCF\Tests\Unit;
 
 use MPCF\Capabilities;
+use MPCF\Infrastructure\Database\Migrator;
+use MPCF\Infrastructure\Database\Schema;
 use MPCF\PersistedKeys;
 use MPCF\Settings;
 use PHPUnit\Framework\TestCase;
@@ -23,7 +25,9 @@ final class PersistedKeysInventoryTest extends TestCase {
 	public function test_inventory_matches_the_owning_classes(): void {
 		$inventory = PersistedKeys::inventory();
 
-		self::assertSame( array( Settings::OPTION ), $inventory['options'] );
+		self::assertSame( array( Settings::OPTION, Migrator::OPTION ), $inventory['options'] );
+		self::assertSame( Schema::all_tables(), $inventory['tables'] );
+		self::assertSame( array(), $inventory['tables'], 'Milestone 0 introduces no business tables.' );
 		self::assertSame( Capabilities::all(), $inventory['capabilities'] );
 		self::assertSame( array( Capabilities::ROLE_OPERATOR, Capabilities::ROLE_LEAD ), $inventory['roles'] );
 	}
