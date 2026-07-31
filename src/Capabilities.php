@@ -37,7 +37,9 @@ final class Capabilities {
 	public const ROLE_LEAD     = 'mpcf_warehouse_lead';
 
 	/**
-	 * Existing WordPress/WooCommerce roles granted every capability.
+	 * Existing platform roles granted every capability (the core
+	 * "administrator" role and the shop-management role the required
+	 * e-commerce plugin defines).
 	 *
 	 * @var list<string>
 	 */
