@@ -1,0 +1,197 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+# Integration-leg coordinates are pinned here rather than resolved
+# dynamically so a leg's identity cannot drift without editing this file
+# (docs/COMPATIBILITY.md must be updated in the same commit as any change
+# here — see CiMatrixGuardTest / CompatibilityMatrixTest). The `current`
+# leg pins an exact WooCommerce release rather than `latest`, which can
+# resolve to a pre-release build. The `ceiling` leg intentionally floats
+# on `latest` for early warning on upstream drift and never blocks a merge.
+
+jobs:
+  phpcs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        id: setup-php
+        with:
+          php-version: '8.3'
+          coverage: none
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/composer
+          key: ${{ runner.os }}-composer-${{ steps.setup-php.outputs.php-version }}-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-${{ steps.setup-php.outputs.php-version }}-
+      - run: composer install --prefer-dist --no-progress
+      - run: composer phpcs
+
+  pot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Install WP-CLI
+        run: |
+          curl -sSLo wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          chmod +x wp-cli.phar
+          sudo mv wp-cli.phar /usr/local/bin/wp
+      - run: composer make-pot:check
+
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The PHP floor, the current development version and one minor
+        # ahead of it. Unit tests never load WordPress, so this is the PHP
+        # axis in isolation.
+        php: ['8.1', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        id: setup-php
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/composer
+          key: ${{ runner.os }}-composer-${{ steps.setup-php.outputs.php-version }}-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-${{ steps.setup-php.outputs.php-version }}-
+      - run: composer install --prefer-dist --no-progress
+      - run: composer test:unit
+
+  integration:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The lowest supported corner — the only leg that can
+          # substantiate the declared floors (docs/COMPATIBILITY.md).
+          - leg: floor
+            php: '8.1'
+            wp_phpunit: '6.5.*'
+            wc: '8.2.5'
+          # Today's coordinate.
+          - leg: current
+            php: '8.3'
+            wp_phpunit: ''
+            wc: '10.9.4'
+          # Isolates the PHP axis: floor PHP against current WP/WC.
+          - leg: mixed-php-floor
+            php: '8.1'
+            wp_phpunit: ''
+            wc: '10.9.4'
+          # Isolates the WordPress axis: floor WP against current PHP/WC.
+          - leg: mixed-wp-floor
+            php: '8.3'
+            wp_phpunit: '6.5.*'
+            wc: '10.9.4'
+          # Early warning on upstream drift. Deliberately floats on the
+          # latest WooCommerce release; never blocks a merge.
+          - leg: ceiling
+            php: '8.4'
+            wp_phpunit: ''
+            wc: 'latest'
+    continue-on-error: ${{ matrix.leg == 'ceiling' }}
+    services:
+      mysql:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: wordpress_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      WC_VERSION: ${{ matrix.wc }}
+      WP_DB_HOST: 127.0.0.1
+      WP_DB_NAME: wordpress_test
+      WP_DB_USER: root
+      WP_DB_PASS: root
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        id: setup-php
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli
+          coverage: none
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/composer
+          key: ${{ runner.os }}-composer-${{ steps.setup-php.outputs.php-version }}-${{ hashFiles('composer.lock') }}-${{ matrix.wp_phpunit }}
+          restore-keys: |
+            ${{ runner.os }}-composer-${{ steps.setup-php.outputs.php-version }}-${{ hashFiles('composer.lock') }}-
+      - uses: actions/cache@v6
+        if: matrix.wc != 'latest'
+        with:
+          path: tests/tmp/wordpress
+          key: ${{ runner.os }}-wp-install-${{ matrix.wp_phpunit }}-${{ matrix.wc }}-${{ hashFiles('tests/bin/install-wp.sh') }}
+      - run: composer install --prefer-dist --no-progress
+      - name: Pin the WordPress test library
+        if: matrix.wp_phpunit != ''
+        run: composer update "wp-phpunit/wp-phpunit:${{ matrix.wp_phpunit }}" --with-all-dependencies --no-progress
+      - run: bash tests/bin/install-wp.sh
+      - run: composer test:integration
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        id: setup-php
+        with:
+          php-version: '8.1'
+          coverage: none
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/composer
+          key: ${{ runner.os }}-composer-${{ steps.setup-php.outputs.php-version }}-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-${{ steps.setup-php.outputs.php-version }}-
+      - run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
+      - run: bash bin/build-zip.sh
+      - uses: actions/upload-artifact@v6
+        with:
+          name: mp-commerce-fulfillment
+          path: dist/mp-commerce-fulfillment-*.zip
+
+  release-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        id: setup-php
+        with:
+          php-version: '8.3'
+          extensions: zip
+          coverage: none
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/composer
+          key: ${{ runner.os }}-composer-${{ steps.setup-php.outputs.php-version }}-${{ hashFiles('composer.lock') }}-release-audit
+          restore-keys: |
+            ${{ runner.os }}-composer-${{ steps.setup-php.outputs.php-version }}-${{ hashFiles('composer.lock') }}-
+      - run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
+      - run: composer release-audit
