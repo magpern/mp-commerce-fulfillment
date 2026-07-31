@@ -17,6 +17,14 @@ $mpcf_root = dirname( __DIR__, 2 );
 
 require_once $mpcf_root . '/vendor/autoload.php';
 
+if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+	// Lets UninstallPolicyIntegrationTest `include` uninstall.php directly.
+	// Named by the WordPress uninstall.php contract, not by this plugin —
+	// without this, uninstall.php's own `defined(...) || exit;` guard would
+	// silently terminate the entire PHPUnit process.
+	define( 'WP_UNINSTALL_PLUGIN', true ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound
+}
+
 $mpcf_tests_dir = getenv( 'WP_TESTS_DIR' );
 if ( ! $mpcf_tests_dir ) {
 	$mpcf_tests_dir = $mpcf_root . '/vendor/wp-phpunit/wp-phpunit';

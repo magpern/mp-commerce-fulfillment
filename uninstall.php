@@ -7,9 +7,11 @@
  * every option, table, role and capability survives so a later reinstall
  * resumes exactly where it left off.
  *
- * Later milestones extend this file as they introduce tables and the
- * protected media directory (see docs/PERSISTED_DATA.md, kept in sync with
- * this file by UninstallPolicyGuardTest).
+ * Later milestones extend this file as they introduce the protected media
+ * directory (see docs/PERSISTED_DATA.md, kept in sync with this file by
+ * PersistedKeysInventoryTest / UninstallPolicyGuardTest). Options and tables
+ * are removed from `MPCF\PersistedKeys`, not hardcoded here, so the two can
+ * never silently drift apart.
  *
  * @package MPCommerceFulfillment
  */
@@ -29,4 +31,11 @@ if ( empty( $mpcf_settings['remove_data_on_uninstall'] ) ) {
 
 \MPCF\Capabilities::uninstall();
 
-delete_option( \MPCF\Settings::OPTION );
+global $wpdb;
+foreach ( \MPCF\PersistedKeys::tables() as $mpcf_table ) {
+	$wpdb->query( 'DROP TABLE IF EXISTS ' . $mpcf_table ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL
+}
+
+foreach ( \MPCF\PersistedKeys::option_keys() as $mpcf_option ) {
+	delete_option( $mpcf_option );
+}

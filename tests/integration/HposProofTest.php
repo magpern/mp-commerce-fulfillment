@@ -28,6 +28,6 @@ final class HposProofTest extends WP_UnitTestCase {
 		$order = wc_create_order();
 
 		self::assertGreaterThan( 0, $order->get_id() );
-		self::assertInstanceOf( OrdersTableDataStore::class, $order->get_data_store() );
+		self::assertSame( OrdersTableDataStore::class, $order->get_data_store()->get_current_class_name() );
 	}
 }
