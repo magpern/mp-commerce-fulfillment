@@ -22,6 +22,16 @@ final class WooConfinementGuardTest extends TestCase {
 	private const ALLOWED_PATH = 'Woo';
 
 	/**
+	 * The Vendor/ subdirectory is pinned third-party content (MP Admin
+	 * Design System), governed by its own repo's invariants, not this
+	 * plugin's I8 — its prose is free to mention WooCommerce/WC_ in a
+	 * historical comment (as it does, citing UMC's WC_Settings_Page as
+	 * prior art) without meaning this plugin has coupled itself to
+	 * WooCommerce outside src/Woo/.
+	 */
+	private const EXCLUDED_PATH = 'Vendor';
+
+	/**
 	 * @var list<string>
 	 */
 	private const FORBIDDEN_MARKERS = array( 'WooCommerce', 'WC_', '\\WC_', "'woocommerce_", '"woocommerce_' );
@@ -67,7 +77,7 @@ final class WooConfinementGuardTest extends TestCase {
 
 			$relative = ltrim( str_replace( $src_root, '', $file->getPathname() ), '/' );
 
-			if ( str_starts_with( $relative, self::ALLOWED_PATH . '/' ) ) {
+			if ( str_starts_with( $relative, self::ALLOWED_PATH . '/' ) || str_starts_with( $relative, self::EXCLUDED_PATH . '/' ) ) {
 				continue;
 			}
 
