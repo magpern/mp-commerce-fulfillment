@@ -13,7 +13,7 @@
 #
 # Usage: bin/sync-mpds.sh <tag> [source-repo-url-or-path]
 #   bin/sync-mpds.sh v0.1.0
-#   bin/sync-mpds.sh v0.1.0 /opt/biopentra/dev/mp-admin-design-system   (local checkout, for this host)
+#   bin/sync-mpds.sh v0.1.0 /path/to/local/mp-admin-design-system   (local checkout, for development)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
