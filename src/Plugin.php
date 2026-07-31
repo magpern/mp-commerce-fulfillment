@@ -67,11 +67,12 @@ final class Plugin {
 	/**
 	 * Runs on plugin activation.
 	 *
-	 * Milestone 0 has no schema and no capabilities to grant yet — those
-	 * arrive in later Milestone 0 commits (Infrastructure\Database\Migrator,
-	 * Capabilities) and this method grows to call them, matching the
-	 * sibling plugins' activation-hook convention.
+	 * Milestone 0 has no schema yet — the migration call arrives in a later
+	 * Milestone 0 commit (Infrastructure\Database\Migrator) and this method
+	 * grows to include it, matching the sibling plugins' activation-hook
+	 * convention.
 	 */
 	public static function activate(): void {
+		Capabilities::activate();
 	}
 }

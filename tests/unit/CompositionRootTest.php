@@ -20,6 +20,10 @@ use ReflectionClass;
  */
 final class CompositionRootTest extends TestCase {
 
+	protected function setUp(): void {
+		mpcf_tests_reset_wp_state();
+	}
+
 	public function test_instance_is_a_singleton(): void {
 		self::assertSame( Plugin::instance(), Plugin::instance() );
 	}
@@ -37,10 +41,20 @@ final class CompositionRootTest extends TestCase {
 		self::assertTrue( $booted->getValue( $plugin ) );
 	}
 
-	public function test_activate_does_not_throw(): void {
+	public function test_activate_grants_capabilities_and_roles(): void {
 		Plugin::activate();
 
-		$this->addToAssertionCount( 1 );
+		$lead = get_role( \MPCF\Capabilities::ROLE_LEAD );
+
+		self::assertNotNull( $lead );
+		self::assertTrue( $lead->has_cap( \MPCF\Capabilities::VIEW_QUEUE ) );
+	}
+
+	public function test_activate_is_idempotent(): void {
+		Plugin::activate();
+		Plugin::activate();
+
+		$this->addToAssertionCount( 1 ); // Calling activate() twice must not throw or duplicate-register a role.
 	}
 
 	/**

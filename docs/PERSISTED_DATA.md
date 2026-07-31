@@ -24,11 +24,11 @@ empty array in M0; Milestone 1 introduces `mpcf_fulfillments`,
 
 ## Capabilities and roles
 
-Granted on activation, removed on uninstall (both branches — capabilities
-are not "data" in the retention sense; removing a capability this plugin
-added is not a data-loss risk, so it happens regardless of
-`remove_data_on_uninstall`, matching the sibling plugins' convention for
-capabilities they introduced):
+Granted on every activation. Removal follows the same all-or-nothing rule
+as everything else (invariant I12): with `remove_data_on_uninstall`
+disabled, uninstalling leaves every capability and role in place exactly
+as reactivating would; enabling the flag removes them along with the
+options and tables below.
 
 | Capability | Purpose |
 |---|---|

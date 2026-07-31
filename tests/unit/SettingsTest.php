@@ -17,6 +17,10 @@ use PHPUnit\Framework\TestCase;
  */
 final class SettingsTest extends TestCase {
 
+	protected function setUp(): void {
+		mpcf_tests_reset_wp_state();
+	}
+
 	public function test_defaults_keep_data_on_uninstall(): void {
 		$defaults = Settings::defaults();
 

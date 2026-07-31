@@ -7,10 +7,9 @@
  * every option, table, role and capability survives so a later reinstall
  * resumes exactly where it left off.
  *
- * Milestone 0 persists only its own settings and schema-version option;
- * later milestones extend this file as they introduce tables, capabilities
- * and the protected media directory (see docs/PERSISTED_DATA.md, kept in
- * sync with this file by UninstallPolicyGuardTest).
+ * Later milestones extend this file as they introduce tables and the
+ * protected media directory (see docs/PERSISTED_DATA.md, kept in sync with
+ * this file by UninstallPolicyGuardTest).
  *
  * @package MPCommerceFulfillment
  */
@@ -27,5 +26,7 @@ $mpcf_settings = \MPCF\Settings::sanitize( get_option( \MPCF\Settings::OPTION ) 
 if ( empty( $mpcf_settings['remove_data_on_uninstall'] ) ) {
 	return;
 }
+
+\MPCF\Capabilities::uninstall();
 
 delete_option( \MPCF\Settings::OPTION );
