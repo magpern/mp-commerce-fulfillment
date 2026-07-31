@@ -1,0 +1,44 @@
+# Compatibility
+
+## Minimum supported versions (the floor)
+
+| | Version |
+|---|---|
+| PHP | 8.1 |
+| WordPress | 6.5 |
+| WooCommerce | 8.2 |
+
+These are minimums, not the primary development target (PO decision,
+2026-07-31 — see `docs/ARCHITECTURE_PLAN.md` D18). CI's `floor` integration
+leg pins exactly these coordinates.
+
+## Tested up to (current stable)
+
+| | Version |
+|---|---|
+| PHP | 8.4 |
+| WordPress | 6.7 |
+| WooCommerce | 10.9 |
+
+CI's `current` integration leg pins the current stable WooCommerce release
+exactly (not `latest` — see the CI workflow's own comment on why floating
+tags are unsuitable there); a `ceiling` leg floats on `latest` as an early
+warning, `continue-on-error`.
+
+## HPOS
+
+Mandatory from the first release (invariant I2). `custom_order_tables` and
+`cart_checkout_blocks` compatibility are declared unconditionally in
+`mp-commerce-fulfillment.php` on `before_woocommerce_init`, independent of
+whether `MPCF\Plugin::init()` ever runs. Direct access to legacy order post
+storage (`wp_posts`/`wp_postmeta` for orders, `get_post()`/`get_post_meta()`
+on an order ID) is forbidden everywhere in this codebase, guard-tested by
+`LegacyOrderStorageGuardTest`.
+
+## Bump ritual
+
+When the floor or tested-up-to versions change, update this file, the
+`Requires at least` / `Requires PHP` / `WC requires at least` / `WC tested
+up to` plugin headers, and the CI matrix in the same commit. `CiMatrixGuardTest`
+and `CompatibilityMatrixTest` bind this file to the CI workflow and the
+plugin header so they cannot drift apart silently.
