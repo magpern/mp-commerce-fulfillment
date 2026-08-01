@@ -564,6 +564,344 @@ final class ComponentRenderer {
 	}
 
 	/**
+	 * Opens a data table (dense list/queue view).
+	 *
+	 * @param array<int,array<string,mixed>> $columns Column definitions: `label`
+	 *                                                (string, pre-escaped HTML
+	 *                                                for a `checkbox` column,
+	 *                                                escaped here otherwise)
+	 *                                                and optional `checkbox`
+	 *                                                (bool).
+	 * @param array<string, string>          $attrs   Extra attributes for the
+	 *                                                 `<table>` element (e.g.
+	 *                                                 `aria-label`).
+	 */
+	public function data_table_open( array $columns, array $attrs = array() ): string {
+		$header_cells = '';
+
+		foreach ( $columns as $column ) {
+			$label    = (string) ( $column['label'] ?? '' );
+			$checkbox = ! empty( $column['checkbox'] );
+			$classes  = array( 'mpcf-ui-data-table__header-cell' );
+
+			if ( $checkbox ) {
+				$classes[] = 'mpcf-ui-data-table__header-cell--checkbox';
+			}
+
+			$header_cells .= sprintf(
+				'<th scope="col" class="%1$s">%2$s</th>',
+				esc_attr( implode( ' ', $classes ) ),
+				$checkbox ? $label : esc_html( $label ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Checkbox column label is caller-built markup (e.g. a select-all checkbox); other labels are escaped above.
+			);
+		}
+
+		return sprintf(
+			'<div class="mpcf-ui-data-table" data-mpcf-table><table class="mpcf-ui-data-table__table"%1$s><thead class="mpcf-ui-data-table__head"><tr>%2$s</tr></thead><tbody>',
+			$this->attr_html( $attrs ),
+			$header_cells
+		);
+	}
+
+	/**
+	 * Closes a data table.
+	 */
+	public function data_table_close(): string {
+		return '</tbody></table></div>';
+	}
+
+	/**
+	 * Renders one data table row.
+	 *
+	 * @param array<int,array<string,mixed>> $cells     Cell definitions: `html`
+	 *                                                   (pre-escaped markup —
+	 *                                                   this method composes
+	 *                                                   structure only, it does
+	 *                                                   not escape cell
+	 *                                                   content), and optional
+	 *                                                   `numeric`/`checkbox`
+	 *                                                   (bool) for alignment.
+	 * @param array<string, string>          $row_attrs Extra attributes on the
+	 *                                                   `<tr>` (e.g.
+	 *                                                   `data-mpcf-row-id`).
+	 */
+	public function data_table_row( array $cells, array $row_attrs = array() ): string {
+		$cell_html = '';
+
+		foreach ( $cells as $cell ) {
+			$html    = (string) ( $cell['html'] ?? '' );
+			$classes = array( 'mpcf-ui-data-table__cell' );
+
+			if ( ! empty( $cell['numeric'] ) ) {
+				$classes[] = 'mpcf-ui-data-table__cell--numeric';
+			}
+
+			if ( ! empty( $cell['checkbox'] ) ) {
+				$classes[] = 'mpcf-ui-data-table__cell--checkbox';
+			}
+
+			$cell_html .= sprintf(
+				'<td class="%1$s">%2$s</td>',
+				esc_attr( implode( ' ', $classes ) ),
+				$html // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Cell markup (links, badges, checkboxes) is caller-built and caller-escaped; this method composes structure only.
+			);
+		}
+
+		return sprintf(
+			'<tr class="mpcf-ui-data-table__row" data-mpcf-row%1$s>%2$s</tr>',
+			$this->attr_html( $row_attrs ),
+			$cell_html
+		);
+	}
+
+	/**
+	 * Renders a full-width empty-state row spanning every column.
+	 *
+	 * @param int    $colspan Number of columns to span.
+	 * @param string $message Message text.
+	 */
+	public function data_table_empty_row( int $colspan, string $message ): string {
+		return sprintf(
+			'<tr class="mpcf-ui-data-table__empty-row"><td class="mpcf-ui-data-table__empty" colspan="%1$d">%2$s</td></tr>',
+			max( 1, $colspan ),
+			esc_html( $message )
+		);
+	}
+
+	/**
+	 * Opens a filter bar (pairs with the data table above).
+	 *
+	 * @param array<string, string> $attrs Extra attributes for the wrapper
+	 *                                     (e.g. a `data-mpcf-*` scope hook).
+	 */
+	public function filter_bar_open( array $attrs = array() ): string {
+		return sprintf( '<div class="mpcf-ui-filter-bar"%s>', $this->attr_html( $attrs ) );
+	}
+
+	/**
+	 * Closes a filter bar.
+	 */
+	public function filter_bar_close(): string {
+		return '</div>';
+	}
+
+	/**
+	 * Renders one filter field (a labeled wrapper around a caller-built
+	 * select/input control).
+	 *
+	 * @param string $label        Visible field label.
+	 * @param string $control_html Pre-built, pre-escaped control markup.
+	 */
+	public function filter_bar_field( string $label, string $control_html ): string {
+		return sprintf(
+			'<div class="mpcf-ui-filter-bar__field"><span class="mpcf-ui-filter-bar__field-label">%1$s</span>%2$s</div>',
+			esc_html( $label ),
+			$control_html // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Caller-built select/input markup; this method composes the labeled wrapper only.
+		);
+	}
+
+	/**
+	 * Renders the filter bar's search field. Carries `data-mpcf-search-focus`
+	 * so `js/data-table-keynav.js`'s `/` shortcut can find it.
+	 *
+	 * @param string $name        Input name.
+	 * @param string $value       Current value.
+	 * @param string $placeholder Placeholder text.
+	 */
+	public function filter_bar_search( string $name, string $value, string $placeholder = '' ): string {
+		return sprintf(
+			'<div class="mpcf-ui-filter-bar__search"><span class="dashicons dashicons-search mpcf-ui-filter-bar__search-icon" aria-hidden="true"></span><input type="search" class="mpcf-ui-filter-bar__search-input" name="%1$s" value="%2$s" placeholder="%3$s" data-mpcf-search-focus /></div>',
+			esc_attr( $name ),
+			esc_attr( $value ),
+			esc_attr( $placeholder )
+		);
+	}
+
+	/**
+	 * Opens a slide-over drawer (e.g. a queue row preview). Hidden by
+	 * default; `js/drawer.js` toggles the `hidden` attribute.
+	 *
+	 * @param string                 $id     Element id. Trigger elements
+	 *                                        reference it via
+	 *                                        `data-mpcf-drawer-open="{$id}"`.
+	 * @param string                 $title  Drawer title.
+	 * @param array<string, string>  $attrs  Extra attributes for the wrapper.
+	 */
+	public function drawer_open( string $id, string $title, array $attrs = array() ): string {
+		return sprintf(
+			'<div class="mpcf-ui-drawer" id="%1$s" data-mpcf-drawer hidden%2$s><div class="mpcf-ui-drawer__backdrop" data-mpcf-drawer-close></div><div class="mpcf-ui-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="%1$s-title"><header class="mpcf-ui-drawer__header"><h3 class="mpcf-ui-drawer__title" id="%1$s-title">%3$s</h3><button type="button" class="mpcf-ui-drawer__close" data-mpcf-drawer-close aria-label="Close">&times;</button></header><div class="mpcf-ui-drawer__body">',
+			esc_attr( $id ),
+			$this->attr_html( $attrs ),
+			esc_html( $title )
+		);
+	}
+
+	/**
+	 * Closes a drawer without a footer.
+	 */
+	public function drawer_close(): string {
+		return '</div></div></div>';
+	}
+
+	/**
+	 * Renders an optional drawer footer (e.g. the "Open detail" primary
+	 * action) and closes the drawer. Mirrors `settings_card_footer()`'s
+	 * either/or contract with `drawer_close()` — call this OR
+	 * `drawer_close()`, never both.
+	 *
+	 * @param string $html Footer markup (escaped by caller when dynamic).
+	 */
+	public function drawer_footer( string $html ): string {
+		if ( '' === $html ) {
+			return '';
+		}
+
+		return sprintf(
+			'</div><footer class="mpcf-ui-drawer__footer">%s</footer></div></div>',
+			$html // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Caller supplies escaped or static markup.
+		);
+	}
+
+	/**
+	 * Opens a timeline (audit/history feed).
+	 */
+	public function timeline_open(): string {
+		return '<ol class="mpcf-ui-timeline">';
+	}
+
+	/**
+	 * Closes a timeline.
+	 */
+	public function timeline_close(): string {
+		return '</ol>';
+	}
+
+	/**
+	 * Renders one timeline entry.
+	 *
+	 * @param string $icon_class   Dashicon class for the entry's marker.
+	 * @param string $actor        Actor label (e.g. an operator's display
+	 *                              name, or "System").
+	 * @param string $time         Human-readable timestamp.
+	 * @param string $message_html Entry body (pre-escaped by the caller —
+	 *                              this method composes structure only).
+	 */
+	public function timeline_item( string $icon_class, string $actor, string $time, string $message_html ): string {
+		return sprintf(
+			'<li class="mpcf-ui-timeline__item"><span class="mpcf-ui-timeline__marker dashicons %1$s" aria-hidden="true"></span><div class="mpcf-ui-timeline__content"><div class="mpcf-ui-timeline__meta"><span class="mpcf-ui-timeline__actor">%2$s</span><time class="mpcf-ui-timeline__time">%3$s</time></div><div class="mpcf-ui-timeline__message">%4$s</div></div></li>',
+			esc_attr( $icon_class ),
+			esc_html( $actor ),
+			esc_html( $time ),
+			$message_html // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Caller-built/escaped entry body (may contain links or inline markup); this method composes structure only.
+		);
+	}
+
+	/**
+	 * Opens a centered modal dialog. Hidden by default; `js/modal.js`
+	 * toggles the `hidden` attribute.
+	 *
+	 * @param string                $id    Element id. Trigger elements
+	 *                                     reference it via
+	 *                                     `data-mpcf-modal-open="{$id}"`.
+	 * @param string                $title Modal title.
+	 * @param array<string, string> $attrs Extra attributes for the wrapper.
+	 */
+	public function modal_open( string $id, string $title, array $attrs = array() ): string {
+		return sprintf(
+			'<div class="mpcf-ui-modal" id="%1$s" data-mpcf-modal hidden%2$s><div class="mpcf-ui-modal__backdrop" data-mpcf-modal-close></div><div class="mpcf-ui-modal__panel" role="dialog" aria-modal="true" aria-labelledby="%1$s-title"><header class="mpcf-ui-modal__header"><h3 class="mpcf-ui-modal__title" id="%1$s-title">%3$s</h3><button type="button" class="mpcf-ui-modal__close" data-mpcf-modal-close aria-label="Close">&times;</button></header><div class="mpcf-ui-modal__body">',
+			esc_attr( $id ),
+			$this->attr_html( $attrs ),
+			esc_html( $title )
+		);
+	}
+
+	/**
+	 * Closes a modal without a footer.
+	 */
+	public function modal_close(): string {
+		return '</div></div></div>';
+	}
+
+	/**
+	 * Renders an optional modal footer (typically Cancel/Confirm buttons)
+	 * and closes the modal. Either/or with `modal_close()`, exactly like
+	 * `settings_card_footer()`/`settings_card_close()`.
+	 *
+	 * @param string $html Footer markup (escaped by caller when dynamic).
+	 */
+	public function modal_footer( string $html ): string {
+		if ( '' === $html ) {
+			return '';
+		}
+
+		return sprintf(
+			'</div><footer class="mpcf-ui-modal__footer">%s</footer></div></div>',
+			$html // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Caller supplies escaped or static markup.
+		);
+	}
+
+	/**
+	 * Renders a complete reason-capture modal: a prompt, a required
+	 * textarea, and Cancel/Confirm buttons. The preset this design system
+	 * ships for any transition that requires an audited reason (exception
+	 * states, cancellation).
+	 *
+	 * @param string $id            Element id.
+	 * @param string $title         Modal title.
+	 * @param string $field_name    Textarea `name` attribute.
+	 * @param string $prompt        Prompt text shown above the textarea.
+	 * @param string $confirm_label Confirm button label.
+	 */
+	public function reason_modal(
+		string $id,
+		string $title,
+		string $field_name,
+		string $prompt,
+		string $confirm_label = 'Confirm'
+	): string {
+		$body = sprintf(
+			'<p class="mpcf-ui-modal__prompt">%1$s</p><textarea class="mpcf-ui-modal__reason-field" name="%2$s" rows="4" required data-mpcf-modal-autofocus></textarea>',
+			esc_html( $prompt ),
+			esc_attr( $field_name )
+		);
+
+		$footer = sprintf(
+			'<button type="button" class="button mpcf-ui-modal__cancel" data-mpcf-modal-close>%1$s</button><button type="submit" class="button button-primary">%2$s</button>',
+			esc_html( 'Cancel' ),
+			esc_html( $confirm_label )
+		);
+
+		return $this->modal_open( $id, $title ) . $body . $this->modal_footer( $footer );
+	}
+
+	/**
+	 * Opens a keyboard-shortcut hints legend (e.g. below a data table).
+	 */
+	public function kbd_hints_open(): string {
+		return '<div class="mpcf-ui-kbd-hints">';
+	}
+
+	/**
+	 * Closes a keyboard-shortcut hints legend.
+	 */
+	public function kbd_hints_close(): string {
+		return '</div>';
+	}
+
+	/**
+	 * Renders one keyboard-shortcut hint (a key badge plus its label).
+	 *
+	 * @param string $key   Key label (e.g. "j/k", "Enter", "/").
+	 * @param string $label What the key does.
+	 */
+	public function kbd_hint( string $key, string $label ): string {
+		return sprintf(
+			'<span class="mpcf-ui-kbd-hint"><kbd class="mpcf-ui-kbd">%1$s</kbd><span class="mpcf-ui-kbd-hint__label">%2$s</span></span>',
+			esc_html( $key ),
+			esc_html( $label )
+		);
+	}
+
+	/**
 	 * Opens a generic field group wrapper.
 	 *
 	 * @param string $extra_class Optional extra classes.
