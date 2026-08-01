@@ -1,6 +1,6 @@
 # Commerce Fulfillment for WooCommerce — Architecture Specification
 
-**Status:** **Architecture Freeze v1.0** — Architecture Plan Rev 2.1 and Milestone 0 Execution Plan Rev 1 approved by the Product Owner 2026-07-31 as the permanent architectural baseline for Commerce Fulfillment.
+**Status:** **Architecture Freeze v1.0** — Architecture Plan Rev 2.1 and Milestone 0 Execution Plan Rev 1 approved by the Product Owner 2026-07-31 as the permanent architectural baseline for Commerce Fulfillment. M0 is closed (`v0.0.1` released). **Milestone 1 Execution Plan Rev 1 (Part III) approved by the Product Owner 2026-08-01 — M1 is approved for implementation.**
 **Working name:** Commerce Fulfillment (commercial name TBD — internal identifiers are rename-proof and never churn).
 **Internal identity (fixed, PO-approved 2026-07-31):** namespace `MPCF\`, prefix `mpcf_`, tables `{$wpdb->prefix}mpcf_*`, text domain `mp-commerce-fulfillment`, constants `MPCF_*`, capability prefix `mpcf_`.
 **Repo (to create):** private GitHub `magpern/mp-commerce-fulfillment`, plus sibling `magpern/mp-admin-design-system` (PO-approved 2026-07-31).
@@ -24,6 +24,7 @@ This document is the **authoritative architectural specification** for Commerce 
 | Rev 2 | 2026-07-31 | Scalability review: Product Philosophy (§2.1) and MP Commerce ecosystem (§2.2); `Package` first-class under `Shipment` (D19, ADR-0005); single self-referential location hierarchy (D13); polymorphic assignment (D20); channel-based notification subsystem (D21); `SearchQuery` port (D22); explicit five-stage document pipeline (§10); Dashboard as operational workspace (§9.3); audit investigation direction (§13); event payload versioning (§6.4). |
 | Rev 2.1 | 2026-07-31 | M0 reconciliation: I2 retitled "WooCommerce CRUD-only order access; HPOS compatibility mandatory" (intent unchanged); M0 re-scoped to migration framework only (schema v1 lands in M1) with MPDS `v0.1.0` carrying the extracted existing component set; HPOS declaration confirmed in the main plugin file (§5.4 authoritative); Part II (M0 execution plan) appended. |
 | **Architecture Freeze v1.0** | 2026-07-31 | PO approved Rev 2.1 + M0 Execution Plan Rev 1 as the permanent baseline. Freeze, version-history and governance sections added; final consistency pass (guard-test references corrected §19.3→§19.1, layer-map notification naming aligned with D21, one illustrative undefined option key removed, internal §16 subsection references precised). |
+| M1 Execution Plan Rev 1 | 2026-08-01 | Part III appended: Milestone 1 (Fulfillment core — Warehouse MVP) execution plan, reconciled against M0's actual shipped state. Three open scope questions resolved by explicit PO decision (MPDS component work in-scope as an early M1 phase; Queue drawer ships in M1 and opens Fulfillment Detail; Dashboard's picking-list quick action omitted, not stubbed). PO approved for implementation 2026-08-01. Part I/II baseline unchanged — no architectural decision altered. |
 
 ## Governance
 
@@ -839,4 +840,96 @@ Dependency note: B7 needs the MPDS tag, so A1–A6 complete first; everything el
 ## II.6 GO / NO-GO
 
 **GO.** No architectural blockers found. The four discrepancies discovered were wording/scoping drift, all resolved in Rev 2.1 without touching any design decision (D1–D22 unchanged, invariants unchanged in intent). Pre-conditions to start: PO approves this Part II (house rule I14); GitHub repos created; `mpcf-test-runner` image built locally. Recommended start: MPDS commits A1–A6 and plugin commits B1–B6 in parallel tracks, B7 after the MPDS tag.
+
+---
+---
+
+# Part III — Milestone 1 Execution Plan (Rev 1 — approved for implementation)
+
+**Scope:** Fulfillment core — Warehouse MVP → plugin `v0.1.0`, MPDS `v0.2.0`. **Approved by the PO 2026-08-01.** Architecture (Part I) is frozen; M0 (Part II) is closed — `v0.0.1` released, `v0.1.0` (MPDS) released, both CI-green. Three scope questions the frozen architecture left open for this milestone were resolved by explicit PO decision at approval time (recorded in III.1) rather than left implicit.
+
+## III.1 Reconciliation record
+
+| Checkpoint | Verdict | Notes |
+|---|---|---|
+| M0 actually shipped what `ROADMAP.md` claimed | ✅ after wording fix | `v0.0.1` is tagged, pushed, and its Release workflow already ran green and published the zip; `mp-admin-design-system` `v0.1.0` likewise tagged, pushed, CI green. `ROADMAP.md`'s M0 entry previously read as "awaiting the tag" — corrected in this milestone's doc pass to state the release as fact, not pending. |
+| M1's roadmap-table scope (§20) matches what this plan builds | ✅ | Intake, workflow engine + standard workflow, Queue, fulfillment detail, audit stream + hash chain, roles/capabilities + operator mode, status bridge v1, dashboard v1, uninstall policy, tables `fulfillments/items/events/notes` — all covered below. |
+| §20.1 draft acceptance criteria still hold | ✅, adopted as-is | The ten criteria written at architecture time need no amendment; reused verbatim in III.5. |
+| No `Domain/`, `Engine/`, `Application/`, `Woo/`, `Admin/`, `Cli/` code exists yet | ✅ confirmed by inspection | M0 built exactly `Plugin.php`, `Capabilities.php`, `PersistedKeys.php`, `Settings.php`, `Infrastructure/Database/{Migrator,Schema}.php`, and the vendored `Vendor/Mpds/`. Zero WooCommerce symbols anywhere in `src/` outside `Vendor/`. This milestone is genuinely greenfield for every layer below the bootstrap. |
+| MPDS v0.1.0 has the components M1's UI needs | ❌ — the material gap this plan closes first | Confirmed by inspection: zero occurrences of data table, filter bar, drawer, modal, timeline, stepper, toast, kbd, or scan-input anywhere in MPDS `css/`, `js/`, `php/`. Every §8.4 component M0 deferred is still unbuilt. M1's Queue and Fulfillment Detail screens cannot be built without a data table, filter bar, drawer, timeline, and a reason-capture modal existing upstream first — hence the MPDS sub-track opens this milestone's commit sequence (III.4). |
+| `docs/PERSISTED_DATA.md` already anticipates M1 | ✅ | Already states M1 introduces `mpcf_fulfillments`, `mpcf_fulfillment_items`, `mpcf_events` and `mpcf_notes` — filled in with real content, not invented, as part of this milestone. |
+| Existing test/guard-test scaffolding is ready to receive real M1 code | ✅ | `DomainPurityGuardTest`, `DbConfinementGuardTest`, `WooConfinementGuardTest` already exist and pass vacuously (self-tested via planted fixtures per `docs/TEST_STRATEGY.md`) — M1 is where they start doing real work. New guard tests (single-writer, audit-append-only, admin/REST-parity) follow the identical scan-then-self-test convention. |
+
+**PO decisions captured at approval (binding for this milestone):**
+
+1. MPDS component work is in-scope as an early phase of M1, not a separate blocking milestone — mirrors how M0 itself handled the v0.1.0 extraction.
+2. The Queue's drawer ships in M1; its primary action opens M1's own Fulfillment Detail page (not "the Workspace," which doesn't exist until M2). M2 repoints the same action later — no rework.
+3. Dashboard's "print today's picking lists" quick action is omitted entirely from M1 (no disabled placeholder) — document rendering doesn't exist until M3. If no other quick action survives, the quick-actions panel is omitted entirely rather than shipped empty.
+
+## III.2 Strategy decisions this plan makes
+
+Flagged at M0 time (II.2) as destined for this plan — "hash-chain canonicalization, index verification against real queue queries, snapshot column sizes" — plus the PO decisions above:
+
+1. **Hash-chain canonicalization.** `hash = sha256(prev_hash . canonical_payload)` (§13) is specified without saying what "canonical" means. Decision: `payload` is JSON-encoded with `JSON_UNESCAPED_SLASHES` and **sorted keys at every nesting level** before hashing, via a fixed `Domain\Event\Canonicalizer` pure function (WordPress-free, I6) — the same logical event always hashes identically regardless of PHP array-insertion order or locale. Unit-tested by feeding the same logical payload in two key orders and asserting an identical hash.
+2. **Index verification against real query shapes.** §7.1's pre-specified indexes on `mpcf_fulfillments` — `(state, warehouse_id)`, `(order_id)`, `(assignee_type, assignee_id, state)`, `(created_at)` — are accepted as the starting migration, but not treated as final until the 10k-row `EXPLAIN` proof (acceptance criterion 3) runs against the Queue's actual filter/search query shapes. If that proof finds a missing composite index, the migration is amended before the `v0.1.0` tag, not patched afterward.
+3. **Snapshot column sizing.** `customer_name_snapshot VARCHAR(191)`, `order_number_snapshot VARCHAR(64)`, etc. are accepted as specified — `191` is the house convention ceiling for indexable `utf8mb4` columns.
+4. **MPDS sequencing.** MPDS component work is the first block of this milestone's commit sequence, released as `mp-admin-design-system v0.2.0`, vendored into the plugin before any Admin screen work starts (III.4).
+5. **Queue drawer target.** Drawer's "Open workspace" action links to `FulfillmentDetail` in M1; the route/label is designed so M2 can repoint it at the Workspace without a drawer-component change.
+6. **Optimistic-lock conflict UI.** `WorkflowService`'s typed conflict error needs UI surfacing, but `toast` is explicitly M2-scoped (workspace async save feedback). Decision: M1 surfaces conflicts as a standard WP admin notice on page reload ("someone else updated this fulfillment") — no new MPDS component required.
+
+## III.3 M1 scope — exhaustive
+
+**Repositories:** `mp-admin-design-system` (new minor release `v0.2.0`: data table, filter bar, drawer, timeline, modal + reason-capture variant, kbd-hint components, each with contract tests — no breaking change to v0.1.0's existing components) and `mp-commerce-fulfillment` (primary deliverable, vendors MPDS `v0.2.0` partway through the sequence). No other repository is touched by this milestone.
+
+**Domain model additions** — four tables, `ENGINE=InnoDB ROW_FORMAT=DYNAMIC`, `BIGINT UNSIGNED AUTO_INCREMENT` ids, UTC `DATETIME`, no SQL `ENUM`, no `FOREIGN KEY` constraints (app-level integrity + indexes), DDL in `Infrastructure\Database\Schema`, applied via `Migrator` step 1 (`mpcf_db_version` 0 → 1):
+
+- **`mpcf_fulfillments`** (aggregate root): `id, order_id, order_source, warehouse_id, workflow, state, previous_state, return_to_state, exception_reason, priority, assignee_type, assignee_id, version, order_number_snapshot, customer_name_snapshot, item_count, created_at, state_entered_at, completed_at`. Indexes: `(state, warehouse_id)`, `(order_id)`, `(assignee_type, assignee_id, state)`, `(created_at)`.
+- **`mpcf_fulfillment_items`**: `id, fulfillment_id, order_item_id, product_id, variation_id, sku_snapshot, name_snapshot, qty_ordered, qty_picked, qty_packed, location_snapshot`. Indexed on `fulfillment_id`.
+- **`mpcf_events`** (append-only, hash-chained): `id, fulfillment_id, event_type, actor_type, actor_id, actor_label_snapshot, payload, prev_hash, hash, created_at`. Indexed on `fulfillment_id`, `event_type`, `created_at`.
+- **`mpcf_notes`**: `id, fulfillment_id, author_id, body, is_pinned, created_at`. Indexed on `fulfillment_id`.
+
+Order meta writes remain limited to `_mpcf_*` back-pointers only (I3).
+
+**Services, by layer:**
+
+- *Domain* (WordPress-free, I6): `Fulfillment`/`FulfillmentItem`/`Note`, `State`/`Transition`/`WorkflowDefinition` VOs, the standard workflow's data-defined definition, `TransitionGuard` implementations (`all_items_picked`, `all_items_packed`, `package_spec_present`, `photo_required`, `has_shipment`), `DomainEvent` + concrete events, `Actor`, `Clock` port, `Event\Canonicalizer`, repository interfaces, `OrderSource` port, `SearchQuery` port.
+- *Engine*: `WorkflowEngine::transition()` — pure, validates the edge, runs guards, returns rejection or approved result + events.
+- *Application*: `WorkflowService` (sole state writer, optimistic lock), `IntakeService`, `EventDispatcher`, `SearchQuery` v1 implementation.
+- *Infrastructure/Database* ($wpdb confined here, I7): `WpdbFulfillmentRepository`, `WpdbItemRepository`, `WpdbNoteRepository`, `WpdbEventRepository` (append-only), `Schema`/`Migrator` additions.
+- *Woo* (only namespace allowed to name a WC symbol, I8): `WooOrderSource`, `IntakeHooks`, `StatusBridge` (outbound + inbound, loop-guarded), `RefundObserver`.
+- *Cli*: `wp mpcf intake backfill`, `wp mpcf audit verify`.
+- *Admin* (consumes the same Application services the future REST layer will use, I11 — no logic duplication despite no REST controller existing yet): `Screens/Queue`, `Screens/FulfillmentDetail`, `Screens/Dashboard`. All admin actions are nonce-based form POSTs calling `WorkflowService`/`IntakeService` directly.
+- *Settings*: bridge-mapping config, schema_version bump.
+- *Capabilities/roles*: no new capability strings (all eleven already exist from M0); M1 is where they are first consumed by real screens. Operator Mode ships as an M1 setting, off by default.
+
+**Migrations:** single `Migrator` step 1, `TARGET` raised `0 → 1`, creates the four tables above. Idempotent/resumable per the existing contract — no framework change, only a new step entry.
+
+**Tests:** unit coverage for `WorkflowEngine` per edge/guard, `WorkflowDefinition::validate()`, `Event\Canonicalizer` determinism, hash-chain computation, `SearchQuery` classification, and new guard tests (`SingleStateWriterGuardTest` I4, `AuditAppendOnlyGuardTest` I5, `AdminBoundaryGuardTest` I11) plus real (no-longer-vacuous) `DomainPurityGuardTest`/`DbConfinementGuardTest`/`WooConfinementGuardTest` and a PII-payload guard test (spike S6). Integration coverage (real WP+WC+MariaDB, HPOS on): classic+Blocks intake idempotency, CLI backfill idempotency, migration correctness, optimistic-lock conflict, `StatusBridge` outbound/inbound + loop-guard proof, `RefundObserver` post-intake-edit handling, Queue performance at 10k rows with `EXPLAIN`, capability/role screen-access enforcement, `wp mpcf audit verify` pass/fail (including deliberate corruption), uninstall/deactivate-reactivate extended to the four new tables, and an Action Scheduler 200-order burst test (spike S5). MPDS side: contract tests per new component, vendor-guard re-verification after sync.
+
+**CI impact:** no new workflow files; the existing five-leg integration matrix is unchanged in shape (no floor move anticipated); integration-suite runtime grows materially from the new payment-simulation and AS-burst tests, worth watching but not a blocker; `release-audit.sh`'s doc-presence check is unaffected by the same doc set, which must be current by tag time (criterion 10).
+
+## III.4 Commit sequence (each independently green)
+
+**MPDS repo (C1–C7):** C1 data table + contract tests → C2 filter bar + contract tests → C3 drawer + contract tests → C4 timeline + contract tests → C5 modal + reason-capture variant + contract tests → C6 kbd-hint + contract tests → C7 `docs/CONSUMING.md` update + MANIFEST regeneration → release candidate ready for **tag `v0.2.0` on explicit PO approval**.
+
+**Plugin repo (D1–D22):** D1 vendor MPDS v0.2.0 candidate via `bin/sync-mpds.sh`, `MpdsVendorGuardTest` green → D2 `Schema`+`Migrator` step 1 (four tables), `docs/PERSISTED_DATA.md` filled in → D3 Domain (aggregates, VOs, standard workflow data, `Event\Canonicalizer`), `DomainPurityGuardTest` now real → D4 Engine (`WorkflowEngine` + guards) → D5 Infrastructure repositories, `DbConfinementGuardTest` now real → D6 Application (`WorkflowService`, `EventDispatcher`, hash-chain append), `SingleStateWriterGuardTest`+`AuditAppendOnlyGuardTest` new and real → D7 spike S6 (PII-payload guard) → D8 `WooOrderSource`, `WooConfinementGuardTest` now real → D9 `IntakeHooks`+`IntakeService` (sync + AS fallback) → D10 spike S5 (AS burst test) → D11 `wp mpcf intake backfill` → D12 `StatusBridge` (outbound + loop guard) → D13 `RefundObserver` (inbound) → D14 Settings (bridge mapping, schema bump) → D15 `Screens/Queue` (data table + filter bar + drawer + bulk actions, `SearchQuery` v1) → D16 `Screens/FulfillmentDetail` (timeline, notes, manual transitions + reason modal) → D17 `Screens/Dashboard` (next-actions band + stat cards, no picking-list action) → D18 capability/role wiring (`AdminBoundaryGuardTest`), Operator Mode setting → D19 uninstall policy extended to the four tables → D20 docs (`HOOKS.md`, this document's outcomes, `ROADMAP.md` M1 row) → D21 Queue performance validation at 10k rows, amend indexes here if needed (III.2.2) → D22 full III.5 acceptance pass, all CI legs green, `release-audit.sh` green, release candidate ready for **tag `v0.1.0` on explicit PO approval**.
+
+Dependency note: D1 needs the MPDS tag/candidate, so C1–C7 complete first; everything else in D depends on D1–D6 in the order listed — commit boundaries may shift where dependency order requires it, documented as a deviation if so.
+
+## III.5 M1 acceptance criteria (falsifiable)
+
+1. Paying a WooCommerce order (classic and Blocks checkout, HPOS on) creates exactly one `queued` fulfillment within the same request or the next AS tick; paying it twice creates no duplicate.
+2. `wp mpcf intake backfill --status=processing` ingests existing orders idempotently.
+3. The Queue lists/filters/searches 10k seeded fulfillments with indexed queries (no full scans in `EXPLAIN`) and p95 page render under target on the reference container.
+4. Every transition in the standard workflow is executable exactly per §6.2 — guard-blocked transitions render disabled with the guard's reason; forbidden edges are absent from UI and rejected by the service (tested at the service layer, not the UI).
+5. A Warehouse Operator account can process a fulfillment end to end but cannot see WC orders admin, settings, or cancel; a Lead can cancel (audited).
+6. Order cancellation in WC moves open fulfillments to `cancelled` (audited, loop-guard proven by a test asserting no recursive bridge writes).
+7. `wp mpcf audit verify <id>` passes on a processed fulfillment; manually corrupting an event row makes it fail.
+8. Deactivate/reactivate loses nothing; uninstall with the flag off removes nothing; with the flag on removes everything in `PersistedKeys::inventory()`.
+9. All guard tests of §19.1 exist, pass, and each fails when its violation is injected (mutation check recorded in the PR).
+10. `docs/HOOKS.md`, `docs/PERSISTED_DATA.md`, ADRs 0001–0005, and `ROADMAP.md` are current; CI floor + current-stable legs green.
+
+## III.6 GO / NO-GO
+
+**GO for implementation.** Every scope item is traceable to a specific section of the frozen Architecture Freeze v1.0, reconciled against the actual (inspected, not assumed) state of both repos, with the three open scope questions resolved by explicit PO decision (III.1) rather than left implicit. Spikes S5 and S6 are real open risks, sequenced early (D7, D10) to fail fast if they don't pan out. Pre-conditions to start: PO approves this Part III (house rule I14) — granted 2026-08-01. Tags (`v0.2.0` MPDS, `v0.1.0` plugin) are cut only on a separate, explicit PO go-ahead after this milestone's acceptance criteria are met — not automatically at the end of the commit sequence.
 

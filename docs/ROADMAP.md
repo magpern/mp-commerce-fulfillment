@@ -5,18 +5,19 @@ approved milestone at a time (I14) — each milestone gets its own execution
 plan appended to `ARCHITECTURE_PLAN.md`, reconciled against this document's
 actual state before work starts.
 
-0. **M0 — Bootstrap & MPDS extraction** — **code-complete on `main`,
-   awaiting the `v0.0.1` tag (house rule: tags are pushed only on explicit
-   PO approval).** Plugin bootstrap, composition root, settings framework,
-   `PersistedKeys`, capability framework, migration framework (framework
-   only — no business tables), structural guard framework, MPDS vendoring
-   proof, canonical documentation. Unit suite (44 tests) and integration
-   suite (12 tests, HPOS forced on, real WordPress/WooCommerce/MariaDB)
-   both green; phpcs clean. `mp-admin-design-system` extracted to its own
-   repo and tagged `v0.1.0`. The plugin activates, installs its migration
-   framework, declares HPOS compatibility, and does nothing else.
-1. **M1 — Fulfillment core (Warehouse MVP)** — not started. Requires fresh
-   PO approval before work begins (house rule).
+0. **M0 — Bootstrap & MPDS extraction** — **released as `v0.0.1`** (tag
+   pushed, Release workflow green, installable zip published). Plugin
+   bootstrap, composition root, settings framework, `PersistedKeys`,
+   capability framework, migration framework (framework only — no business
+   tables), structural guard framework, MPDS vendoring proof, canonical
+   documentation. Unit suite (44 tests) and integration suite (12 tests,
+   HPOS forced on, real WordPress/WooCommerce/MariaDB) both green; phpcs
+   clean. `mp-admin-design-system` extracted to its own repo and released
+   as `v0.1.0`. The plugin activates, installs its migration framework,
+   declares HPOS compatibility, and does nothing else.
+1. **M1 — Fulfillment core (Warehouse MVP)** — **approved for
+   implementation** (PO approval 2026-08-01; execution plan is Part III of
+   `ARCHITECTURE_PLAN.md`). In progress.
 2. **M2 — Packing Workspace & REST** — not started.
 3. **M3 — Documents I** — not started.
 4. **M4 — Tracking & notifications** — not started.
