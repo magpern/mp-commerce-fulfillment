@@ -41,6 +41,50 @@ if ( ! isset( $GLOBALS['mpcf_test_roles'] ) ) {
 	$GLOBALS['mpcf_test_roles'] = array();
 }
 
+if ( ! isset( $GLOBALS['wpdb'] ) ) {
+	// Minimal $wpdb double: no real database in the unit suite, so
+	// get_var() always reports "table not found" (every CREATE TABLE in
+	// Migrator::step_1_initial_tables() is therefore attempted, harmlessly,
+	// on every activate() call) and query() just records what ran.
+	$GLOBALS['wpdb'] = new class() {
+		/**
+		 * @var string
+		 */
+		public string $prefix = 'wp_';
+
+		/**
+		 * @var list<string>
+		 */
+		public array $queries = array();
+
+		public function get_charset_collate(): string { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+			return 'DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci';
+		}
+
+		public function prepare( string $query, ...$args ): string { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+			$query = str_replace( array( '%s', '%d' ), array( "'%s'", '%d' ), $query );
+
+			return vsprintf( $query, $args );
+		}
+
+		public function esc_like( string $text ): string { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+			return addcslashes( $text, '_%\\' );
+		}
+
+		public function get_var( string $query ) { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+			unset( $query );
+
+			return null;
+		}
+
+		public function query( string $sql ) { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+			$this->queries[] = $sql;
+
+			return true;
+		}
+	};
+}
+
 /**
  * Resets the in-memory options/roles stores. Call from `setUp()` in any test
  * that exercises activation or uninstall so state never leaks between tests.

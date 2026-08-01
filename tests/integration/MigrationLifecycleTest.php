@@ -1,8 +1,8 @@
 <?php
 /**
  * Proves the migration framework's per-step persistence, resume-after-
- * interruption, and idempotency, against a disposable fake step map
- * (Milestone 0 ships no real migration steps yet).
+ * interruption, and idempotency, against a disposable fake step map, plus
+ * the real Milestone 1 step against the real database.
  *
  * @package MPCommerceFulfillment
  */
@@ -12,6 +12,7 @@ declare( strict_types=1 );
 namespace MPCF\Tests\Integration;
 
 use MPCF\Infrastructure\Database\Migrator;
+use MPCF\Infrastructure\Database\Schema;
 use RuntimeException;
 use WP_UnitTestCase;
 
@@ -98,11 +99,36 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 		self::assertSame( 1, $calls, 'maybe_migrate() must no-op once current_version() is already at target.' );
 	}
 
-	public function test_real_milestone_0_migrator_writes_target_zero_with_no_steps(): void {
+	public function test_real_migrator_creates_the_four_milestone_1_tables_and_reaches_target_one(): void {
+		global $wpdb;
+
+		foreach ( Schema::all_tables() as $table ) {
+			$wpdb->query( 'DROP TABLE IF EXISTS ' . $table ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL
+		}
+
 		$migrator = new Migrator();
 		$migrator->migrate();
 
-		self::assertSame( 0, $migrator->current_version() );
-		self::assertSame( 0, (int) get_option( Migrator::OPTION ) );
+		self::assertSame( 1, $migrator->current_version() );
+		self::assertSame( 1, (int) get_option( Migrator::OPTION ) );
+
+		foreach ( Schema::all_tables() as $table ) {
+			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
+			self::assertNotNull( $exists, "{$table} must exist after the real migrator runs." );
+		}
+	}
+
+	public function test_real_migrator_step_1_is_idempotent_against_existing_tables(): void {
+		$migrator = new Migrator();
+		$migrator->migrate();
+
+		// Re-running against tables that already exist (from the previous
+		// test, or a prior activation) must not error — this is exactly
+		// what the SHOW TABLES LIKE guard in step_1_initial_tables() exists
+		// to prove against a real database, not just the unit-test double.
+		$again = new Migrator();
+		$again->migrate();
+
+		self::assertSame( 1, $again->current_version() );
 	}
 }

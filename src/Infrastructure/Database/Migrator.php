@@ -37,10 +37,10 @@ final class Migrator {
 	public const OPTION = 'mpcf_db_version';
 
 	/**
-	 * Schema version this build expects. Milestone 0 introduces no tables,
-	 * so the target is 0 — Milestone 1 raises it alongside its first step.
+	 * Schema version this build expects. Milestone 1 raises this to 1
+	 * alongside its first step, {@see step_1_initial_tables()}.
 	 */
-	public const TARGET = 0;
+	public const TARGET = 1;
 
 	/**
 	 * Test-only step map override.
@@ -121,12 +121,47 @@ final class Migrator {
 	/**
 	 * Ordered migration steps, keyed by the version they produce.
 	 *
-	 * Empty in Milestone 0 — there is nothing to create yet. Milestone 1
-	 * adds `1 => array( $this, 'step_1_initial_tables' )`.
-	 *
 	 * @return array<int, callable():void>
 	 */
 	private function steps(): array {
-		return $this->steps_override ?? array();
+		return $this->steps_override ?? array(
+			1 => array( $this, 'step_1_initial_tables' ),
+		);
+	}
+
+	/**
+	 * Milestone 1: creates `mpcf_fulfillments`, `mpcf_fulfillment_items`,
+	 * `mpcf_events` and `mpcf_notes` ({@see Schema::create_statements()}).
+	 * Idempotent: `CREATE TABLE` (no `IF NOT EXISTS`) would error on re-run,
+	 * so a table that already exists is skipped by checking
+	 * `SHOW TABLES LIKE` first — the same re-run safety every other step in
+	 * this class provides, extended to raw DDL.
+	 */
+	private function step_1_initial_tables(): void {
+		global $wpdb;
+
+		foreach ( Schema::create_statements() as $sql ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
+			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $this->table_name_from_ddl( $sql ) ) ) );
+
+			if ( null !== $exists ) {
+				continue;
+			}
+
+			$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
+		}
+	}
+
+	/**
+	 * Extracts the table name a `CREATE TABLE {name} (...)` statement
+	 * targets, for the idempotency check in {@see step_1_initial_tables()}.
+	 *
+	 * @param string $create_table_sql A `CREATE TABLE` statement produced by
+	 *                                 {@see Schema::create_statements()}.
+	 */
+	private function table_name_from_ddl( string $create_table_sql ): string {
+		preg_match( '/CREATE TABLE (\S+)\s*\(/', $create_table_sql, $matches );
+
+		return $matches[1] ?? '';
 	}
 }

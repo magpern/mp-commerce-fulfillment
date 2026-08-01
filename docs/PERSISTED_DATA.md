@@ -6,21 +6,28 @@ its human-readable mirror, kept in sync by `PersistedKeysInventoryTest`
 `UninstallPolicyGuardTest` (fails if uninstall does not remove exactly this
 inventory when `remove_data_on_uninstall` is enabled).
 
-Milestone 0 persists only framework state — no fulfillment data exists yet.
+Milestone 1 introduces the plugin's first business tables (Architecture
+Plan §7.1). Milestone 0 persisted only framework state.
 
 ## Options
 
 | Option | Owner | Notes |
 |---|---|---|
 | `mpcf_settings` | `MPCF\Settings` | Versioned settings array; sole key in M0 is `remove_data_on_uninstall` (default `false`). |
-| `mpcf_db_version` | `MPCF\Infrastructure\Database\Migrator` | Applied schema version. M0's `TARGET` is `0` (no business tables yet). |
+| `mpcf_db_version` | `MPCF\Infrastructure\Database\Migrator` | Applied schema version. M1 raises `TARGET` to `1` (see Tables below). |
 
 ## Tables
 
-None yet. `MPCF\Infrastructure\Database\Schema::all_tables()` returns an
-empty array in M0; Milestone 1 introduces `mpcf_fulfillments`,
-`mpcf_fulfillment_items`, `mpcf_events` and `mpcf_notes` (see
-`docs/ARCHITECTURE_PLAN.md` §7).
+All four created by `Migrator` step 1, DDL in
+`MPCF\Infrastructure\Database\Schema` (see `docs/ARCHITECTURE_PLAN.md` §7.1
+for the frozen column/index specification):
+
+| Table | Purpose |
+|---|---|
+| `mpcf_fulfillments` | Aggregate root: one row per fulfillment, its workflow state, assignee, and order snapshot fields. |
+| `mpcf_fulfillment_items` | Line items per fulfillment, snapshotted (SKU, name) so picking lists and audit stay stable if a product is later renamed or deleted. |
+| `mpcf_events` | Append-only (I5), hash-chained audit log — every state change, item tick, and bridge action. |
+| `mpcf_notes` | Internal operator/lead notes per fulfillment. |
 
 ## Capabilities and roles
 
@@ -59,7 +66,6 @@ None created in M0. Milestone 5 introduces the protected photo store under
 
 All-or-nothing (invariant I12), default **keep everything**. With
 `remove_data_on_uninstall` disabled, `uninstall.php` is a no-op. Enabled, it
-removes: `mpcf_settings`, `mpcf_db_version`, every table in
-`Schema::all_tables()` (none yet), the `mpcf_warehouse_operator` and
-`mpcf_warehouse_lead` roles, and every `mpcf_*` capability from every role
-that holds it.
+removes: `mpcf_settings`, `mpcf_db_version`, all four tables above, the
+`mpcf_warehouse_operator` and `mpcf_warehouse_lead` roles, and every
+`mpcf_*` capability from every role that holds it.

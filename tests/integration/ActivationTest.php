@@ -20,11 +20,19 @@ use WP_UnitTestCase;
  */
 final class ActivationTest extends WP_UnitTestCase {
 
-	public function test_activation_creates_no_tables_and_writes_schema_version_zero(): void {
+	public function test_activation_creates_the_four_milestone_1_tables(): void {
+		global $wpdb;
+
 		Plugin::activate();
 
-		self::assertSame( array(), Schema::all_tables(), 'Milestone 0 introduces no business tables.' );
-		self::assertSame( 0, (int) get_option( Migrator::OPTION ), 'mpcf_db_version must be written, even at target 0.' );
+		self::assertSame( 1, (int) get_option( Migrator::OPTION ), 'mpcf_db_version must reach target 1.' );
+
+		foreach ( Schema::all_tables() as $table ) {
+			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
+			self::assertNotNull( $exists, "{$table} must exist after activation." );
+		}
+
+		self::assertCount( 4, Schema::all_tables() );
 	}
 
 	public function test_activation_grants_roles_and_capabilities(): void {
@@ -79,7 +87,7 @@ final class ActivationTest extends WP_UnitTestCase {
 		Plugin::activate();
 		Plugin::activate();
 
-		self::assertSame( 0, (int) get_option( Migrator::OPTION ) );
+		self::assertSame( 1, (int) get_option( Migrator::OPTION ) );
 		self::assertNotNull( get_role( Capabilities::ROLE_OPERATOR ) );
 	}
 }

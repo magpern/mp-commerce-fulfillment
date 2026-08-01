@@ -27,7 +27,7 @@ final class PersistedKeysInventoryTest extends TestCase {
 
 		self::assertSame( array( Settings::OPTION, Migrator::OPTION ), $inventory['options'] );
 		self::assertSame( Schema::all_tables(), $inventory['tables'] );
-		self::assertSame( array(), $inventory['tables'], 'Milestone 0 introduces no business tables.' );
+		self::assertCount( 4, $inventory['tables'], 'Milestone 1 introduces the four fulfillment tables.' );
 		self::assertSame( Capabilities::all(), $inventory['capabilities'] );
 		self::assertSame( array( Capabilities::ROLE_OPERATOR, Capabilities::ROLE_LEAD ), $inventory['roles'] );
 	}
@@ -37,12 +37,25 @@ final class PersistedKeysInventoryTest extends TestCase {
 
 		foreach ( PersistedKeys::inventory() as $kind => $keys ) {
 			foreach ( $keys as $key ) {
+				// Table names are runtime-prefixed ({$wpdb->prefix}mpcf_*);
+				// the doc documents the unprefixed name, matching how
+				// CLAUDE.md itself describes table naming generically.
+				$needle = 'tables' === $kind ? self::unprefixed_table_name( $key ) : $key;
+
 				self::assertStringContainsString(
-					$key,
+					$needle,
 					$doc,
-					"docs/PERSISTED_DATA.md must document the {$kind} entry `{$key}`."
+					"docs/PERSISTED_DATA.md must document the {$kind} entry `{$needle}`."
 				);
 			}
 		}
+	}
+
+	private static function unprefixed_table_name( string $table ): string {
+		global $wpdb;
+
+		return str_starts_with( $table, $wpdb->prefix )
+			? substr( $table, strlen( $wpdb->prefix ) )
+			: $table;
 	}
 }
