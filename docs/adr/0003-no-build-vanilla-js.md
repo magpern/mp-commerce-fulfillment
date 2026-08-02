@@ -3,7 +3,12 @@
 ## Status
 
 Accepted (Milestone 0; the Packing Workspace exercising this decision
-lands in Milestone 2).
+lands in Milestone 2). **Superseded in part by ADR-0006** (Milestone 2):
+this ADR's Consequences bullet ruling out any `package.json` in the
+repository no longer holds for a dev/CI-only Playwright browser-test
+toolchain — see that ADR for the narrow scope of the exception. This
+ADR's Decision (no JS framework, no build step, for *shipped* code) is
+unaffected.
 
 ## Context
 
@@ -38,4 +43,4 @@ updates and rollback on conflict.
 ## Related
 
 `docs/ARCHITECTURE_PLAN.md` §9.2 (this decision's fuller rationale), D7,
-R2 (risk register).
+R2 (risk register), ADR-0006 (the narrow, dev-only-toolchain exception).
