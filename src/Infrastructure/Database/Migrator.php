@@ -37,11 +37,12 @@ final class Migrator {
 	public const OPTION = 'mpcf_db_version';
 
 	/**
-	 * Schema version this build expects. Milestone 1 raises this to 2:
+	 * Schema version this build expects. Milestone 1 raises this to 3:
 	 * step 1 creates the four tables, step 2 adds the intake-idempotency
-	 * unique index once that requirement made the gap concrete.
+	 * unique index, step 3 adds the two indexes SearchQuery v1 (D15) needs
+	 * to keep its lookups indexed rather than full-table scans.
 	 */
-	public const TARGET = 2;
+	public const TARGET = 3;
 
 	/**
 	 * Test-only step map override.
@@ -128,6 +129,7 @@ final class Migrator {
 		return $this->steps_override ?? array(
 			1 => array( $this, 'step_1_initial_tables' ),
 			2 => array( $this, 'step_2_order_unique_index' ),
+			3 => array( $this, 'step_3_search_indexes' ),
 		);
 	}
 
@@ -186,5 +188,30 @@ final class Migrator {
 		}
 
 		$wpdb->query( Schema::fulfillments_order_unique_index_ddl() ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
+	}
+
+	/**
+	 * Adds the two indexes {@see \MPCF\Domain\SearchQuery} v1 (D15) needs to
+	 * keep its customer-name and SKU lookups indexed. Idempotent, same
+	 * `SHOW INDEX` pattern as {@see step_2_order_unique_index()}.
+	 */
+	private function step_3_search_indexes(): void {
+		global $wpdb;
+
+		$fulfillments_table = Schema::table( Schema::FULFILLMENTS );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from Schema, no user input; only the index name is a %s placeholder.
+		$exists = $wpdb->get_var( $wpdb->prepare( "SHOW INDEX FROM {$fulfillments_table} WHERE Key_name = %s", Schema::FULFILLMENTS_CUSTOMER_NAME_INDEX ) );
+
+		if ( null === $exists ) {
+			$wpdb->query( Schema::fulfillments_customer_name_index_ddl() ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
+		}
+
+		$items_table = Schema::table( Schema::FULFILLMENT_ITEMS );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from Schema, no user input; only the index name is a %s placeholder.
+		$exists = $wpdb->get_var( $wpdb->prepare( "SHOW INDEX FROM {$items_table} WHERE Key_name = %s", Schema::FULFILLMENT_ITEMS_SKU_INDEX ) );
+
+		if ( null === $exists ) {
+			$wpdb->query( Schema::fulfillment_items_sku_index_ddl() ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
+		}
 	}
 }

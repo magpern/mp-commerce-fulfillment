@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace MPCF\Infrastructure\Database;
 
+use DateTimeImmutable;
 use MPCF\Domain\Event\Canonicalizer;
 use MPCF\Domain\Event\DomainEvent;
 use MPCF\Domain\Repository\EventRepository;
@@ -88,5 +89,42 @@ final class WpdbEventRepository implements EventRepository {
 			},
 			$rows ?? array()
 		);
+	}
+
+	/**
+	 * How many `fulfillment.state_changed` events since `$since` moved a
+	 * fulfillment into `$state`. Filters on the two indexed columns
+	 * (`event_type`, `created_at`) in SQL, then reads the small resulting
+	 * set's JSON payload in PHP — the payload's `to` field is not itself
+	 * indexed, but "events since midnight" is bounded regardless of total
+	 * table size, unlike the Queue's own hot path.
+	 *
+	 * @param string            $state State a fulfillment entered.
+	 * @param DateTimeImmutable $since Only count events at or after this moment.
+	 */
+	public function count_state_entries_since( string $state, DateTimeImmutable $since ): int {
+		global $wpdb;
+
+		$table = Schema::table( Schema::EVENTS );
+		$rows  = $wpdb->get_col(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is Schema-built, never user input.
+				"SELECT payload FROM {$table} WHERE event_type = %s AND created_at >= %s",
+				'fulfillment.state_changed',
+				$since->format( 'Y-m-d H:i:s' )
+			)
+		);
+
+		$count = 0;
+
+		foreach ( $rows ?? array() as $payload_json ) {
+			$payload = json_decode( (string) $payload_json, true );
+
+			if ( is_array( $payload ) && ( $payload['to'] ?? null ) === $state ) {
+				++$count;
+			}
+		}
+
+		return $count;
 	}
 }

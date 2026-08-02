@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace MPCF\Tests\Unit\Application\Doubles;
 
+use DateTimeImmutable;
 use MPCF\Domain\Event\Canonicalizer;
 use MPCF\Domain\Event\DomainEvent;
 use MPCF\Domain\Repository\EventRepository;
@@ -67,5 +68,16 @@ final class InMemoryEventRepository implements EventRepository {
 	 */
 	public function all(): array {
 		return $this->rows;
+	}
+
+	public function count_state_entries_since( string $state, DateTimeImmutable $since ): int {
+		return count(
+			array_filter(
+				$this->rows,
+				static fn( array $row ): bool => 'fulfillment.state_changed' === $row['event_type']
+					&& $since <= $row['created_at']
+					&& ( $row['payload']['to'] ?? null ) === $state
+			)
+		);
 	}
 }

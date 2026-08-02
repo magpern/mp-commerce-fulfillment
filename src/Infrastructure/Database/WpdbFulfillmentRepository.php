@@ -11,6 +11,8 @@ namespace MPCF\Infrastructure\Database;
 
 use DateTimeImmutable;
 use MPCF\Domain\Fulfillment;
+use MPCF\Domain\FulfillmentQuery;
+use MPCF\Domain\FulfillmentQueryResult;
 use MPCF\Domain\Repository\FulfillmentRepository;
 
 /**
@@ -156,6 +158,123 @@ final class WpdbFulfillmentRepository implements FulfillmentRepository {
 		}
 
 		return false;
+	}
+
+	/**
+	 * A server-side paginated, filtered listing — the only method here that
+	 * builds a dynamic `WHERE` clause, always against indexed columns
+	 * ({@see where_clause()}).
+	 *
+	 * @param FulfillmentQuery $query Filter/sort/page.
+	 */
+	public function query( FulfillmentQuery $query ): FulfillmentQueryResult {
+		global $wpdb;
+
+		$table                        = Schema::table( Schema::FULFILLMENTS );
+		list( $where, $where_params ) = $this->where_clause( $query );
+
+		if ( array() === $where_params ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table/$where are Schema-built/placeholder-only, never user input; there is nothing here for prepare() to bind.
+			$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} {$where}" );
+		} else {
+			$total = (int) $wpdb->get_var(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $where's own %-placeholders are opaque to static analysis here but are real and bound via $where_params below.
+				$wpdb->prepare( "SELECT COUNT(*) FROM {$table} {$where}", $where_params )
+			);
+		}
+
+		$order_by = $this->safe_order_by( $query->order_by() );
+		$order    = 'ASC' === strtoupper( $query->order() ) ? 'ASC' : 'DESC';
+
+		$sql  = "SELECT * FROM {$table} {$where} ORDER BY {$order_by} {$order} LIMIT %d OFFSET %d";
+		$rows = $wpdb->get_results(
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $sql's only dynamic fragment is $where, built exclusively from %-placeholders (see where_clause()); $order_by/$order are validated against a fixed allowlist, never interpolated user input.
+			$wpdb->prepare( $sql, array_merge( $where_params, array( $query->per_page(), $query->offset() ) ) ),
+			ARRAY_A
+		);
+
+		return new FulfillmentQueryResult( array_map( array( $this, 'hydrate' ), $rows ?? array() ), $total, $query->page(), $query->per_page() );
+	}
+
+	/**
+	 * Count of fulfillments whose state is one of `$states`.
+	 *
+	 * @param array<int, string> $states State keys to match.
+	 */
+	public function count_in_states( array $states ): int {
+		global $wpdb;
+
+		if ( array() === $states ) {
+			return 0;
+		}
+
+		$table        = Schema::table( Schema::FULFILLMENTS );
+		$placeholders = implode( ',', array_fill( 0, count( $states ), '%s' ) );
+
+		return (int) $wpdb->get_var(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $table/$placeholders are Schema-built/count-derived, never user input; the %s placeholders are real and bound via $states.
+			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE state IN ({$placeholders})", $states )
+		);
+	}
+
+	/**
+	 * Builds a `WHERE` clause and its bound parameters from a query's
+	 * filters — every condition targets an indexed column
+	 * (`state`/`assignee_id`/`id`/`state_entered_at`), per Architecture
+	 * Plan §9.3's "no unindexed scan" rule for the Queue's hot path.
+	 *
+	 * @param FulfillmentQuery $query Filter to translate.
+	 * @return array{0: string, 1: array<int, mixed>}
+	 */
+	private function where_clause( FulfillmentQuery $query ): array {
+		$conditions = array();
+		$params     = array();
+
+		if ( array() !== $query->states() ) {
+			$placeholders = implode( ',', array_fill( 0, count( $query->states() ), '%s' ) );
+			$conditions[] = "state IN ({$placeholders})";
+			array_push( $params, ...$query->states() );
+		}
+
+		$assignee = $query->assignee();
+
+		if ( FulfillmentQuery::SENTINEL_UNASSIGNED === $assignee ) {
+			$conditions[] = 'assignee_id IS NULL';
+		} elseif ( null !== $assignee ) {
+			$conditions[] = 'assignee_id = %d';
+			$params[]     = (int) $assignee;
+		}
+
+		if ( null !== $query->fulfillment_ids() ) {
+			if ( array() === $query->fulfillment_ids() ) {
+				$conditions[] = '1 = 0'; // No candidate ids (e.g. an empty search result) -> no rows, never a malformed empty IN().
+			} else {
+				$placeholders = implode( ',', array_fill( 0, count( $query->fulfillment_ids() ), '%d' ) );
+				$conditions[] = "id IN ({$placeholders})";
+				array_push( $params, ...$query->fulfillment_ids() );
+			}
+		}
+
+		if ( null !== $query->min_age_seconds() ) {
+			$conditions[] = 'state_entered_at <= %s';
+			$params[]     = gmdate( 'Y-m-d H:i:s', time() - $query->min_age_seconds() );
+		}
+
+		if ( array() === $conditions ) {
+			return array( '', array() );
+		}
+
+		return array( 'WHERE ' . implode( ' AND ', $conditions ), $params );
+	}
+
+	/**
+	 * Validates a caller-requested sort column against a fixed allowlist —
+	 * never interpolates caller input directly into `ORDER BY`.
+	 *
+	 * @param string $column Requested column.
+	 */
+	private function safe_order_by( string $column ): string {
+		return in_array( $column, array( 'created_at', 'state_entered_at', 'priority', 'id' ), true ) ? $column : 'created_at';
 	}
 
 	/**

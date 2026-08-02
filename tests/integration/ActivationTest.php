@@ -32,7 +32,7 @@ final class ActivationTest extends WP_UnitTestCase {
 
 		Plugin::activate();
 
-		self::assertSame( 2, (int) get_option( Migrator::OPTION ), 'mpcf_db_version must reach target 2.' );
+		self::assertSame( 3, (int) get_option( Migrator::OPTION ), 'mpcf_db_version must reach target 3.' );
 
 		foreach ( Schema::all_tables() as $table ) {
 			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
@@ -67,7 +67,7 @@ final class ActivationTest extends WP_UnitTestCase {
 		Plugin::activate();
 		Plugin::activate();
 
-		self::assertSame( 2, (int) get_option( Migrator::OPTION ) );
+		self::assertSame( 3, (int) get_option( Migrator::OPTION ) );
 		self::assertNotNull( get_role( Capabilities::ROLE_OPERATOR ) );
 	}
 }

@@ -59,6 +59,17 @@ final class Schema {
 	public const FULFILLMENTS_ORDER_UNIQUE_INDEX = 'order_unique';
 
 	/**
+	 * Name of the index {@see \MPCF\Domain\SearchQuery} v1's name-snapshot lookup needs
+	 * to stay a prefix-indexed scan instead of an unindexed one.
+	 */
+	public const FULFILLMENTS_CUSTOMER_NAME_INDEX = 'customer_name_snapshot';
+
+	/**
+	 * Name of the index {@see \MPCF\Domain\SearchQuery} v1's SKU lookup needs.
+	 */
+	public const FULFILLMENT_ITEMS_SKU_INDEX = 'sku_snapshot';
+
+	/**
 	 * Prefixes a table name with the current site's table prefix.
 	 *
 	 * @param string $name Unprefixed table name.
@@ -163,6 +174,31 @@ final class Schema {
 		$index = self::FULFILLMENTS_ORDER_UNIQUE_INDEX;
 
 		return "ALTER TABLE {$table} ADD UNIQUE KEY {$index} (order_id, order_source)";
+	}
+
+	/**
+	 * `ALTER TABLE` statement adding the index {@see \MPCF\Domain\SearchQuery} v1's
+	 * customer-name lookup needs. Added post-tag-freeze-prep (D15/D22's own
+	 * "verified against real Queue query shapes" clause at the top of this
+	 * file) rather than folded into {@see fulfillments_ddl()}, for the same
+	 * reason {@see fulfillments_order_unique_index_ddl()} is its own step.
+	 */
+	public static function fulfillments_customer_name_index_ddl(): string {
+		$table = self::table( self::FULFILLMENTS );
+		$index = self::FULFILLMENTS_CUSTOMER_NAME_INDEX;
+
+		return "ALTER TABLE {$table} ADD KEY {$index} (customer_name_snapshot)";
+	}
+
+	/**
+	 * `ALTER TABLE` statement adding the index {@see \MPCF\Domain\SearchQuery} v1's SKU
+	 * lookup needs.
+	 */
+	public static function fulfillment_items_sku_index_ddl(): string {
+		$table = self::table( self::FULFILLMENT_ITEMS );
+		$index = self::FULFILLMENT_ITEMS_SKU_INDEX;
+
+		return "ALTER TABLE {$table} ADD KEY {$index} (sku_snapshot)";
 	}
 
 	/**

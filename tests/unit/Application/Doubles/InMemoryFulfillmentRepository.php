@@ -9,7 +9,10 @@ declare( strict_types=1 );
 
 namespace MPCF\Tests\Unit\Application\Doubles;
 
+use DateTimeImmutable;
 use MPCF\Domain\Fulfillment;
+use MPCF\Domain\FulfillmentQuery;
+use MPCF\Domain\FulfillmentQueryResult;
 use MPCF\Domain\Repository\FulfillmentRepository;
 
 /**
@@ -89,6 +92,70 @@ final class InMemoryFulfillmentRepository implements FulfillmentRepository {
 		);
 
 		$fulfillment->increment_version();
+
+		return true;
+	}
+
+	public function query( FulfillmentQuery $query ): FulfillmentQueryResult {
+		$matches = array_values( array_filter( $this->rows, fn( Fulfillment $f ): bool => $this->matches( $f, $query ) ) );
+
+		usort(
+			$matches,
+			static function ( Fulfillment $a, Fulfillment $b ) use ( $query ): int {
+				$column = $query->order_by();
+				$va     = 'priority' === $column ? $a->priority() : ( 'state_entered_at' === $column ? $a->state_entered_at()->getTimestamp() : $a->created_at()->getTimestamp() );
+				$vb     = 'priority' === $column ? $b->priority() : ( 'state_entered_at' === $column ? $b->state_entered_at()->getTimestamp() : $b->created_at()->getTimestamp() );
+				$cmp    = $va <=> $vb;
+
+				return 'ASC' === strtoupper( $query->order() ) ? $cmp : -$cmp;
+			}
+		);
+
+		$total = count( $matches );
+		$page  = array_slice( $matches, $query->offset(), $query->per_page() );
+
+		return new FulfillmentQueryResult(
+			array_map( static fn( Fulfillment $f ): Fulfillment => Fulfillment::from_array( $f->to_array() ), $page ),
+			$total,
+			$query->page(),
+			$query->per_page()
+		);
+	}
+
+	public function count_in_states( array $states ): int {
+		if ( array() === $states ) {
+			return 0;
+		}
+
+		return count( array_filter( $this->rows, static fn( Fulfillment $f ): bool => in_array( $f->state(), $states, true ) ) );
+	}
+
+	private function matches( Fulfillment $fulfillment, FulfillmentQuery $query ): bool {
+		if ( array() !== $query->states() && ! in_array( $fulfillment->state(), $query->states(), true ) ) {
+			return false;
+		}
+
+		$assignee = $query->assignee();
+
+		if ( FulfillmentQuery::SENTINEL_UNASSIGNED === $assignee && null !== $fulfillment->assignee_id() ) {
+			return false;
+		}
+
+		if ( is_int( $assignee ) && $fulfillment->assignee_id() !== $assignee ) {
+			return false;
+		}
+
+		if ( null !== $query->fulfillment_ids() && ! in_array( $fulfillment->id(), $query->fulfillment_ids(), true ) ) {
+			return false;
+		}
+
+		if ( null !== $query->min_age_seconds() ) {
+			$threshold = ( new DateTimeImmutable() )->getTimestamp() - $query->min_age_seconds();
+
+			if ( $fulfillment->state_entered_at()->getTimestamp() > $threshold ) {
+				return false;
+			}
+		}
 
 		return true;
 	}

@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace MPCF\Domain\Repository;
 
+use DateTimeImmutable;
 use MPCF\Domain\Event\DomainEvent;
 
 /**
@@ -46,4 +47,15 @@ interface EventRepository {
 	 * @return list<array<string, mixed>>
 	 */
 	public function timeline_for_fulfillment( int $fulfillment_id ): array;
+
+	/**
+	 * How many `fulfillment.state_changed` events since `$since` moved a
+	 * fulfillment into `$state` — the Dashboard's "packed today"/"shipped
+	 * today" stats' data source (a fulfillment currently further along than
+	 * `$state` still counts, since it passed through it earlier today).
+	 *
+	 * @param string            $state State a fulfillment entered.
+	 * @param DateTimeImmutable $since Only count events at or after this moment.
+	 */
+	public function count_state_entries_since( string $state, DateTimeImmutable $since ): int;
 }

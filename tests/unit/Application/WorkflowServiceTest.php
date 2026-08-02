@@ -262,6 +262,14 @@ final class WorkflowServiceTest extends TestCase {
 				return null === $this->stored ? array() : array( $this->stored );
 			}
 
+			public function query( \MPCF\Domain\FulfillmentQuery $query ): \MPCF\Domain\FulfillmentQueryResult {
+				return new \MPCF\Domain\FulfillmentQueryResult( array(), 0, 1, 20 );
+			}
+
+			public function count_in_states( array $states ): int {
+				return 0;
+			}
+
 			public function insert( Fulfillment $fulfillment ): int {
 				$this->stored = Fulfillment::from_array( array( 'id' => 1 ) + $fulfillment->to_array() );
 

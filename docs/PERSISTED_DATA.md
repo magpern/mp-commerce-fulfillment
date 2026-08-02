@@ -14,7 +14,7 @@ Plan §7.1). Milestone 0 persisted only framework state.
 | Option | Owner | Notes |
 |---|---|---|
 | `mpcf_settings` | `MPCF\Settings` | Versioned settings array. M0's only key was `remove_data_on_uninstall` (default `false`). M1 raises the shape version to 2, adding `outbound_bridge_enabled` (default `true`) and `inbound_cancel_behavior`/`inbound_refund_behavior` (`cancel`\|`flag`, defaulting to `cancel` and `flag` respectively) for `Woo\StatusBridge`/`Woo\RefundObserver`. |
-| `mpcf_db_version` | `MPCF\Infrastructure\Database\Migrator` | Applied schema version. M1 raises `TARGET` to `2`: step 1 creates the four tables below, step 2 adds the `order_unique` index on `mpcf_fulfillments (order_id, order_source)` that makes intake idempotency a database-enforced guarantee. |
+| `mpcf_db_version` | `MPCF\Infrastructure\Database\Migrator` | Applied schema version. M1 raises `TARGET` to `3`: step 1 creates the four tables below, step 2 adds the `order_unique` index on `mpcf_fulfillments (order_id, order_source)` that makes intake idempotency a database-enforced guarantee, step 3 adds `customer_name_snapshot` (on `mpcf_fulfillments`) and `sku_snapshot` (on `mpcf_fulfillment_items`) indexes that `SearchQuery` v1 (D15) needs to keep its Queue-search lookups indexed. |
 
 ## Tables
 

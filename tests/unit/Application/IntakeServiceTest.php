@@ -167,6 +167,14 @@ final class IntakeServiceTest extends TestCase {
 				return $this->real->find_all_by_order_id( $order_id );
 			}
 
+			public function query( \MPCF\Domain\FulfillmentQuery $query ): \MPCF\Domain\FulfillmentQueryResult {
+				return $this->real->query( $query );
+			}
+
+			public function count_in_states( array $states ): int {
+				return $this->real->count_in_states( $states );
+			}
+
 			public function insert( \MPCF\Domain\Fulfillment $fulfillment ): ?int {
 				$this->real->insert( $fulfillment );
 

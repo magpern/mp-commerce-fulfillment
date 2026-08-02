@@ -99,7 +99,7 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 		self::assertSame( 1, $calls, 'maybe_migrate() must no-op once current_version() is already at target.' );
 	}
 
-	public function test_real_migrator_creates_the_four_milestone_1_tables_and_reaches_target_two(): void {
+	public function test_real_migrator_creates_the_four_milestone_1_tables_and_reaches_target_three(): void {
 		global $wpdb;
 
 		foreach ( Schema::all_tables() as $table ) {
@@ -109,8 +109,8 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 		$migrator = new Migrator();
 		$migrator->migrate();
 
-		self::assertSame( 2, $migrator->current_version() );
-		self::assertSame( 2, (int) get_option( Migrator::OPTION ) );
+		self::assertSame( 3, $migrator->current_version() );
+		self::assertSame( 3, (int) get_option( Migrator::OPTION ) );
 
 		foreach ( Schema::all_tables() as $table ) {
 			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
@@ -131,18 +131,35 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 		self::assertNotNull( $index, 'The order-uniqueness index must exist after the real migrator runs.' );
 	}
 
-	public function test_real_migrator_steps_1_and_2_are_idempotent_against_an_already_migrated_database(): void {
+	public function test_real_migrator_step_3_adds_the_search_indexes(): void {
+		global $wpdb;
+
+		$migrator = new Migrator();
+		$migrator->migrate();
+
+		$fulfillments_table = Schema::table( Schema::FULFILLMENTS );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is Schema-built, never user input.
+		$name_index = $wpdb->get_var( $wpdb->prepare( "SHOW INDEX FROM {$fulfillments_table} WHERE Key_name = %s", Schema::FULFILLMENTS_CUSTOMER_NAME_INDEX ) );
+		self::assertNotNull( $name_index, 'The customer-name-snapshot index must exist after the real migrator runs.' );
+
+		$items_table = Schema::table( Schema::FULFILLMENT_ITEMS );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is Schema-built, never user input.
+		$sku_index = $wpdb->get_var( $wpdb->prepare( "SHOW INDEX FROM {$items_table} WHERE Key_name = %s", Schema::FULFILLMENT_ITEMS_SKU_INDEX ) );
+		self::assertNotNull( $sku_index, 'The sku-snapshot index must exist after the real migrator runs.' );
+	}
+
+	public function test_real_migrator_steps_are_idempotent_against_an_already_migrated_database(): void {
 		$migrator = new Migrator();
 		$migrator->migrate();
 
 		// Re-running against a table/index that already exist (from the
 		// previous test, or a prior activation) must not error — this is
-		// exactly what the SHOW TABLES LIKE / SHOW INDEX guards in
-		// step_1_initial_tables()/step_2_order_unique_index() exist to
-		// prove against a real database, not just the unit-test double.
+		// exactly what the SHOW TABLES LIKE / SHOW INDEX guards in every
+		// step exist to prove against a real database, not just the
+		// unit-test double.
 		$again = new Migrator();
 		$again->migrate();
 
-		self::assertSame( 2, $again->current_version() );
+		self::assertSame( 3, $again->current_version() );
 	}
 }

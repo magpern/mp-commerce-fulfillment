@@ -10,6 +10,8 @@ declare( strict_types=1 );
 namespace MPCF\Domain\Repository;
 
 use MPCF\Domain\Fulfillment;
+use MPCF\Domain\FulfillmentQuery;
+use MPCF\Domain\FulfillmentQueryResult;
 
 /**
  * Implemented in Infrastructure ({@see \MPCF\Infrastructure\Database\WpdbFulfillmentRepository}),
@@ -46,6 +48,23 @@ interface FulfillmentRepository {
 	 * @return list<Fulfillment>
 	 */
 	public function find_all_by_order_id( int $order_id ): array;
+
+	/**
+	 * A server-side paginated, filtered listing — the Queue's and
+	 * Dashboard's only way to list fulfillments, always through indexed
+	 * columns (invariant: no unindexed scan on the Queue's hot path).
+	 *
+	 * @param FulfillmentQuery $query Filter/sort/page.
+	 */
+	public function query( FulfillmentQuery $query ): FulfillmentQueryResult;
+
+	/**
+	 * Count of fulfillments whose state is one of `$states`, with no
+	 * pagination overhead — the Dashboard's stat cards' only way to count.
+	 *
+	 * @param array<int, string> $states State keys to match.
+	 */
+	public function count_in_states( array $states ): int;
 
 	/**
 	 * Inserts a brand-new fulfillment and returns its assigned id, or null if
