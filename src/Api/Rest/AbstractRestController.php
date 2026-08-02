@@ -15,6 +15,8 @@ use MPCF\Domain\Event\Actor;
 use MPCF\Domain\Fulfillment;
 use MPCF\Domain\FulfillmentItem;
 use MPCF\Domain\Note;
+use MPCF\Domain\Shipping\Package;
+use MPCF\Domain\Shipping\Shipment;
 use WP_Error;
 use WP_REST_Response;
 use WP_User;
@@ -163,6 +165,37 @@ abstract class AbstractRestController implements RestController {
 	 */
 	protected static function note_resource( Note $note ): array {
 		$data               = $note->to_array();
+		$data['created_at'] = $data['created_at']->format( DATE_ATOM );
+
+		return $data;
+	}
+
+	/**
+	 * A shipment as the wire shape every route embedding one uses.
+	 *
+	 * @param Shipment $shipment Shipment to serialize.
+	 * @return array<string, mixed>
+	 */
+	protected static function shipment_resource( Shipment $shipment ): array {
+		$data = $shipment->to_array();
+
+		foreach ( array( 'shipped_at', 'delivered_at', 'created_at' ) as $key ) {
+			if ( $data[ $key ] instanceof DateTimeImmutable ) {
+				$data[ $key ] = $data[ $key ]->format( DATE_ATOM );
+			}
+		}
+
+		return $data;
+	}
+
+	/**
+	 * A package as the wire shape every route embedding one uses.
+	 *
+	 * @param Package $package Package to serialize.
+	 * @return array<string, mixed>
+	 */
+	protected static function package_resource( Package $package ): array {
+		$data               = $package->to_array();
 		$data['created_at'] = $data['created_at']->format( DATE_ATOM );
 
 		return $data;

@@ -131,6 +131,50 @@ final class ShippingService {
 	}
 
 	/**
+	 * Every shipment on a fulfillment, each with its own packages —
+	 * `GET /fulfillments/{id}/shipments`'s read shape (Architecture Plan
+	 * §IV.9). Thin read delegation, not business logic: callers outside
+	 * this class (Admin, REST) never reach `ShipmentRepository`/
+	 * `PackageRepository` directly (invariant I11).
+	 *
+	 * @param int $fulfillment_id Fulfillment to list shipments for.
+	 * @return list<array{shipment: Shipment, packages: list<Package>}>
+	 */
+	public function list_for_fulfillment( int $fulfillment_id ): array {
+		$result = array();
+
+		foreach ( $this->shipments->find_for_fulfillment( $fulfillment_id ) as $shipment ) {
+			$result[] = array(
+				'shipment' => $shipment,
+				'packages' => $this->packages->find_for_shipment( (int) $shipment->id() ),
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Finds one shipment by its own id — the read counterpart every
+	 * shipment-scoped mutation (`PATCH/DELETE /shipments/{id}`, …) needs to
+	 * resolve the owning fulfillment before or after acting.
+	 *
+	 * @param int $shipment_id Shipment id.
+	 */
+	public function find_shipment( int $shipment_id ): ?Shipment {
+		return $this->shipments->find( $shipment_id );
+	}
+
+	/**
+	 * Finds one package by its own id — the read counterpart every
+	 * package-scoped mutation (`PATCH/DELETE /packages/{id}`) needs.
+	 *
+	 * @param int $package_id Package id.
+	 */
+	public function find_package( int $package_id ): ?Package {
+		return $this->packages->find( $package_id );
+	}
+
+	/**
 	 * Creates a new shipment for a fulfillment, together with its package
 	 * 1, auto-allocated with every currently-packed line quantity.
 	 *

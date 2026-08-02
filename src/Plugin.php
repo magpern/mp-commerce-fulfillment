@@ -15,10 +15,13 @@ use MPCF\Admin\FulfillmentDetailPage;
 use MPCF\Admin\OperatorMode;
 use MPCF\Admin\QueuePage;
 use MPCF\Api\Rest\AssignmentController;
+use MPCF\Api\Rest\CarriersController;
 use MPCF\Api\Rest\FulfillmentsController;
 use MPCF\Api\Rest\ItemsController;
 use MPCF\Api\Rest\NotesController;
+use MPCF\Api\Rest\PackagesController;
 use MPCF\Api\Rest\RestApi;
+use MPCF\Api\Rest\ShipmentsController;
 use MPCF\Application\AssignmentService;
 use MPCF\Application\DashboardService;
 use MPCF\Application\EventDispatcher;
@@ -36,6 +39,7 @@ use MPCF\Domain\Workflow\StandardWorkflow;
 use MPCF\Domain\Workflow\WorkflowDefinition;
 use MPCF\Engine\GuardRegistry;
 use MPCF\Engine\WorkflowEngine;
+use MPCF\Infrastructure\Carriers\BundledCarrierRegistry;
 use MPCF\Infrastructure\Database\Migrator;
 use MPCF\Infrastructure\Database\WpdbEventRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentItemRepository;
@@ -262,12 +266,13 @@ final class Plugin {
 		// transition submitted either way produces identical outcomes
 		// (§IV.15 criterion 2).
 		$notes_repository = new WpdbNoteRepository();
+		$detail_service   = new FulfillmentDetailService( $fulfillments, $items, $events, $notes_repository );
 
 		( new RestApi(
 			array(
 				new FulfillmentsController(
 					new QueueService( $fulfillments, new WpdbSearchQuery() ),
-					new FulfillmentDetailService( $fulfillments, $items, $events, $notes_repository ),
+					$detail_service,
 					$workflow_service,
 					$definition
 				),
@@ -277,6 +282,9 @@ final class Plugin {
 				),
 				new NotesController( new NoteService( $notes_repository, $clock ) ),
 				new AssignmentController( new AssignmentService( $fulfillments ) ),
+				new ShipmentsController( $shipping_service, $workflow_service, $detail_service ),
+				new PackagesController( $shipping_service, $workflow_service, $detail_service ),
+				new CarriersController( new BundledCarrierRegistry() ),
 			)
 		) )->register();
 	}
