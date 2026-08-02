@@ -24,6 +24,9 @@ require_once __DIR__ . '/Application/Doubles/InMemoryEventRepository.php';
 require_once __DIR__ . '/Application/Doubles/InMemoryOrderSource.php';
 require_once __DIR__ . '/Application/Doubles/FixedClock.php';
 require_once __DIR__ . '/Application/Doubles/RecordingSubscriber.php';
+require_once __DIR__ . '/Application/Doubles/InMemoryShipmentRepository.php';
+require_once __DIR__ . '/Application/Doubles/InMemoryPackageRepository.php';
+require_once __DIR__ . '/Application/Doubles/InMemoryPackageItemRepository.php';
 
 if ( ! defined( 'MPCF_VERSION' ) ) {
 	define( 'MPCF_VERSION', '0.0.0-test' );
