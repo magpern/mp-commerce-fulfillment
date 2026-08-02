@@ -1,12 +1,10 @@
 # Milestone 1 Release Report — Fulfillment Core (Warehouse MVP)
 
-**Status: implementation, documentation reconciliation, and the 10k-row
-Queue performance proof are complete (D1–D21); D22 (full acceptance pass
-+ release candidate) is the remaining step before this milestone is ready
-to tag.** This report is updated in place as that step completes — it
-describes what actually shipped and what evidence backs each acceptance
-criterion, not what was planned. No `v0.1.0` tag or GitHub release exists
-at the time of writing.
+**Status: D1–D22 complete. Full acceptance pass green on both repos;
+release candidates built, verified, and checksummed. This milestone is
+ready to tag on explicit PO approval — no tag or GitHub release has been
+created.** This report describes what actually shipped and what evidence
+backs each acceptance criterion, not what was planned.
 
 Execution plan: `docs/ARCHITECTURE_PLAN.md` Part III. Actual outcomes
 against that plan: §III.7. This report is the falsifiable evidence record
@@ -118,12 +116,67 @@ current-stable) was green on the first try. Fixed in the same D20 pass
 No deviation changed an architectural decision, a data-model shape beyond
 the two additive indexes above, or a public contract.
 
-## 5. Outstanding before this milestone can tag
+## 5. D22 — full acceptance pass
 
-- **D22:** full acceptance-criteria pass (§III.5, all ten), `release-audit.sh`
-  green, both CI legs (floor + current-stable) confirmed green on the
-  fixed push, release-candidate artifacts built and verified (version
-  sync, POT/manifest regeneration, MPDS vendoring, SHA-256 checksums, no
-  dev files, self-contained zip).
-- Explicit PO acceptance review and go-ahead before the `v0.1.0` tag is
-  created and pushed — not automatic at the end of the commit sequence.
+Every §III.5 criterion, checked against real evidence:
+
+| # | Criterion | Evidence |
+|---|---|---|
+| 1 | Paid order (classic + Blocks) → exactly one `queued` fulfillment, no duplicate on repeat | `Woo\IntakeHooks` integration tests: "Paying an order creates exactly one fulfillment", "A second payment notification for the same order creates no duplicate" |
+| 2 | `wp mpcf intake backfill` idempotent | `Cli\BackfillCommand` integration tests: "Repeated backfills create no duplicates" |
+| 3 | Queue indexed at 10k rows, p95 under target | `docs/QUEUE_PERFORMANCE_VALIDATION.md` — no full scan, no N+1, p95 ≤ 89ms worst case |
+| 4 | Every standard-workflow transition executable exactly per §6.2; forbidden edges rejected | Unit: `WorkflowEngineTest` + per-guard tests, table-driven over every edge |
+| 5 | Operator: full pick-to-ship, no WC orders/settings/cancel; Lead: can cancel (audited) | `MenuVisibilityTest`, `FulfillmentDetailPageTest` ("capability forbidden transition is rejected for an operator" / "succeeds for a lead"), `QueuePageTest` bulk-action capability tests |
+| 6 | WC cancel → open fulfillments `cancelled` (audited), no bridge loop | `RefundObserver`/`StatusBridge` integration tests: "Cancellation moves a queued fulfillment to cancelled", "does not recursively trigger another bridge write" |
+| 7 | `wp mpcf audit verify` passes/fails correctly | Unit hash-chain tests + `WpdbEventRepositoryTest` |
+| 8 | Deactivate/reactivate loses nothing; uninstall keep/remove exact | `UninstallPolicyIntegrationTest`, full 7-test suite including the D19 Action Scheduler additions |
+| 9 | Every §19.1 guard test exists, passes, and fails on injected violation | All 14 guards present (2 added in D20); each has its own planted-violation self-test, all green |
+| 10 | Docs + ADRs + ROADMAP current; CI floor + current-stable green | D20/D21 doc reconciliation; CI run `30761537682` — `phpcs`, `pot`, `unit`×3, `integration`×5 (floor, current, mixed-php-floor, mixed-wp-floor, ceiling), `release-audit`, `build` all green |
+
+Beyond the ten criteria, this pass also directly confirmed (all in the
+same green integration run, `109 tests, 310 assertions`): the Action
+Scheduler 200-order burst test, the PII-payload guard (unit), the
+optimistic-lock conflict path (`WpdbFulfillmentRepositoryTest` +
+`FulfillmentDetailPageTest`), `HposProofTest` (ran, zero skips — HPOS was
+active), Operator Mode's full behavior matrix, and every
+cancellation/refund/partial-refund/item-change path including the
+diff-summary payload's own "contains no customer data" assertion.
+
+No implementation defect was found beyond the two already resolved in
+D20 (missing guards, stale POT) — D22 itself surfaced nothing new
+requiring a fix.
+
+## 6. Release candidates
+
+**`mp-admin-design-system` v0.2.0-rc:** commit `c19871670fbfb5906a0299641741058144d74cba`
+on `origin/main`, CI green (`phpcs`, `manifest`, `test`×3 PHP versions —
+42 tests, 168 assertions). No zip artifact — this repo is a source
+library distributed by git tag and vendored via `bin/sync-mpds.sh`, not
+an installable package; its commit hash is its content-addressed
+identity. `MANIFEST` already current (`bin/make-manifest.sh` produces no
+diff). Ready for the `v0.2.0` tag on explicit PO approval.
+
+**`mp-commerce-fulfillment` v0.1.0-rc:** commit `cc4a4e0` on `origin/main`
+— version header/constant/readme Stable tag bumped to `0.1.0` together,
+POT regenerated. Built by CI run `30761537682`'s `build` job (a clean
+`--no-dev` install, not a local reproduction) and downloaded as
+`mp-commerce-fulfillment-0.1.0.zip`:
+
+- SHA-256: `fb0c9430c438cf16cce46276ea349a56f5b09267c6e925689ec202a10a5ebacf`
+- 132 entries; contains `mp-commerce-fulfillment.php`, `uninstall.php`,
+  `vendor/autoload.php`, `readme.txt`, `languages/`, `src/`, `assets/`
+- `vendor/composer/installed.json` reports zero packages (`"dev": false`)
+  — no composer runtime dependency of any kind, confirming this plugin
+  has none, in production or otherwise
+- `assets/mpds/` and `src/Vendor/Mpds/` contain the vendored MPDS files
+  directly (CSS/JS/PHP) — no reference to the `mp-admin-design-system`
+  package anywhere in the zip; `assets/mpds/SOURCE_TAG` records
+  `v0.2.0-rc (pending PO tag approval; source: mp-admin-design-system@c19871670fbfb5906a0299641741058144d74cba)`
+- No dev-only files: no `tests/`, no `vendor/phpunit`, no
+  `vendor/dealerdirect`, no `.git`, no `.github`, no `composer.lock`
+- CI's own `release-audit` job independently confirmed: version parity,
+  all six required docs present, zip builds, contains the three required
+  files, contains no dev-only files — "Release audit passed."
+
+Ready for the `v0.1.0` tag on explicit PO approval. No tag has been
+created; no GitHub release has been published in either repo.
