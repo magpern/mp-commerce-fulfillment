@@ -18,13 +18,14 @@ actual state before work starts.
 1. **M1 — Fulfillment core (Warehouse MVP)** — **implemented, awaiting PO
    acceptance review** (PO approval to implement 2026-08-01; execution plan
    is Part III of `ARCHITECTURE_PLAN.md`, actual outcomes recorded in
-   §III.7). D1–D20 of the commit sequence are done: intake, workflow engine
+   §III.7). D1–D21 of the commit sequence are done: intake, workflow engine
    + standard workflow, Queue/Fulfillment Detail/Dashboard screens, audit
    hash chain, roles/capabilities + Operator Mode, status bridge, uninstall
-   policy, and documentation reconciliation. D21 (10k-row Queue performance
-   proof) and D22 (full acceptance pass + release candidate) are the
-   remaining steps before this milestone is ready to tag — no `v0.1.0` tag
-   or GitHub release exists yet.
+   policy, documentation reconciliation, and the 10k-row Queue performance
+   proof (no full scan, no N+1, no migration amendment needed — see
+   `docs/QUEUE_PERFORMANCE_VALIDATION.md`). D22 (full acceptance pass +
+   release candidate) is the remaining step before this milestone is ready
+   to tag — no `v0.1.0` tag or GitHub release exists yet.
 2. **M2 — Packing Workspace & REST** — not started.
 3. **M3 — Documents I** — not started.
 4. **M4 — Tracking & notifications** — not started.

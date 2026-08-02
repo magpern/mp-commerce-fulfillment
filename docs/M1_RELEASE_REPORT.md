@@ -1,9 +1,9 @@
 # Milestone 1 Release Report — Fulfillment Core (Warehouse MVP)
 
-**Status: implementation and documentation reconciliation complete (D1–D20);
-D21 (10k-row Queue performance proof) and D22 (full acceptance pass +
-release candidate) are the remaining steps before this milestone is ready
-to tag.** This report is updated in place as those steps complete — it
+**Status: implementation, documentation reconciliation, and the 10k-row
+Queue performance proof are complete (D1–D21); D22 (full acceptance pass
++ release candidate) is the remaining step before this milestone is ready
+to tag.** This report is updated in place as that step completes — it
 describes what actually shipped and what evidence backs each acceptance
 criterion, not what was planned. No `v0.1.0` tag or GitHub release exists
 at the time of writing.
@@ -63,18 +63,20 @@ were added as separate additive migrations rather than folded into step
 | 2 | `order_unique` — `UNIQUE KEY (order_id, order_source)` on `mpcf_fulfillments`, making intake idempotency database-enforced. |
 | 3 | `customer_name_snapshot` index on `mpcf_fulfillments`, `sku_snapshot` index on `mpcf_fulfillment_items`, for `SearchQuery` v1's prefix lookups. |
 
-D21's 10k-row `EXPLAIN` proof against the real Queue query shapes — the
-final check on whether this index set holds at scale — has not run yet;
-this section will be updated with its findings, and the schema amended
-before tagging if it finds a gap.
+D21's 10k-row `EXPLAIN` proof against the real Queue query shapes ran and
+confirmed this index set holds at scale — no full table scan, no N+1, no
+non-scaling plan, every p95 under the 200ms reference-container target.
+**No migration amendment was required.** Full evidence:
+`docs/QUEUE_PERFORMANCE_VALIDATION.md`.
 
-## 3. Test evidence (as of the D20 commit sequence)
+## 3. Test evidence (as of the D21 commit sequence)
 
 | Suite | Count | Result |
 |---|---|---|
 | Unit (`tests/unit/`, 50 files) | 233 tests, 670 assertions | Green |
 | Integration (`tests/integration/`, 25 files, real WP+WooCommerce+MariaDB, HPOS forced on) | 109 tests, 310 assertions | Green |
-| phpcs | 147 files | Clean |
+| Performance (`tests/integration/Performance/`, 1 file, 10k-row seeded dataset, run separately via `phpunit-performance.xml.dist`) | 12 tests, 51 assertions | Green |
+| phpcs | 148 files | Clean |
 | `bin/make-pot.sh --check` | — | Clean (regenerated in D20 part 2 — stale since M0, first caught by this milestone's first CI run) |
 
 Every structural guard named in Architecture Plan §19.1 now exists and is
@@ -90,13 +92,14 @@ and closed.
 
 CI (GitHub Actions, `magpern/mp-commerce-fulfillment`): the D1–D19 commit
 sequence had never been pushed to `origin` before D20 (M0's `v0.0.1`
-release was the last thing CI ran against `main`), so D20 is this
+release was the last thing CI ran against `main`), so D20 was this
 milestone's first real CI signal. First push (`da15c00`) failed on
 `make-pot:check` only — every other job (`phpcs`, `release-audit`,
 `build`, `unit` ×3 PHP versions, `integration` ×5 legs including floor and
 current-stable) was green on the first try. Fixed in the same D20 pass
-(`1afc01d`); this report is updated once that push's CI result is
-confirmed.
+(`1afc01d`), confirmed green (`c668082`), and green again on D21's push
+(`f6e5ce6`) — the Performance suite is excluded from CI by design (see
+§3's table), so CI's own `integration` legs stay unaffected by it.
 
 ## 4. Deviations from the plan (see §III.7 for full narrative)
 
@@ -117,10 +120,6 @@ the two additive indexes above, or a public contract.
 
 ## 5. Outstanding before this milestone can tag
 
-- **D21:** seed ≥10,000 fulfillments with a realistic state/assignment/age
-  distribution; capture `EXPLAIN`/timing evidence (p50/p95, cold/warm) for
-  every required Queue/Dashboard query shape; confirm no unindexed scan and
-  no N+1; amend the migration if the proof demands it.
 - **D22:** full acceptance-criteria pass (§III.5, all ten), `release-audit.sh`
   green, both CI legs (floor + current-stable) confirmed green on the
   fixed push, release-candidate artifacts built and verified (version

@@ -44,6 +44,19 @@ itself moved (0 → 3).
 `HposProofTest` mirrors the sibling plugins' pattern: it skips when HPOS is
 off, so a green run with zero skips is itself the proof HPOS was active.
 
+## Performance (`tests/integration/Performance/`, `phpunit-performance.xml.dist`)
+
+A fourth, deliberately separate tier: `QueuePerformanceProofTest` seeds
+10,000 fulfillments and proves every real Queue/Dashboard query shape
+stays indexed at that scale (Architecture Plan §III.2.2/acceptance
+criterion 3). Not part of `composer test:integration` or CI — excluded
+explicitly in `phpunit-integration.xml.dist` — because seeding 10k rows on
+every run would slow the whole suite down for no ongoing benefit once
+this proof has run once per schema change. Run explicitly (see that test
+file's own docblock for the command); findings are recorded in
+`docs/QUEUE_PERFORMANCE_VALIDATION.md` and must be rerun and updated
+whenever the schema, an index, or one of these query shapes changes.
+
 ## Structural guards (mutation-verified)
 
 Regex-over-`src/` and, where needed, live introspection. Each guard is
