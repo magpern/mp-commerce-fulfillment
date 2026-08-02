@@ -4,7 +4,7 @@ Tags: woocommerce, fulfillment, warehouse, shipping, picking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,8 +29,19 @@ Performance Order Storage (HPOS).
 
 == Changelog ==
 
+= 0.1.1 =
+* Fix: an admin-initiated transition (Fulfillment Queue or Fulfillment
+  Detail) now reaches the WooCommerce status bridge. Previously the
+  composition root wired the admin screens' workflow service to a separate,
+  unsubscribed event dispatcher, so only order-driven transitions (via
+  cancellation/refund observation) advanced a WooCommerce order to
+  "completed" — an operator manually shipping the last package for an
+  order did not. No data migration; no settings change.
+* Housekeeping: corrected a stale vendored-source label left over from
+  release-candidate testing (`assets/mpds/SOURCE_TAG`), no functional
+  effect.
+
 = 0.1.0 =
-(Milestone 1 — pending release, not yet tagged.)
 * Fulfillment core: paying a WooCommerce order (classic or Blocks checkout)
   creates a fulfillment automatically and idempotently; `wp mpcf intake
   backfill` ingests existing orders the same way.

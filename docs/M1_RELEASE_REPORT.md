@@ -19,6 +19,23 @@ vendor time, stale in wording only, no behavioral effect. Not corrected
 here since the `v0.1.0` tag is already published; a candidate fix for a
 future patch release, not a reason to reopen this one.
 
+**Addendum — `v0.1.1` (2026-08-02).** Milestone 2 planning reconciliation
+(`docs/ARCHITECTURE_PLAN.md` §IV.3) found one real defect in what M1
+actually shipped: `Plugin::wire_admin()` built its own `WorkflowService`
+against a fresh, subscriber-less `EventDispatcher`, so a transition
+submitted from the Fulfillment Queue or Fulfillment Detail screen never
+reached `Woo\StatusBridge` — only `RefundObserver`-driven transitions did.
+None of the ten acceptance criteria below caught it because criterion 6's
+evidence (`Woo\StatusBridge`/`RefundObserver` integration tests) exercises
+a hand-wired service graph built for the test, not `Plugin`'s actual
+composition root — a genuine test-design blind spot, not a flaky assertion.
+`v0.1.1` fixes this (one shared `EventDispatcher`/`WorkflowService` between
+`wire_services()` and `wire_admin()`) together with the cosmetic
+`SOURCE_TAG` finding above, tagged and released 2026-08-02. Evidence:
+`AdminStatusBridgeWiringTest`, which boots the real composition root and is
+mutation-verified against the reintroduced defect. See
+`docs/ARCHITECTURE_PLAN.md` §IV.2/§III.7 for the full record.
+
 This report remains the historical evidence record for the milestone,
 below, unchanged from the acceptance pass that earned the PO's approval.
 

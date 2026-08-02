@@ -2,7 +2,7 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Commerce Fulfillment 0.1.0\n"
+"Project-Id-Version: Commerce Fulfillment 0.1.1\n"
 "Report-Msgid-Bugs-To: https://github.com/magpern/mp-commerce-fulfillment/issues\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -378,6 +378,6 @@ msgstr ""
 msgid "Warehouse Lead"
 msgstr ""
 
-#: src/Plugin.php:228
+#: src/Plugin.php:271
 msgid "Fulfillment"
 msgstr ""
