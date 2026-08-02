@@ -15,18 +15,22 @@ actual state before work starts.
    clean. `mp-admin-design-system` extracted to its own repo and released
    as `v0.1.0`. The plugin activates, installs its migration framework,
    declares HPOS compatibility, and does nothing else.
-1. **M1 — Fulfillment core (Warehouse MVP)** — **implemented, awaiting PO
-   acceptance review** (PO approval to implement 2026-08-01; execution plan
-   is Part III of `ARCHITECTURE_PLAN.md`, actual outcomes recorded in
-   §III.7). D1–D21 of the commit sequence are done: intake, workflow engine
-   + standard workflow, Queue/Fulfillment Detail/Dashboard screens, audit
+1. **M1 — Fulfillment core (Warehouse MVP)** — **released as `v0.1.0`**
+   (PO accepted the milestone and its release-candidate verification
+   2026-08-02; tag pushed, Release workflow green, installable zip
+   published). Execution plan is Part III of `ARCHITECTURE_PLAN.md`,
+   actual outcomes recorded in §III.7, full evidence in
+   `docs/M1_RELEASE_REPORT.md` (archived). Intake, workflow engine +
+   standard workflow, Queue/Fulfillment Detail/Dashboard screens, audit
    hash chain, roles/capabilities + Operator Mode, status bridge, uninstall
-   policy, documentation reconciliation, and the 10k-row Queue performance
-   proof (no full scan, no N+1, no migration amendment needed — see
-   `docs/QUEUE_PERFORMANCE_VALIDATION.md`). D22 (full acceptance pass +
-   release candidate) is the remaining step before this milestone is ready
-   to tag — no `v0.1.0` tag or GitHub release exists yet.
-2. **M2 — Packing Workspace & REST** — not started.
+   policy, and the 10k-row Queue performance proof (no full scan, no N+1,
+   no migration amendment needed — see `docs/QUEUE_PERFORMANCE_VALIDATION.md`).
+   `mp-admin-design-system` gained the six Milestone 1 components and was
+   released as `v0.2.0`. Milestone formally closed 2026-08-02.
+2. **M2 — Packing Workspace & REST** — not started. Planning may begin
+   per PO authorization (I14: one approved milestone at a time — a fresh
+   execution plan and explicit PO approval are still required before
+   implementation starts).
 3. **M3 — Documents I** — not started.
 4. **M4 — Tracking & notifications** — not started.
 5. **M5 — Package photography** — not started.

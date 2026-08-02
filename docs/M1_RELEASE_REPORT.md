@@ -1,10 +1,26 @@
 # Milestone 1 Release Report — Fulfillment Core (Warehouse MVP)
 
-**Status: D1–D22 complete. Full acceptance pass green on both repos;
-release candidates built, verified, and checksummed. This milestone is
-ready to tag on explicit PO approval — no tag or GitHub release has been
-created.** This report describes what actually shipped and what evidence
-backs each acceptance criterion, not what was planned.
+**ARCHIVED — Milestone 1 is formally closed.** The Product Owner accepted
+the milestone and its release-candidate verification on 2026-08-02 and
+authorized tagging and release. Both repos are now tagged and published:
+
+- `mp-admin-design-system` — [`v0.2.0`](https://github.com/magpern/mp-admin-design-system/releases/tag/v0.2.0), commit `c19871670fbfb5906a0299641741058144d74cba`
+- `mp-commerce-fulfillment` — [`v0.1.0`](https://github.com/magpern/mp-commerce-fulfillment/releases/tag/v0.1.0), commit `bed7df1697386f32b05153eeb1ddde56e0c99486`
+
+The published `mp-commerce-fulfillment-0.1.0.zip` release asset was
+independently re-downloaded and re-verified after publication (contents,
+version parity, no dev files, no runtime dependency on
+`mp-admin-design-system` — same checks as the release-candidate pass
+below, repeated against the actual tagged build). One cosmetic,
+non-functional finding: `assets/mpds/SOURCE_TAG` inside the shipped zip
+still reads "pending PO tag approval" for the MPDS source commit, since
+that file was vendored during D1 before either tag existed — accurate at
+vendor time, stale in wording only, no behavioral effect. Not corrected
+here since the `v0.1.0` tag is already published; a candidate fix for a
+future patch release, not a reason to reopen this one.
+
+This report remains the historical evidence record for the milestone,
+below, unchanged from the acceptance pass that earned the PO's approval.
 
 Execution plan: `docs/ARCHITECTURE_PLAN.md` Part III. Actual outcomes
 against that plan: §III.7. This report is the falsifiable evidence record
@@ -154,7 +170,7 @@ on `origin/main`, CI green (`phpcs`, `manifest`, `test`×3 PHP versions —
 library distributed by git tag and vendored via `bin/sync-mpds.sh`, not
 an installable package; its commit hash is its content-addressed
 identity. `MANIFEST` already current (`bin/make-manifest.sh` produces no
-diff). Ready for the `v0.2.0` tag on explicit PO approval.
+diff). **Tagged and released as `v0.2.0` on 2026-08-02.**
 
 **`mp-commerce-fulfillment` v0.1.0-rc:** commit `cc4a4e0` on `origin/main`
 — version header/constant/readme Stable tag bumped to `0.1.0` together,
@@ -178,5 +194,15 @@ POT regenerated. Built by CI run `30761537682`'s `build` job (a clean
   all six required docs present, zip builds, contains the three required
   files, contains no dev-only files — "Release audit passed."
 
-Ready for the `v0.1.0` tag on explicit PO approval. No tag has been
-created; no GitHub release has been published in either repo.
+**Tagged and released as `v0.1.0` on 2026-08-02** (tag → `bed7df1`,
+Release workflow green,
+[GitHub Release](https://github.com/magpern/mp-commerce-fulfillment/releases/tag/v0.1.0)
+published with `mp-commerce-fulfillment-0.1.0.zip` attached). The
+published asset's SHA-256 differs from the one recorded above — expected,
+not a defect: a zip's per-entry timestamps and composer's own
+`pretty_version`/`version` provenance stamp (`dev-main` when built from a
+branch push vs. `v0.1.0`/`0.1.0.0` when built from the tag itself, as the
+Release workflow does) both legitimately change the outer archive's hash
+between builds even when every real source file is byte-identical —
+verified file-by-file at re-download. See the archive note at the top of
+this document.
