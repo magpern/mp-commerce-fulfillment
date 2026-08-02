@@ -16,6 +16,7 @@ use MPCF\Admin\OperatorMode;
 use MPCF\Admin\QueuePage;
 use MPCF\Api\Rest\AssignmentController;
 use MPCF\Api\Rest\CarriersController;
+use MPCF\Api\Rest\DocumentsController;
 use MPCF\Api\Rest\FulfillmentsController;
 use MPCF\Api\Rest\ItemsController;
 use MPCF\Api\Rest\NotesController;
@@ -24,6 +25,7 @@ use MPCF\Api\Rest\RestApi;
 use MPCF\Api\Rest\ShipmentsController;
 use MPCF\Application\AssignmentService;
 use MPCF\Application\DashboardService;
+use MPCF\Application\DocumentService;
 use MPCF\Application\EventDispatcher;
 use MPCF\Application\FulfillmentDetailService;
 use MPCF\Application\IntakeService;
@@ -35,12 +37,15 @@ use MPCF\Application\ShippingService;
 use MPCF\Application\TransitionContextFactory;
 use MPCF\Application\WorkflowService;
 use MPCF\Cli\BackfillCommand;
+use MPCF\Documents\HtmlRenderer;
+use MPCF\Documents\TemplateRegistry;
 use MPCF\Domain\Workflow\StandardWorkflow;
 use MPCF\Domain\Workflow\WorkflowDefinition;
 use MPCF\Engine\GuardRegistry;
 use MPCF\Engine\WorkflowEngine;
 use MPCF\Infrastructure\Carriers\BundledCarrierRegistry;
 use MPCF\Infrastructure\Database\Migrator;
+use MPCF\Infrastructure\Database\WpdbDocumentRepository;
 use MPCF\Infrastructure\Database\WpdbEventRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentItemRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
@@ -268,6 +273,19 @@ final class Plugin {
 		$notes_repository = new WpdbNoteRepository();
 		$detail_service   = new FulfillmentDetailService( $fulfillments, $items, $events, $notes_repository );
 
+		$document_service = new DocumentService(
+			$fulfillments,
+			$items,
+			$orders,
+			$shipping_service,
+			new HtmlRenderer( new TemplateRegistry() ),
+			new WpdbDocumentRepository(),
+			$events,
+			$dispatcher,
+			$clock,
+			get_bloginfo( 'name' )
+		);
+
 		( new RestApi(
 			array(
 				new FulfillmentsController(
@@ -285,6 +303,7 @@ final class Plugin {
 				new ShipmentsController( $shipping_service, $workflow_service, $detail_service ),
 				new PackagesController( $shipping_service, $workflow_service, $detail_service ),
 				new CarriersController( new BundledCarrierRegistry() ),
+				new DocumentsController( $document_service, $workflow_service, $detail_service ),
 			)
 		) )->register();
 	}

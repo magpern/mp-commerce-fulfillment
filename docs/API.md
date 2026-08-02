@@ -108,6 +108,7 @@ route surfaced it.
 | POST | `/shipments/{id}/packages` | `mpcf_manage_shipments` |
 | PATCH | `/packages/{id}` | `mpcf_manage_shipments` |
 | DELETE | `/packages/{id}` | `mpcf_manage_shipments` |
+| POST | `/fulfillments/{id}/documents/render` | `mpcf_render_documents` |
 | GET | `/carriers` | `mpcf_view_queue` |
 
 ### `GET /fulfillments`
@@ -291,6 +292,27 @@ client converts to/from the store's display units itself.
 
 `200`: `{ "package": null, "fulfillment": {...}, "transitions": [...] }`.
 
+### `POST /fulfillments/{id}/documents/render`
+
+No body. Assembles, renders, and records a packing slip for the
+fulfillment. `201`:
+
+```json
+{
+  "html": "<!DOCTYPE html>...",
+  "document_id": 7,
+  "fulfillment": { "id": 42, "version": 5, "...": "..." },
+  "transitions": [ "..." ]
+}
+```
+
+There is no stored file to link to — every Milestone 2 render is
+render-to-print (`file_path` is always `null`, §10) — so `html` is the
+rendered document itself, not a URL. Load it into a same-origin hidden
+`<iframe>` (`iframe.srcdoc = html`) and call `iframe.contentWindow.print()`
+(§IV.8); the stylesheet is already inlined into `html`, so no second
+request is needed to render correctly.
+
 ### `GET /carriers`
 
 ```json
@@ -304,9 +326,6 @@ phone-required flags, an `mpcf_carriers` filter) is Milestone 4's job.
 
 ## What is not exposed, and why
 
-- **`POST /fulfillments/{id}/documents/render`** (the packing slip) ships
-  later in this same milestone (Phase E) and will be documented here once
-  implemented — this reference reflects the surface built through Phase D.
 - **No pick list or batch picking routes** (Milestone 3+/7).
 - **No `mpcf_workflows`/`mpcf_carriers` filter routes** — the workflow
   definition and the real carrier registry shape are still evolving;

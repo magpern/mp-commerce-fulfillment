@@ -27,6 +27,7 @@ require_once __DIR__ . '/Application/Doubles/RecordingSubscriber.php';
 require_once __DIR__ . '/Application/Doubles/InMemoryShipmentRepository.php';
 require_once __DIR__ . '/Application/Doubles/InMemoryPackageRepository.php';
 require_once __DIR__ . '/Application/Doubles/InMemoryPackageItemRepository.php';
+require_once __DIR__ . '/Application/Doubles/InMemoryDocumentRepository.php';
 
 if ( ! defined( 'MPCF_VERSION' ) ) {
 	define( 'MPCF_VERSION', '0.0.0-test' );
@@ -149,6 +150,12 @@ if ( ! function_exists( 'load_plugin_textdomain' ) ) {
 	function load_plugin_textdomain( ...$args ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 		unset( $args );
 		return true;
+	}
+}
+
+if ( ! function_exists( 'get_bloginfo' ) ) {
+	function get_bloginfo( $show = '' ) { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound, Generic.CodeAnalysis.UnusedFunctionParameter.Found
+		return 'Test Site';
 	}
 }
 
