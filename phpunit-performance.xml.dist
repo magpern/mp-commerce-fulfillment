@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Milestone 1 acceptance criterion 3 / Architecture Plan section III.2.2:
+	the 10,000 row Queue/Dashboard performance proof. Deliberately separate
+	from phpunit integration.xml.dist and never run by CI or
+	composer test:integration: seeding 10,000 fulfillments on every run
+	would slow the whole suite down for no benefit once this proof has run
+	once per schema change.
+
+	Run command and rationale: see the docblock atop
+	tests/integration/Performance/QueuePerformanceProofTest.php.
+	Recorded findings: docs/QUEUE_PERFORMANCE_VALIDATION.md.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
+	bootstrap="tests/integration/bootstrap.php"
+	colors="true"
+	>
+	<testsuites>
+		<testsuite name="performance">
+			<directory suffix="Test.php">tests/integration/Performance</directory>
+		</testsuite>
+	</testsuites>
+</phpunit>

@@ -7,6 +7,11 @@
 	<testsuites>
 		<testsuite name="integration">
 			<directory suffix="Test.php">tests/integration</directory>
+			<!-- The 10k-row Queue performance proof (D21) has its own
+			     phpunit-performance.xml.dist and must never run as part of
+			     the default integration suite or CI - see that file's
+			     header comment for why. -->
+			<exclude>tests/integration/Performance</exclude>
 		</testsuite>
 	</testsuites>
 </phpunit>
