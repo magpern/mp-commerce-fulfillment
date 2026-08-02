@@ -1,0 +1,67 @@
+<?php
+/**
+ * Integration tests for the WooCommerce-backed order source, against a
+ * real order (HPOS on).
+ *
+ * @package MPCommerceFulfillment
+ */
+
+declare( strict_types=1 );
+
+namespace MPCF\Tests\Integration\Woo;
+
+use MPCF\Woo\WooOrderSource;
+use WP_UnitTestCase;
+
+/**
+ * Integration tests for the WooCommerce-backed order source, against a
+ * real order (HPOS on).
+ */
+final class WooOrderSourceTest extends WP_UnitTestCase {
+
+	use OrderFactoryTrait;
+
+	public function test_find_returns_a_snapshot_matching_the_real_order(): void {
+		$order = $this->create_paid_order( 3 );
+
+		$snapshot = ( new WooOrderSource() )->find( $order->get_id() );
+
+		self::assertNotNull( $snapshot );
+		self::assertSame( $order->get_id(), $snapshot->order_id() );
+		self::assertSame( 'woocommerce', $snapshot->order_source() );
+		self::assertSame( $order->get_order_number(), $snapshot->order_number() );
+		self::assertSame( 'Jane Doe', $snapshot->customer_name() );
+		self::assertSame( 'processing', $snapshot->status() );
+	}
+
+	public function test_find_returns_the_orders_line_items(): void {
+		$order = $this->create_paid_order( 3 );
+
+		$snapshot = ( new WooOrderSource() )->find( $order->get_id() );
+
+		self::assertCount( 1, $snapshot->items() );
+
+		$line = $snapshot->items()[0];
+		self::assertSame( 3, $line->quantity() );
+		self::assertSame( 'Test Widget', $line->name() );
+		self::assertNotSame( 0, $line->product_id() );
+		self::assertSame( 0, $line->variation_id(), 'A simple product has no variation.' );
+	}
+
+	public function test_find_returns_null_for_an_order_id_that_does_not_exist(): void {
+		self::assertNull( ( new WooOrderSource() )->find( 999999999 ) );
+	}
+
+	public function test_find_reads_correctly_regardless_of_which_hpos_storage_backend_is_active(): void {
+		// The integration bootstrap forces HPOS on; this assertion exists
+		// so a future run with HPOS off (the compatibility-matrix floor
+		// leg) exercises the exact same assertions against the exact same
+		// code path — there is no HPOS-specific branch in WooOrderSource
+		// for this test to accidentally skip.
+		$order    = $this->create_paid_order();
+		$snapshot = ( new WooOrderSource() )->find( $order->get_id() );
+
+		self::assertNotNull( $snapshot );
+		self::assertCount( 1, $snapshot->items() );
+	}
+}

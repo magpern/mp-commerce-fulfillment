@@ -36,6 +36,11 @@ if ( ! getenv( 'WP_PHPUNIT__TESTS_CONFIG' ) ) {
 
 require_once $mpcf_tests_dir . '/includes/functions.php';
 
+// Test helper traits never match *Test.php, so PHPUnit's directory-based
+// discovery never loads them; required explicitly (same house convention
+// as tests/unit/bootstrap.php's Doubles/ requires).
+require_once __DIR__ . '/Woo/OrderFactoryTrait.php';
+
 tests_add_filter(
 	'muplugins_loaded',
 	function () {
