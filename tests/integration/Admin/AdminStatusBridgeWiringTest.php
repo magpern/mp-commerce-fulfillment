@@ -69,6 +69,14 @@ final class AdminStatusBridgeWiringTest extends WP_UnitTestCase {
 	 * ( $detail_page ) {...}, 20 )` — via `ReflectionFunction`'s bound
 	 * `use()` variables. This is reading back what the real composition
 	 * root actually built, not re-wiring an equivalent by hand.
+	 *
+	 * Priority 20 on `admin_menu` is not exclusively this plugin's — a real
+	 * WooCommerce install may hook something of its own at the same
+	 * priority (observed on the floor WC coordinate), so every registered
+	 * callback at every priority is inspected rather than assuming the
+	 * first one found is ours; non-`Closure` callbacks (arrays, strings)
+	 * are skipped outright, since only a `Closure` can be reflected this
+	 * way in the first place.
 	 */
 	private function boot_real_detail_page(): \MPCF\Admin\FulfillmentDetailPage {
 		set_current_screen( 'dashboard' );
@@ -83,16 +91,23 @@ final class AdminStatusBridgeWiringTest extends WP_UnitTestCase {
 		$hook = $GLOBALS['wp_filter']['admin_menu'] ?? null;
 		self::assertNotNull( $hook, 'Plugin::wire_admin() must register an admin_menu callback.' );
 
-		$callbacks = $hook->callbacks[20] ?? array();
-		self::assertNotEmpty( $callbacks, 'The Fulfillment Detail submenu registration must be hooked at priority 20.' );
+		foreach ( $hook->callbacks as $priority_callbacks ) {
+			foreach ( $priority_callbacks as $registration ) {
+				$callback = $registration['function'];
 
-		$closure = reset( $callbacks )['function'];
-		$bound   = ( new ReflectionFunction( $closure ) )->getStaticVariables();
+				if ( ! $callback instanceof \Closure ) {
+					continue;
+				}
 
-		self::assertArrayHasKey( 'detail_page', $bound, 'The admin_menu closure must close over the real FulfillmentDetailPage instance.' );
-		self::assertInstanceOf( \MPCF\Admin\FulfillmentDetailPage::class, $bound['detail_page'] );
+				$bound = ( new ReflectionFunction( $callback ) )->getStaticVariables();
 
-		return $bound['detail_page'];
+				if ( isset( $bound['detail_page'] ) && $bound['detail_page'] instanceof \MPCF\Admin\FulfillmentDetailPage ) {
+					return $bound['detail_page'];
+				}
+			}
+		}
+
+		self::fail( 'No admin_menu callback closing over a FulfillmentDetailPage instance was found — did Plugin::wire_admin() change how it registers this submenu?' );
 	}
 
 	public function test_an_admin_initiated_shipped_transition_reaches_the_status_bridge(): void {
