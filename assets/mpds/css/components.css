@@ -765,8 +765,11 @@
 	.mpcf-ui-toggle-row,
 	.mpcf-ui-pill-nav__link,
 	.mpcf-ui-sticky-save,
-	.mpcf-ui-data-table__row {
+	.mpcf-ui-data-table__row,
+	.mpcf-ui-toast-region [data-mpcf-toast],
+	.mpcf-ui-checklist__row {
 		transition: none;
+		animation: none;
 	}
 
 	.mpcf-ui-skeleton__line {
@@ -1419,4 +1422,549 @@
 		flex-direction: column;
 		align-items: flex-start;
 	}
+}
+
+/*
+ * Toast — transient async-action feedback (§8.4). Deliberately built on
+ * `[data-mpcf-toast]`/`[data-mpcf-toast-variant]` ATTRIBUTE selectors, not
+ * additional variant classes: `js/toast.js` clones a `<template>` a
+ * consumer's own `ComponentRenderer::toast_region()` call already rendered
+ * (carrying every `mpcf-ui-*` class it needs from PHP), then only ever sets
+ * `data-mpcf-*` attributes and text content on the clone — never a class
+ * string — so the behavior module can fabricate new DOM nodes without
+ * violating the house rule that JS never references an `mpcf-ui-*` class
+ * (see js/toast.js's own docblock).
+ */
+.mpcf-ui-toast-region {
+	position: fixed;
+	right: 24px;
+	bottom: 24px;
+	z-index: 179900;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: min(380px, calc(100vw - 32px));
+	pointer-events: none;
+}
+
+.mpcf-ui-toast-region [data-mpcf-toast] {
+	pointer-events: auto;
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 14px 16px;
+	border-radius: var(--mpcf-ds-ui-card-radius);
+	background: var(--mpcf-ds-ui-neutral-900);
+	color: #fff;
+	box-shadow: var(--mpcf-ds-ui-shadow-lg);
+	font-size: 0.875rem;
+	line-height: 1.5;
+	transition: opacity var(--mpcf-ds-ui-transition), transform var(--mpcf-ds-ui-transition);
+}
+
+.mpcf-ui-toast-region [data-mpcf-toast][data-mpcf-toast-variant="success"] {
+	background: var(--mpcf-ds-success);
+}
+
+.mpcf-ui-toast-region [data-mpcf-toast][data-mpcf-toast-variant="warning"] {
+	background: var(--mpcf-ds-ui-badge-warning);
+	color: var(--mpcf-ds-ui-neutral-900);
+}
+
+.mpcf-ui-toast-region [data-mpcf-toast][data-mpcf-toast-variant="error"] {
+	background: var(--mpcf-ds-ui-badge-error);
+}
+
+.mpcf-ui-toast__message {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.mpcf-ui-toast__action {
+	flex-shrink: 0;
+	color: inherit;
+	font-weight: 650;
+	text-decoration: underline;
+}
+
+.mpcf-ui-toast__action[hidden] {
+	display: none;
+}
+
+.mpcf-ui-toast__dismiss {
+	flex-shrink: 0;
+	display: inline-grid;
+	place-items: center;
+	width: 28px;
+	height: 28px;
+	margin: -4px -4px 0 0;
+	border: none;
+	border-radius: 8px;
+	background: transparent;
+	color: inherit;
+	opacity: 0.8;
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.mpcf-ui-toast__dismiss:hover,
+.mpcf-ui-toast__dismiss:focus {
+	opacity: 1;
+	background: rgba(255, 255, 255, 0.16);
+	outline: none;
+}
+
+@media (max-width: 480px) {
+	.mpcf-ui-toast-region {
+		right: 12px;
+		bottom: 12px;
+		left: 12px;
+		width: auto;
+	}
+}
+
+/* Stepper — segmented workflow-position indicator */
+.mpcf-ui-stepper {
+	display: flex;
+	align-items: flex-start;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.mpcf-ui-stepper__step {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	flex: 1 1 auto;
+	gap: 6px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--mpcf-ds-muted);
+	text-align: center;
+}
+
+.mpcf-ui-stepper__step::before {
+	content: "";
+	position: absolute;
+	top: 9px;
+	left: -50%;
+	width: 100%;
+	height: 2px;
+	background: var(--mpcf-ds-ui-neutral-200);
+	z-index: 0;
+}
+
+.mpcf-ui-stepper__step:first-child::before {
+	content: none;
+}
+
+.mpcf-ui-stepper__marker {
+	position: relative;
+	z-index: 1;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: #fff;
+	border: 2px solid var(--mpcf-ds-ui-neutral-300);
+}
+
+.mpcf-ui-stepper__step--complete .mpcf-ui-stepper__marker {
+	background: var(--mpcf-ds-accent);
+	border-color: var(--mpcf-ds-accent);
+}
+
+.mpcf-ui-stepper__step--complete::before {
+	background: var(--mpcf-ds-accent);
+}
+
+.mpcf-ui-stepper__step--current .mpcf-ui-stepper__marker {
+	border-color: var(--mpcf-ds-accent);
+	box-shadow: 0 0 0 3px var(--mpcf-ds-accent-a20);
+}
+
+.mpcf-ui-stepper__step--current .mpcf-ui-stepper__label,
+.mpcf-ui-stepper__step--complete .mpcf-ui-stepper__label {
+	color: var(--mpcf-ds-ui-neutral-900);
+}
+
+.mpcf-ui-stepper__label {
+	max-width: 12ch;
+}
+
+@media (max-width: 480px) {
+	.mpcf-ui-stepper__label {
+		display: none;
+	}
+}
+
+/*
+ * Workspace layout — three-region responsive grid primitive (§9.4/§8.4:
+ * "the layout grammar every future operational screen inherits"). Named
+ * regions ("context", "work", "outcome") rather than numbered columns, so
+ * the same markup collapses meaningfully at every breakpoint instead of
+ * just narrowing. This is its own breakpoint scale (1280/1024/768),
+ * deliberately not the 1024/782/480/390 scale the rest of this file uses —
+ * a three-column operational canvas needs real estate before it collapses,
+ * unlike a settings card or data table.
+ */
+.mpcf-ui-workspace-layout {
+	display: grid;
+	gap: 20px;
+	grid-template-columns: 22% 48% 30%;
+	grid-template-areas: "context work outcome";
+	align-items: start;
+}
+
+.mpcf-ui-workspace-layout__region--context {
+	grid-area: context;
+}
+
+.mpcf-ui-workspace-layout__region--work {
+	grid-area: work;
+}
+
+.mpcf-ui-workspace-layout__region--outcome {
+	grid-area: outcome;
+}
+
+@media (max-width: 1279px) {
+	.mpcf-ui-workspace-layout {
+		grid-template-columns: 1fr 30%;
+		grid-template-areas:
+			"context context"
+			"work outcome";
+	}
+}
+
+@media (max-width: 1023px) {
+	.mpcf-ui-workspace-layout {
+		grid-template-columns: 1fr;
+		grid-template-areas:
+			"context"
+			"work"
+			"outcome";
+	}
+}
+
+/*
+ * Action bar — sticky bottom operational bar (§9.4/§8.4). The operational
+ * sibling of the sticky-save bar above: fixed to the viewport bottom (not
+ * a page-end footer), one identity/status region and one actions region
+ * with exactly one primary button per the design's own rule (a consumer
+ * enforces "exactly one primary" — this component does not).
+ */
+.mpcf-ui-action-bar {
+	position: sticky;
+	bottom: 0;
+	z-index: 90;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+	padding: 14px 20px;
+	border-top: 1px solid var(--mpcf-ds-ui-card-divider);
+	background: rgba(255, 255, 255, 0.97);
+	backdrop-filter: blur(8px);
+	box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.06);
+}
+
+.mpcf-ui-action-bar__identity {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: 44px;
+	font-size: 0.875rem;
+	color: var(--mpcf-ds-ui-neutral-700);
+}
+
+.mpcf-ui-action-bar__actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.mpcf-ui-action-bar__primary {
+	min-height: 56px;
+	min-width: 200px;
+	font-size: 0.9375rem;
+	font-weight: 650;
+}
+
+@media (max-width: 782px) {
+	.mpcf-ui-action-bar {
+		padding: 10px 12px;
+	}
+
+	.mpcf-ui-action-bar__primary {
+		min-width: 0;
+		flex: 1 1 auto;
+	}
+}
+
+/*
+ * Checklist — large-target row list (§9.4: "the whole row is the
+ * increment target"). Generic structure only; a row-wide click target and
+ * quantity semantics are consumer-owned behavior (a fulfillment plugin's
+ * own script), not this design system's — this component supplies the
+ * accessible, ≥64px-tall scaffolding such behavior attaches to.
+ */
+.mpcf-ui-checklist {
+	display: grid;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.mpcf-ui-checklist__row {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	min-height: 64px;
+	padding: 10px 16px;
+	border: 1px solid var(--mpcf-ds-ui-card-divider);
+	border-radius: var(--mpcf-ds-ui-card-radius);
+	background: #fff;
+	transition: background-color var(--mpcf-ds-ui-transition), opacity var(--mpcf-ds-ui-transition);
+}
+
+.mpcf-ui-checklist__row--complete {
+	background: var(--mpcf-ds-ui-neutral-50);
+	opacity: 0.75;
+}
+
+.mpcf-ui-checklist__media {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+}
+
+.mpcf-ui-checklist__media img {
+	display: block;
+	width: 48px;
+	height: 48px;
+	border-radius: 8px;
+	object-fit: cover;
+}
+
+.mpcf-ui-checklist__text {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.mpcf-ui-checklist__primary {
+	font-size: 0.9375rem;
+	font-weight: 600;
+	color: var(--mpcf-ds-ui-neutral-900);
+}
+
+.mpcf-ui-checklist__row--complete .mpcf-ui-checklist__primary {
+	text-decoration: line-through;
+	color: var(--mpcf-ds-muted);
+}
+
+.mpcf-ui-checklist__secondary {
+	font-size: 0.8125rem;
+	color: var(--mpcf-ds-muted);
+}
+
+.mpcf-ui-checklist__control {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+}
+
+/*
+ * Quantity stepper — large-target +/- quantity control (§9.4). Purely
+ * structural: incrementing/decrementing and clamping against an
+ * ordered/max quantity are consumer-owned behavior (the actual clamp bound
+ * is domain-specific, e.g. a fulfillment line's ordered quantity), so the
+ * +/- buttons carry only stable data-mpcf-quantity-*/increment/decrement
+ * hooks for a consumer's own script — this design system does not wire
+ * them itself.
+ */
+.mpcf-ui-quantity-stepper {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.mpcf-ui-quantity-stepper__decrement,
+.mpcf-ui-quantity-stepper__increment {
+	display: inline-grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border: 1px solid var(--mpcf-ds-ui-neutral-300);
+	border-radius: 10px;
+	background: #fff;
+	color: var(--mpcf-ds-ui-neutral-900);
+	font-size: 20px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.mpcf-ui-quantity-stepper__decrement:hover,
+.mpcf-ui-quantity-stepper__increment:hover {
+	background: var(--mpcf-ds-ui-neutral-100);
+}
+
+.mpcf-ui-quantity-stepper__decrement:focus,
+.mpcf-ui-quantity-stepper__increment:focus {
+	outline: 2px solid var(--mpcf-ds-accent);
+	outline-offset: 2px;
+}
+
+.mpcf-ui-quantity-stepper__value {
+	width: 64px;
+	height: 44px;
+	border: 1px solid var(--mpcf-ds-ui-neutral-300);
+	border-radius: 10px;
+	text-align: center;
+	font-size: 1rem;
+	font-weight: 650;
+}
+
+/* Unit input — a text/number field with a fixed unit-suffix affordance */
+.mpcf-ui-unit-input {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+}
+
+.mpcf-ui-unit-input__control {
+	height: 44px;
+	padding-right: 40px;
+	border: 1px solid var(--mpcf-ds-ui-neutral-300);
+	border-radius: 10px;
+}
+
+.mpcf-ui-unit-input__suffix {
+	position: absolute;
+	right: 12px;
+	color: var(--mpcf-ds-muted);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	pointer-events: none;
+}
+
+/*
+ * Repeater — add/remove item-group scaffold (e.g. multi-package shipping
+ * specs, §9.4's "add package" action). Structural only: cloning a template
+ * row when "add" is clicked, and removing a row on "remove", are
+ * consumer-owned behavior (index renumbering and any allocation logic are
+ * domain-specific) — this component supplies the stable
+ * data-mpcf-repeater-add/-remove hooks and the item chrome.
+ */
+.mpcf-ui-repeater {
+	display: grid;
+	gap: 12px;
+}
+
+.mpcf-ui-repeater__item {
+	position: relative;
+	padding: 16px 44px 16px 16px;
+	border: 1px solid var(--mpcf-ds-ui-card-divider);
+	border-radius: var(--mpcf-ds-ui-card-radius);
+	background: #fff;
+}
+
+.mpcf-ui-repeater__remove {
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	display: inline-grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	border: none;
+	border-radius: 8px;
+	background: var(--mpcf-ds-ui-neutral-100);
+	color: var(--mpcf-ds-ui-neutral-700);
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.mpcf-ui-repeater__remove:hover,
+.mpcf-ui-repeater__remove:focus {
+	background: var(--mpcf-ds-ui-badge-error);
+	color: #fff;
+	outline: none;
+}
+
+.mpcf-ui-repeater__add {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	padding: 0 16px;
+	border: 1.5px dashed var(--mpcf-ds-ui-neutral-300);
+	border-radius: var(--mpcf-ds-ui-card-radius);
+	background: transparent;
+	color: var(--mpcf-ds-accent);
+	font-size: 0.875rem;
+	font-weight: 650;
+	cursor: pointer;
+}
+
+.mpcf-ui-repeater__add:hover,
+.mpcf-ui-repeater__add:focus {
+	border-color: var(--mpcf-ds-accent);
+	background: var(--mpcf-ds-accent-soft);
+	outline: none;
+}
+
+/*
+ * Scan input — focus-retaining barcode/keyboard-wedge capture field
+ * (§9.4/M6). Deliberately unobtrusive: it is meant to sit in the page's
+ * flow without drawing attention (an operator glances at the ready/paused
+ * indicator, never clicks the field itself). Decoding what a scan means is
+ * never this design system's job — see js/scan-sink.js.
+ */
+.mpcf-ui-scan-input {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.75rem;
+	color: var(--mpcf-ds-muted);
+}
+
+.mpcf-ui-scan-input__field {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.mpcf-ui-scan-input__status {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-weight: 600;
+}
+
+.mpcf-ui-scan-input__status::before {
+	content: "";
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--mpcf-ds-success);
+}
+
+.mpcf-ui-scan-input__status[data-mpcf-scan-status-state="paused"]::before {
+	background: var(--mpcf-ds-ui-badge-warning);
 }

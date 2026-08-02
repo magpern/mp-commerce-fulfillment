@@ -44,6 +44,13 @@ final class ComponentRenderer {
 	);
 
 	/**
+	 * Valid `stepper()` step states.
+	 *
+	 * @var list<string>
+	 */
+	private const STEPPER_STATES = array( 'complete', 'current', 'upcoming' );
+
+	/**
 	 * Renders a sub-page introduction block.
 	 *
 	 * @param string $title       Visible title.
@@ -917,6 +924,340 @@ final class ComponentRenderer {
 	 */
 	public function field_group_close(): string {
 		return '</div>';
+	}
+
+	/**
+	 * Renders the toast (transient async-action feedback) subsystem's
+	 * static scaffolding — a live region plus a hidden `<template>` — once
+	 * per page. `js/toast.js` clones the template and fills it in per call;
+	 * this method takes no dynamic content because a toast's message is
+	 * only known at the moment a consumer's own script triggers one (see
+	 * that file's docblock for the dispatch contract). Every `mpcf-ui-*`
+	 * class the eventual toast needs already lives in this static markup,
+	 * which is what lets the behavior module fabricate toast elements
+	 * without ever referencing an `mpcf-ui-*` class string itself.
+	 */
+	public function toast_region(): string {
+		return '<div class="mpcf-ui-toast-region" data-mpcf-toast-region aria-live="polite" aria-atomic="true">'
+			. '<template data-mpcf-toast-template>'
+			. '<div class="mpcf-ui-toast" data-mpcf-toast role="status">'
+			. '<span class="mpcf-ui-toast__message" data-mpcf-toast-message></span>'
+			. '<a class="mpcf-ui-toast__action" data-mpcf-toast-action hidden></a>'
+			. '<button type="button" class="mpcf-ui-toast__dismiss" data-mpcf-toast-dismiss aria-label="Dismiss">&times;</button>'
+			. '</div>'
+			. '</template>'
+			. '</div>';
+	}
+
+	/**
+	 * Renders a segmented workflow-position stepper (e.g. the Packing
+	 * Workspace's position indicator, §9.4) — purely presentational; the
+	 * caller derives each step's state from its own workflow definition,
+	 * this method never encodes workflow knowledge itself.
+	 *
+	 * @param array<int,array<string,string>> $steps Ordered steps: `label`
+	 *                                               and `state`
+	 *                                               (`complete`|`current`|`upcoming`,
+	 *                                               falls back to `upcoming`
+	 *                                               for anything else).
+	 */
+	public function stepper( array $steps ): string {
+		$items = '';
+
+		foreach ( $steps as $step ) {
+			$label = (string) ( $step['label'] ?? '' );
+			$state = (string) ( $step['state'] ?? 'upcoming' );
+
+			if ( ! in_array( $state, self::STEPPER_STATES, true ) ) {
+				$state = 'upcoming';
+			}
+
+			$items .= sprintf(
+				'<li class="mpcf-ui-stepper__step mpcf-ui-stepper__step--%1$s"%2$s><span class="mpcf-ui-stepper__marker" aria-hidden="true"></span><span class="mpcf-ui-stepper__label">%3$s</span></li>',
+				esc_attr( $state ),
+				'current' === $state ? ' aria-current="step"' : '',
+				esc_html( $label )
+			);
+		}
+
+		return sprintf( '<ol class="mpcf-ui-stepper">%s</ol>', $items );
+	}
+
+	/**
+	 * Valid `workspace_layout_region_open()` region names.
+	 *
+	 * @var list<string>
+	 */
+	private const WORKSPACE_LAYOUT_REGIONS = array( 'context', 'work', 'outcome' );
+
+	/**
+	 * Opens a three-region operational workspace layout (§9.4: context,
+	 * work, outcome), responsive to two/one column at narrower widths.
+	 *
+	 * @param array<string, string> $attrs Extra attributes for the wrapper.
+	 */
+	public function workspace_layout_open( array $attrs = array() ): string {
+		return sprintf( '<div class="mpcf-ui-workspace-layout"%s>', $this->attr_html( $attrs ) );
+	}
+
+	/**
+	 * Opens a named workspace-layout region.
+	 *
+	 * @param string $region One of `context`, `work`, `outcome` (falls back to `work`).
+	 */
+	public function workspace_layout_region_open( string $region ): string {
+		if ( ! in_array( $region, self::WORKSPACE_LAYOUT_REGIONS, true ) ) {
+			$region = 'work';
+		}
+
+		return sprintf(
+			'<div class="mpcf-ui-workspace-layout__region mpcf-ui-workspace-layout__region--%s">',
+			esc_attr( $region )
+		);
+	}
+
+	/**
+	 * Closes a workspace-layout region.
+	 */
+	public function workspace_layout_region_close(): string {
+		return '</div>';
+	}
+
+	/**
+	 * Closes a workspace layout.
+	 */
+	public function workspace_layout_close(): string {
+		return '</div>';
+	}
+
+	/**
+	 * Opens a sticky bottom action bar (§9.4).
+	 *
+	 * @param array<string, string> $attrs Extra attributes for the wrapper.
+	 */
+	public function action_bar_open( array $attrs = array() ): string {
+		return sprintf( '<div class="mpcf-ui-action-bar"%s>', $this->attr_html( $attrs ) );
+	}
+
+	/**
+	 * Renders the action bar's identity/status region.
+	 *
+	 * @param string $html Pre-built, pre-escaped identity markup (e.g. an
+	 *                     order number and a state badge).
+	 */
+	public function action_bar_identity( string $html ): string {
+		return sprintf(
+			'<div class="mpcf-ui-action-bar__identity">%s</div>',
+			$html // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Caller-built/escaped identity markup; this method composes the wrapper only.
+		);
+	}
+
+	/**
+	 * Opens the action bar's actions region.
+	 */
+	public function action_bar_actions_open(): string {
+		return '<div class="mpcf-ui-action-bar__actions">';
+	}
+
+	/**
+	 * Closes the action bar's actions region.
+	 */
+	public function action_bar_actions_close(): string {
+		return '</div>';
+	}
+
+	/**
+	 * Renders the action bar's one primary button. `data-mpcf-primary-action`
+	 * is what `js/action-bar.js` binds Ctrl/Cmd+Enter to — a caller is
+	 * responsible for ensuring at most one such button exists at a time
+	 * (this method does not enforce that itself).
+	 *
+	 * @param string                $label    Button label.
+	 * @param array<string, string> $attrs    Extra attributes (e.g. `disabled`, `form`).
+	 */
+	public function action_bar_primary( string $label, array $attrs = array() ): string {
+		$disabled = array_key_exists( 'disabled', $attrs );
+		unset( $attrs['disabled'] );
+
+		return sprintf(
+			'<button type="submit" class="button button-primary mpcf-ui-action-bar__primary" data-mpcf-primary-action%1$s%2$s>%3$s</button>',
+			$disabled ? ' disabled' : '',
+			$this->attr_html( $attrs ),
+			esc_html( $label )
+		);
+	}
+
+	/**
+	 * Closes an action bar.
+	 */
+	public function action_bar_close(): string {
+		return '</div>';
+	}
+
+	/**
+	 * Opens a checklist (large-target row list, §9.4).
+	 *
+	 * @param array<string, string> $attrs Extra attributes for the wrapper.
+	 */
+	public function checklist_open( array $attrs = array() ): string {
+		return sprintf( '<ul class="mpcf-ui-checklist"%s>', $this->attr_html( $attrs ) );
+	}
+
+	/**
+	 * Renders one checklist row. Row-wide click targets and quantity
+	 * semantics are consumer-owned behavior; this method supplies only the
+	 * accessible, minimum-64px-tall structure they attach to.
+	 *
+	 * @param string                $media_html     Pre-built media markup (e.g. a thumbnail); may be empty.
+	 * @param string                $primary_html   Pre-built primary text markup (escaped by the caller).
+	 * @param string                $secondary_html Pre-built secondary text markup (escaped by the caller); may be empty.
+	 * @param string                $control_html   Pre-built control markup (e.g. a quantity stepper).
+	 * @param bool                  $complete       Whether to render this row in its complete state.
+	 * @param array<string, string> $attrs          Extra attributes on the `<li>` (e.g. `data-mpcf-row-id`).
+	 */
+	public function checklist_row(
+		string $media_html,
+		string $primary_html,
+		string $secondary_html,
+		string $control_html,
+		bool $complete = false,
+		array $attrs = array()
+	): string {
+		$classes = array( 'mpcf-ui-checklist__row' );
+
+		if ( $complete ) {
+			$classes[] = 'mpcf-ui-checklist__row--complete';
+		}
+
+		$secondary = '' !== $secondary_html
+			? sprintf( '<span class="mpcf-ui-checklist__secondary">%s</span>', $secondary_html ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Caller-escaped.
+			: '';
+
+		return sprintf(
+			'<li class="%1$s"%2$s><div class="mpcf-ui-checklist__media">%3$s</div><div class="mpcf-ui-checklist__text"><span class="mpcf-ui-checklist__primary">%4$s</span>%5$s</div><div class="mpcf-ui-checklist__control">%6$s</div></li>',
+			esc_attr( implode( ' ', $classes ) ),
+			$this->attr_html( $attrs ),
+			$media_html, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Caller-built/escaped media markup.
+			$primary_html, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Caller-escaped.
+			$secondary,
+			$control_html // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Caller-built/escaped control markup.
+		);
+	}
+
+	/**
+	 * Closes a checklist.
+	 */
+	public function checklist_close(): string {
+		return '</ul>';
+	}
+
+	/**
+	 * Renders a large-target quantity +/- stepper (§9.4). Purely
+	 * structural: the `data-mpcf-quantity-decrement`/`-increment` buttons
+	 * carry stable hooks only — actually changing the value and clamping it
+	 * (against an ordered quantity, a stock count, or any other
+	 * domain-specific bound) is a consumer's own script's job, never this
+	 * design system's.
+	 *
+	 * @param string                $name  Input name.
+	 * @param int                   $value Current value.
+	 * @param int                   $min   Minimum value (native `min` attribute).
+	 * @param int                   $max   Maximum value (native `max` attribute).
+	 * @param array<string, string> $attrs Extra attributes for the `<input>`.
+	 */
+	public function quantity_stepper( string $name, int $value, int $min, int $max, array $attrs = array() ): string {
+		return sprintf(
+			'<div class="mpcf-ui-quantity-stepper" role="group"><button type="button" class="mpcf-ui-quantity-stepper__decrement" data-mpcf-quantity-decrement aria-label="Decrease">&minus;</button><input type="number" class="mpcf-ui-quantity-stepper__value" name="%1$s" value="%2$d" min="%3$d" max="%4$d" aria-valuenow="%2$d" aria-valuemin="%3$d" aria-valuemax="%4$d"%5$s /><button type="button" class="mpcf-ui-quantity-stepper__increment" data-mpcf-quantity-increment aria-label="Increase">+</button></div>',
+			esc_attr( $name ),
+			$value,
+			$min,
+			$max,
+			$this->attr_html( $attrs )
+		);
+	}
+
+	/**
+	 * Renders a text input with a fixed unit-suffix affordance (e.g. "g",
+	 * "mm") — display-only; unit conversion is a consumer concern.
+	 *
+	 * @param string                $name       Input name.
+	 * @param string                $value      Current value.
+	 * @param string                $unit_label Unit suffix label.
+	 * @param array<string, string> $attrs      Extra attributes for the `<input>`.
+	 */
+	public function unit_input( string $name, string $value, string $unit_label, array $attrs = array() ): string {
+		return sprintf(
+			'<div class="mpcf-ui-unit-input"><input type="text" class="mpcf-ui-unit-input__control" name="%1$s" value="%2$s"%3$s /><span class="mpcf-ui-unit-input__suffix" aria-hidden="true">%4$s</span></div>',
+			esc_attr( $name ),
+			esc_attr( $value ),
+			$this->attr_html( $attrs ),
+			esc_html( $unit_label )
+		);
+	}
+
+	/**
+	 * Opens an add/remove item-group repeater (§9.4).
+	 *
+	 * @param array<string, string> $attrs Extra attributes for the wrapper.
+	 */
+	public function repeater_open( array $attrs = array() ): string {
+		return sprintf( '<div class="mpcf-ui-repeater"%s>', $this->attr_html( $attrs ) );
+	}
+
+	/**
+	 * Renders one repeater item. Removing it on click of
+	 * `data-mpcf-repeater-remove` is a consumer's own script's job; this
+	 * method only renders the button as a stable hook.
+	 *
+	 * @param string                $html  Pre-built, pre-escaped item body markup.
+	 * @param array<string, string> $attrs Extra attributes on the item wrapper.
+	 */
+	public function repeater_item( string $html, array $attrs = array() ): string {
+		return sprintf(
+			'<div class="mpcf-ui-repeater__item"%1$s>%2$s<button type="button" class="mpcf-ui-repeater__remove" data-mpcf-repeater-remove aria-label="Remove">&times;</button></div>',
+			$this->attr_html( $attrs ),
+			$html // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Caller-built/escaped item body markup.
+		);
+	}
+
+	/**
+	 * Renders the repeater's "add" button. Cloning a new item on click of
+	 * `data-mpcf-repeater-add` is a consumer's own script's job.
+	 *
+	 * @param string $label Button label (e.g. "Add package").
+	 */
+	public function repeater_add_button( string $label ): string {
+		return sprintf(
+			'<button type="button" class="mpcf-ui-repeater__add" data-mpcf-repeater-add>%s</button>',
+			esc_html( $label )
+		);
+	}
+
+	/**
+	 * Closes a repeater.
+	 */
+	public function repeater_close(): string {
+		return '</div>';
+	}
+
+	/**
+	 * Renders a focus-retaining scan-sink field plus its ready/paused
+	 * status indicator (§9.4/M6). The field is visually hidden (an
+	 * operator never clicks it directly) but focusable; `js/scan-sink.js`
+	 * keeps it focused and buffers/dispatches what is typed into it —
+	 * decoding what a scan means is never this design system's job.
+	 *
+	 * @param string                $name  Input name.
+	 * @param array<string, string> $attrs Extra attributes for the `<input>`.
+	 */
+	public function scan_input( string $name, array $attrs = array() ): string {
+		$attrs = array_merge( array( 'autocomplete' => 'off' ), $attrs );
+
+		return sprintf(
+			'<div class="mpcf-ui-scan-input"><input type="text" class="mpcf-ui-scan-input__field" name="%1$s" data-mpcf-scan-sink%2$s /><span class="mpcf-ui-scan-input__status" data-mpcf-scan-status data-mpcf-scan-status-state="ready">Ready</span></div>',
+			esc_attr( $name ),
+			$this->attr_html( $attrs )
+		);
 	}
 
 	/**
