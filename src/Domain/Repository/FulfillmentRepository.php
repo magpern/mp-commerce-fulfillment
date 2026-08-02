@@ -86,4 +86,20 @@ interface FulfillmentRepository {
 	 * @param Fulfillment $fulfillment Fulfillment to persist.
 	 */
 	public function save( Fulfillment $fulfillment ): bool;
+
+	/**
+	 * Advances a fulfillment's optimistic-lock `version` by one, without
+	 * touching any other column — how a non-workflow write (an item batch,
+	 * a shipment/package mutation) advances the aggregate's concurrency
+	 * token, since only `WorkflowService` may write `state` itself (I4).
+	 * "One token covers the whole aggregate" (Architecture Plan §IV.5.7):
+	 * every mutation anywhere under a fulfillment shares this single
+	 * version, so a 409 on one kind of write is visible to every other.
+	 * Conditioned on `$expected_version` exactly like {@see save()};
+	 * returns false on a lock conflict.
+	 *
+	 * @param int $id               Fulfillment id.
+	 * @param int $expected_version The version the caller last read.
+	 */
+	public function touch( int $id, int $expected_version ): bool;
 }

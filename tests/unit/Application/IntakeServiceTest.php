@@ -184,6 +184,10 @@ final class IntakeServiceTest extends TestCase {
 			public function save( \MPCF\Domain\Fulfillment $fulfillment ): bool {
 				return $this->real->save( $fulfillment );
 			}
+
+			public function touch( int $id, int $expected_version ): bool {
+				return $this->real->touch( $id, $expected_version );
+			}
 		};
 
 		$service = new IntakeService(

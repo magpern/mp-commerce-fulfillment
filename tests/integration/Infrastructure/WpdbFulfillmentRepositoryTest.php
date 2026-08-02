@@ -129,4 +129,38 @@ final class WpdbFulfillmentRepositoryTest extends WP_UnitTestCase {
 		$reloaded = $this->repository->find( $id );
 		self::assertSame( 'picking', $reloaded->state(), "The first writer's change must be the one that stuck." );
 	}
+
+	public function test_touch_advances_version_without_changing_any_other_column(): void {
+		$id = $this->repository->insert( $this->new_fulfillment() );
+
+		self::assertTrue( $this->repository->touch( $id, 1 ) );
+
+		$reloaded = $this->repository->find( $id );
+		self::assertSame( 2, $reloaded->version() );
+		self::assertSame( 'queued', $reloaded->state(), 'touch() must never write state — only WorkflowService may (I4).' );
+	}
+
+	public function test_touch_fails_on_a_stale_expected_version(): void {
+		$id = $this->repository->insert( $this->new_fulfillment() );
+
+		self::assertTrue( $this->repository->touch( $id, 1 ) );
+		self::assertFalse( $this->repository->touch( $id, 1 ), 'A second touch() against the now-stale version 1 must be rejected.' );
+
+		self::assertSame( 2, $this->repository->find( $id )->version() );
+	}
+
+	public function test_touch_and_save_share_the_same_optimistic_lock(): void {
+		$id = $this->repository->insert( $this->new_fulfillment() );
+
+		self::assertTrue( $this->repository->touch( $id, 1 ), 'A shipment/package write advances the shared token.' );
+
+		$stale = $this->repository->find( $id );
+		$stale->apply_transition( 'picking', null, new DateTimeImmutable() );
+
+		// $stale was loaded AFTER the touch() above, at version 2, so this
+		// save must succeed — proving touch() and save() are conditioned on
+		// the exact same column, not two independent counters.
+		self::assertTrue( $this->repository->save( $stale ) );
+		self::assertSame( 3, $this->repository->find( $id )->version() );
+	}
 }

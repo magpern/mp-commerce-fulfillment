@@ -161,6 +161,35 @@ final class WpdbFulfillmentRepository implements FulfillmentRepository {
 	}
 
 	/**
+	 * Advances `version` by one, conditioned on `$expected_version` —
+	 * the same optimistic-lock shape as {@see save()}, but touching no
+	 * other column, for a non-workflow write (item batch, shipment/package
+	 * mutation) that needs to advance the fulfillment's concurrency token
+	 * without rewriting state columns it has no business rewriting.
+	 *
+	 * @param int $id               Fulfillment id.
+	 * @param int $expected_version The version the caller last read.
+	 */
+	public function touch( int $id, int $expected_version ): bool {
+		global $wpdb;
+
+		$table = Schema::table( Schema::FULFILLMENTS );
+
+		$updated = $wpdb->update(
+			$table,
+			array( 'version' => $expected_version + 1 ),
+			array(
+				'id'      => $id,
+				'version' => $expected_version,
+			),
+			array( '%d' ),
+			array( '%d', '%d' )
+		);
+
+		return (bool) $updated;
+	}
+
+	/**
 	 * A server-side paginated, filtered listing — the only method here that
 	 * builds a dynamic `WHERE` clause, always against indexed columns
 	 * ({@see where_clause()}).

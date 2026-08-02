@@ -122,6 +122,20 @@ final class InMemoryFulfillmentRepository implements FulfillmentRepository {
 		);
 	}
 
+	public function touch( int $id, int $expected_version ): bool {
+		$current = $this->rows[ $id ] ?? null;
+
+		if ( null === $current || $current->version() !== $expected_version ) {
+			return false;
+		}
+
+		$this->rows[ $id ] = Fulfillment::from_array(
+			array_merge( $current->to_array(), array( 'version' => $expected_version + 1 ) )
+		);
+
+		return true;
+	}
+
 	public function count_in_states( array $states ): int {
 		if ( array() === $states ) {
 			return 0;

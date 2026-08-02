@@ -194,6 +194,10 @@ final class FulfillmentDetailPageTest extends WP_UnitTestCase {
 			public function save( Fulfillment $fulfillment ): bool {
 				return false;
 			}
+
+			public function touch( int $id, int $expected_version ): bool {
+				return $this->real->touch( $id, $expected_version );
+			}
 		};
 
 		$error = $this->build_page( $conflicted )->submit_transition( $id, 'picking', null );

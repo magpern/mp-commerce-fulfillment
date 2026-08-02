@@ -279,6 +279,10 @@ final class WorkflowServiceTest extends TestCase {
 			public function save( Fulfillment $fulfillment ): bool {
 				return false;
 			}
+
+			public function touch( int $id, int $expected_version ): bool {
+				return false;
+			}
 		};
 
 		$id = $fulfillments->insert( Fulfillment::intake( 1001, 'woocommerce', 1, StandardWorkflow::NAME, 'queued', '#1001', 'Jane Doe', 1, new DateTimeImmutable() ) );
