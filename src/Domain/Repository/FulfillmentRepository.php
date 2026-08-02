@@ -34,11 +34,14 @@ interface FulfillmentRepository {
 	public function find_by_order_id( int $order_id ): ?Fulfillment;
 
 	/**
-	 * Inserts a brand-new fulfillment and returns its assigned id.
+	 * Inserts a brand-new fulfillment and returns its assigned id, or null if
+	 * the insert was rejected by the `(order_id, order_source)` uniqueness
+	 * constraint — the race {@see \MPCF\Application\IntakeService} falls back
+	 * to {@see find_by_order_id()} for, rather than treating as a failure.
 	 *
 	 * @param Fulfillment $fulfillment A fulfillment built by {@see Fulfillment::intake()}.
 	 */
-	public function insert( Fulfillment $fulfillment ): int;
+	public function insert( Fulfillment $fulfillment ): ?int;
 
 	/**
 	 * Persists a mutation to an existing fulfillment with an optimistic

@@ -54,17 +54,21 @@ final class WpdbFulfillmentRepository implements FulfillmentRepository {
 	}
 
 	/**
-	 * Inserts a brand-new fulfillment and returns its assigned id.
+	 * Inserts a brand-new fulfillment and returns its assigned id, or null if
+	 * the `(order_id, order_source)` uniqueness constraint rejected it (see
+	 * {@see Schema::fulfillments_order_unique_index_ddl()}) — a concurrent
+	 * intake attempt for the same order having just won the race, not a
+	 * genuine failure.
 	 *
 	 * @param Fulfillment $fulfillment A fulfillment built by {@see Fulfillment::intake()}.
 	 */
-	public function insert( Fulfillment $fulfillment ): int {
+	public function insert( Fulfillment $fulfillment ): ?int {
 		global $wpdb;
 
 		$table        = Schema::table( Schema::FULFILLMENTS );
 		$completed_at = $fulfillment->completed_at();
 
-		$wpdb->insert(
+		$result = $wpdb->insert(
 			$table,
 			array(
 				'order_id'               => $fulfillment->order_id(),
@@ -88,6 +92,10 @@ final class WpdbFulfillmentRepository implements FulfillmentRepository {
 			),
 			array( '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%d', '%d', '%s', '%s', '%d', '%s', '%s', '%s' )
 		);
+
+		if ( false === $result ) {
+			return null;
+		}
 
 		return (int) $wpdb->insert_id;
 	}

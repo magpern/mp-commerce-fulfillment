@@ -77,13 +77,15 @@ final class CompositionRootTest extends TestCase {
 	}
 
 	/**
-	 * Milestone 0's only wired service is the migration framework itself
-	 * (`Migrator`, constructed inline in `init()`'s drift-check closure and
-	 * in `activate()` — never stored as a property, so the class still owns
-	 * no service-holding state). Any other instantiation is a placeholder
-	 * service added ahead of the milestone that needs it, which this test
-	 * exists to catch. Extending this allowlist must be a conscious edit,
-	 * not an accumulation of "just in case" construction.
+	 * Milestone 0's only wired service was the migration framework itself
+	 * (`Migrator`). Milestone 1 adds intake's real service graph in
+	 * `Plugin::wire_intake()` — every collaborator `IntakeService` and
+	 * `IntakeHooks` need, constructed inline and never stored as a
+	 * property, so the class still owns no service-holding state. Any
+	 * instantiation beyond this list is a placeholder service added ahead
+	 * of the milestone that needs it, which this test exists to catch.
+	 * Extending this allowlist must be a conscious edit, not an
+	 * accumulation of "just in case" construction.
 	 */
 	public function test_no_unapproved_service_is_constructed_in_the_main_class_file(): void {
 		$source = (string) file_get_contents( __DIR__ . '/../../src/Plugin.php' );
@@ -91,7 +93,17 @@ final class CompositionRootTest extends TestCase {
 		// `new self()` is the singleton pattern itself, not a wired service.
 		preg_match_all( '/\bnew\s+(?!self\s*\()([A-Za-z_\\\\]+)/', $source, $matches );
 
-		$allowed    = array( 'Migrator' );
+		$allowed    = array(
+			'Migrator',
+			'WpdbFulfillmentRepository',
+			'WpdbFulfillmentItemRepository',
+			'WpdbEventRepository',
+			'IntakeService',
+			'WooOrderSource',
+			'EventDispatcher',
+			'SystemClock',
+			'IntakeHooks',
+		);
 		$disallowed = array_values( array_diff( $matches[1], $allowed ) );
 
 		self::assertSame(

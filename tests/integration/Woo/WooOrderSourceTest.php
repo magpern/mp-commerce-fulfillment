@@ -10,16 +10,32 @@ declare( strict_types=1 );
 
 namespace MPCF\Tests\Integration\Woo;
 
+use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
 use MPCF\Woo\WooOrderSource;
 use WP_UnitTestCase;
 
 /**
  * Integration tests for the WooCommerce-backed order source, against a
  * real order (HPOS on).
+ *
+ * Since Milestone 1's `Woo\IntakeHooks` registers real
+ * `woocommerce_payment_complete`/`woocommerce_order_status_processing`
+ * listeners from the moment `Plugin::init()` runs (once, for the whole
+ * integration process), every `create_paid_order()` call in this class now
+ * also triggers a real (and, for this class's purposes, incidental) intake
+ * — exactly as it would in production. {@see CleanFulfillmentTablesTrait}
+ * ensures the fulfillment schema exists before that happens, so intake
+ * succeeds silently instead of erroring against a missing table.
  */
 final class WooOrderSourceTest extends WP_UnitTestCase {
 
 	use OrderFactoryTrait;
+	use CleanFulfillmentTablesTrait;
+
+	protected function setUp(): void {
+		parent::setUp();
+		$this->clean_fulfillment_tables();
+	}
 
 	public function test_find_returns_a_snapshot_matching_the_real_order(): void {
 		$order = $this->create_paid_order( 3 );

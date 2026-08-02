@@ -21,6 +21,7 @@ require_once __DIR__ . '/Doubles/WPRoleDouble.php';
 require_once __DIR__ . '/Application/Doubles/InMemoryFulfillmentRepository.php';
 require_once __DIR__ . '/Application/Doubles/InMemoryFulfillmentItemRepository.php';
 require_once __DIR__ . '/Application/Doubles/InMemoryEventRepository.php';
+require_once __DIR__ . '/Application/Doubles/InMemoryOrderSource.php';
 require_once __DIR__ . '/Application/Doubles/FixedClock.php';
 require_once __DIR__ . '/Application/Doubles/RecordingSubscriber.php';
 

@@ -47,7 +47,17 @@ final class InMemoryFulfillmentRepository implements FulfillmentRepository {
 		return null;
 	}
 
-	public function insert( Fulfillment $fulfillment ): int {
+	public function insert( Fulfillment $fulfillment ): ?int {
+		foreach ( $this->rows as $row ) {
+			// Mirrors the real repository's (order_id, order_source) unique
+			// index (Schema::fulfillments_order_unique_index_ddl()) so
+			// IntakeService's race-fallback path is unit-testable without a
+			// database.
+			if ( $row->order_id() === $fulfillment->order_id() && $row->order_source() === $fulfillment->order_source() ) {
+				return null;
+			}
+		}
+
 		$id = $this->next_id++;
 
 		$this->rows[ $id ] = Fulfillment::from_array( array( 'id' => $id ) + $fulfillment->to_array() );
