@@ -443,6 +443,59 @@ final class FulfillmentDetailPage implements Page {
 	}
 
 	/**
+	 * Attempts one transition. Public and decoupled from `$_POST`/redirect
+	 * handling so it is directly testable — `wp_safe_redirect()` + `exit`
+	 * in a real request would otherwise make this logic untestable from
+	 * PHPUnit, the same reasoning behind `Cli\BackfillCommand::run_backfill()`
+	 * and `QueuePage::handle_bulk_action()`.
+	 *
+	 * @param int         $fulfillment_id Fulfillment being transitioned.
+	 * @param string      $target         Target state.
+	 * @param string|null $reason         Reason text, if the edge requires one.
+	 * @return string|null Null on success, a human-readable error otherwise.
+	 */
+	public function apply_transition( int $fulfillment_id, string $target, ?string $reason ): ?string {
+		$view = $this->detail->get( $fulfillment_id );
+
+		if ( null === $view ) {
+			return __( 'Fulfillment not found.', 'mp-commerce-fulfillment' );
+		}
+
+		$transition = $this->definition->transition( $view->fulfillment()->state(), $target );
+		$capability = null !== $transition ? $transition->required_capability() : Capabilities::PROCESS_FULFILLMENTS;
+
+		if ( ! current_user_can( $capability ) ) {
+			return __( 'You are not allowed to make this change.', 'mp-commerce-fulfillment' );
+		}
+
+		$outcome = $this->workflow->transition( $fulfillment_id, $target, self::current_actor(), $reason, true, true );
+
+		return $outcome->is_success() ? null : (string) $outcome->failure_message();
+	}
+
+	/**
+	 * Adds one note. Public for the same testability reason as
+	 * {@see apply_transition()}.
+	 *
+	 * @param int    $fulfillment_id Fulfillment the note belongs to.
+	 * @param string $body           Note text.
+	 * @return string|null Null on success, a human-readable error otherwise.
+	 */
+	public function apply_note( int $fulfillment_id, string $body ): ?string {
+		if ( ! current_user_can( Capabilities::ADD_NOTES ) ) {
+			return __( 'You are not allowed to add notes.', 'mp-commerce-fulfillment' );
+		}
+
+		if ( '' === $body ) {
+			return __( 'A note cannot be empty.', 'mp-commerce-fulfillment' );
+		}
+
+		$this->notes->add( $fulfillment_id, get_current_user_id(), $body );
+
+		return null;
+	}
+
+	/**
 	 * Processes a submitted transition form.
 	 *
 	 * @param int $fulfillment_id Fulfillment being transitioned.
@@ -455,25 +508,12 @@ final class FulfillmentDetailPage implements Page {
 		check_admin_referer( self::TRANSITION_NONCE_ACTION );
 
 		$target = sanitize_key( wp_unslash( $_POST['mpcf_transition_target'] ) );
-		$view   = $this->detail->get( $fulfillment_id );
-
-		if ( null === $view ) {
-			return;
-		}
-
-		$transition = $this->definition->transition( $view->fulfillment()->state(), $target );
-		$capability = null !== $transition ? $transition->required_capability() : Capabilities::PROCESS_FULFILLMENTS;
-
-		if ( ! current_user_can( $capability ) ) {
-			wp_die( esc_html__( 'You are not allowed to make this change.', 'mp-commerce-fulfillment' ), 403 );
-		}
-
 		$reason = isset( $_POST['reason'] ) ? sanitize_textarea_field( wp_unslash( $_POST['reason'] ) ) : null;
 
-		$outcome = $this->workflow->transition( $fulfillment_id, $target, self::current_actor(), $reason, true, true );
+		$error = $this->apply_transition( $fulfillment_id, $target, $reason );
 
-		if ( ! $outcome->is_success() ) {
-			set_transient( self::notice_transient_key(), (string) $outcome->failure_message(), MINUTE_IN_SECONDS );
+		if ( null !== $error ) {
+			set_transient( self::notice_transient_key(), $error, MINUTE_IN_SECONDS );
 		}
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '&fulfillment_id=' . $fulfillment_id ) );
@@ -492,14 +532,11 @@ final class FulfillmentDetailPage implements Page {
 
 		check_admin_referer( self::NOTE_NONCE_ACTION );
 
-		if ( ! current_user_can( Capabilities::ADD_NOTES ) ) {
-			wp_die( esc_html__( 'You are not allowed to add notes.', 'mp-commerce-fulfillment' ), 403 );
-		}
+		$body  = sanitize_textarea_field( wp_unslash( $_POST['body'] ) );
+		$error = $this->apply_note( $fulfillment_id, $body );
 
-		$body = sanitize_textarea_field( wp_unslash( $_POST['body'] ) );
-
-		if ( '' !== $body ) {
-			$this->notes->add( $fulfillment_id, get_current_user_id(), $body );
+		if ( null !== $error ) {
+			set_transient( self::notice_transient_key(), $error, MINUTE_IN_SECONDS );
 		}
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '&fulfillment_id=' . $fulfillment_id ) );
