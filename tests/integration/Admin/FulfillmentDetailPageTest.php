@@ -35,7 +35,7 @@ use MPCF\Vendor\Mpds\PageShell\SectionNavigation;
 use WP_UnitTestCase;
 
 /**
- * `apply_transition()`/`apply_note()` are exercised directly (no `$_POST`/
+ * `submit_transition()`/`apply_note()` are exercised directly (no `$_POST`/
  * redirect simulation needed — see their own docblocks) against a real
  * database and real capability checks.
  */
@@ -106,7 +106,7 @@ final class FulfillmentDetailPageTest extends WP_UnitTestCase {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_OPERATOR ) ) );
 
 		$id    = $this->seed( 1001 );
-		$error = $this->build_page()->apply_transition( $id, 'picking', null );
+		$error = $this->build_page()->submit_transition( $id, 'picking', null );
 
 		self::assertNull( $error );
 		self::assertSame( 'picking', $this->fulfillments->find( $id )->state() );
@@ -117,11 +117,11 @@ final class FulfillmentDetailPageTest extends WP_UnitTestCase {
 
 		$id   = $this->seed( 2001 );
 		$page = $this->build_page();
-		$page->apply_transition( $id, 'picking', null );
+		$page->submit_transition( $id, 'picking', null );
 
 		// The seeded item is never marked picked, so picking -> picked must
 		// be rejected by AllItemsPickedGuard specifically.
-		$error = $page->apply_transition( $id, 'picked', null );
+		$error = $page->submit_transition( $id, 'picked', null );
 
 		self::assertNotNull( $error );
 		self::assertStringContainsString( 'picked', strtolower( $error ) );
@@ -132,7 +132,7 @@ final class FulfillmentDetailPageTest extends WP_UnitTestCase {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_OPERATOR ) ) );
 
 		$id    = $this->seed( 3001 );
-		$error = $this->build_page()->apply_transition( $id, 'cancelled', 'no longer needed' );
+		$error = $this->build_page()->submit_transition( $id, 'cancelled', 'no longer needed' );
 
 		self::assertNotNull( $error );
 		self::assertSame( 'queued', $this->fulfillments->find( $id )->state() );
@@ -142,7 +142,7 @@ final class FulfillmentDetailPageTest extends WP_UnitTestCase {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
 
 		$id    = $this->seed( 3002 );
-		$error = $this->build_page()->apply_transition( $id, 'cancelled', 'no longer needed' );
+		$error = $this->build_page()->submit_transition( $id, 'cancelled', 'no longer needed' );
 
 		self::assertNull( $error );
 		self::assertSame( 'cancelled', $this->fulfillments->find( $id )->state() );
@@ -155,7 +155,7 @@ final class FulfillmentDetailPageTest extends WP_UnitTestCase {
 
 		// A repository whose save() always reports a lost optimistic-lock
 		// race, regardless of what actually happened — proves
-		// apply_transition() surfaces exactly that failure, the same
+		// submit_transition() surfaces exactly that failure, the same
 		// message the admin-notice rendering path displays verbatim.
 		$conflicted = new class( $this->fulfillments ) implements FulfillmentRepository {
 			/**
@@ -196,7 +196,7 @@ final class FulfillmentDetailPageTest extends WP_UnitTestCase {
 			}
 		};
 
-		$error = $this->build_page( $conflicted )->apply_transition( $id, 'picking', null );
+		$error = $this->build_page( $conflicted )->submit_transition( $id, 'picking', null );
 
 		self::assertNotNull( $error );
 		self::assertStringContainsString( 'else', strtolower( $error ), 'The version-conflict message must be the same one WorkflowService reports.' );

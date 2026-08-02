@@ -454,7 +454,7 @@ final class FulfillmentDetailPage implements Page {
 	 * @param string|null $reason         Reason text, if the edge requires one.
 	 * @return string|null Null on success, a human-readable error otherwise.
 	 */
-	public function apply_transition( int $fulfillment_id, string $target, ?string $reason ): ?string {
+	public function submit_transition( int $fulfillment_id, string $target, ?string $reason ): ?string {
 		$view = $this->detail->get( $fulfillment_id );
 
 		if ( null === $view ) {
@@ -475,7 +475,7 @@ final class FulfillmentDetailPage implements Page {
 
 	/**
 	 * Adds one note. Public for the same testability reason as
-	 * {@see apply_transition()}.
+	 * {@see submit_transition()}.
 	 *
 	 * @param int    $fulfillment_id Fulfillment the note belongs to.
 	 * @param string $body           Note text.
@@ -510,7 +510,7 @@ final class FulfillmentDetailPage implements Page {
 		$target = sanitize_key( wp_unslash( $_POST['mpcf_transition_target'] ) );
 		$reason = isset( $_POST['reason'] ) ? sanitize_textarea_field( wp_unslash( $_POST['reason'] ) ) : null;
 
-		$error = $this->apply_transition( $fulfillment_id, $target, $reason );
+		$error = $this->submit_transition( $fulfillment_id, $target, $reason );
 
 		if ( null !== $error ) {
 			set_transient( self::notice_transient_key(), $error, MINUTE_IN_SECONDS );
