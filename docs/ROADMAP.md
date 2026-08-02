@@ -36,13 +36,16 @@ actual state before work starts.
    a minimal packing slip pulled forward from M3, and MPDS `v0.3.0`
    (toast, stepper, workspace-layout, action-bar, checklist,
    quantity-stepper, unit-input, repeater, scan-input).
-2a. **`v0.1.1` — M1 defect patch (prerequisite for M2)** — in progress.
-    Fixes a real M1 defect found during M2 reconciliation: the admin-side
-    composition root wires a subscriber-less `EventDispatcher`, so
-    admin-initiated transitions (Queue, Fulfillment Detail) never reach
-    `Woo\StatusBridge` — only `RefundObserver`-driven transitions do. Also
-    corrects the stale `assets/mpds/SOURCE_TAG` stamp. See
-    `docs/ARCHITECTURE_PLAN.md` §IV.2.
+2a. **`v0.1.1` — M1 defect patch (prerequisite for M2)** — **released**
+    2026-08-02 (tag pushed, Release workflow green, published artifact
+    independently re-verified: 132 entries, zero dev files, zero runtime
+    dependency, version parity across header/constant/readme, corrected
+    `SOURCE_TAG`). Fixed a real M1 defect found during M2 reconciliation:
+    the admin-side composition root wired a subscriber-less
+    `EventDispatcher`, so admin-initiated transitions (Queue, Fulfillment
+    Detail) never reached `Woo\StatusBridge` — only `RefundObserver`-driven
+    transitions did. See `docs/ARCHITECTURE_PLAN.md` §IV.2 and
+    `docs/M1_RELEASE_REPORT.md`'s addendum for full evidence.
 3. **M3 — Documents I** — not started.
 4. **M4 — Tracking & notifications** — not started.
 5. **M5 — Package photography** — not started.
