@@ -381,3 +381,40 @@ msgstr ""
 #: src/Plugin.php:340
 msgid "Fulfillment"
 msgstr ""
+
+#: templates/documents/packing-slip.php:25
+#: templates/documents/packing-slip.php:34
+msgid "Packing slip"
+msgstr ""
+
+#. translators: %s: order number
+#: templates/documents/packing-slip.php:39
+#, php-format
+msgid "Order %s"
+msgstr ""
+
+#: templates/documents/packing-slip.php:49
+msgid "Ship to"
+msgstr ""
+
+#: templates/documents/packing-slip.php:61
+msgid "SKU"
+msgstr ""
+
+#: templates/documents/packing-slip.php:62
+msgid "Item"
+msgstr ""
+
+#: templates/documents/packing-slip.php:63
+msgid "Qty"
+msgstr ""
+
+#: templates/documents/packing-slip.php:79
+msgid "Packages"
+msgstr ""
+
+#. translators: 1: package sequence number
+#: templates/documents/packing-slip.php:86
+#, php-format
+msgid "Package %1$d"
+msgstr ""

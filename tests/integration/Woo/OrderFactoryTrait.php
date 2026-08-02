@@ -56,4 +56,31 @@ trait OrderFactoryTrait {
 
 		return $order;
 	}
+
+	/**
+	 * Creates a paid order with a real, populated shipping address — for
+	 * tests that specifically exercise address formatting (the packing
+	 * slip's ship-to block), which {@see create_paid_order()} deliberately
+	 * leaves unset since almost none of this suite's other tests care.
+	 */
+	private function create_paid_order_with_shipping_address(): WC_Order {
+		$product = $this->create_product();
+
+		$order = new WC_Order();
+		$order->add_product( $product, 1 );
+		$order->set_billing_first_name( 'Jane' );
+		$order->set_billing_last_name( 'Doe' );
+		$order->set_shipping_first_name( 'Anna' );
+		$order->set_shipping_last_name( 'Andersson' );
+		$order->set_shipping_address_1( 'Storgatan 1' );
+		$order->set_shipping_city( 'Stockholm' );
+		$order->set_shipping_postcode( '111 22' );
+		$order->set_shipping_country( 'SE' );
+		$order->set_status( 'pending' );
+		$order->calculate_totals();
+		$order->save();
+		$order->payment_complete();
+
+		return $order;
+	}
 }

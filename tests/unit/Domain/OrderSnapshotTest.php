@@ -35,4 +35,17 @@ final class OrderSnapshotTest extends TestCase {
 
 		self::assertSame( array(), $snapshot->items() );
 	}
+
+	public function test_ship_to_lines_defaults_to_empty(): void {
+		$snapshot = OrderSnapshot::create( 1001, 'woocommerce', '#1001', 'Jane Doe', 'processing', array() );
+
+		self::assertSame( array(), $snapshot->ship_to_lines() );
+	}
+
+	public function test_ship_to_lines_is_exposed_when_supplied(): void {
+		$lines    = array( 'Anna Andersson', 'Storgatan 1', '111 22 Stockholm', 'SE' );
+		$snapshot = OrderSnapshot::create( 1001, 'woocommerce', '#1001', 'Jane Doe', 'processing', array(), $lines );
+
+		self::assertSame( $lines, $snapshot->ship_to_lines() );
+	}
 }

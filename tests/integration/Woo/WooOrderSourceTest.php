@@ -68,6 +68,26 @@ final class WooOrderSourceTest extends WP_UnitTestCase {
 		self::assertNull( ( new WooOrderSource() )->find( 999999999 ) );
 	}
 
+	public function test_find_returns_the_orders_shipping_address_as_display_lines(): void {
+		$order = $this->create_paid_order_with_shipping_address();
+
+		$snapshot = ( new WooOrderSource() )->find( $order->get_id() );
+
+		$lines = implode( '|', $snapshot->ship_to_lines() );
+
+		self::assertStringContainsString( 'Anna Andersson', $lines );
+		self::assertStringContainsString( 'Storgatan 1', $lines );
+		self::assertStringContainsString( 'Stockholm', $lines );
+	}
+
+	public function test_find_falls_back_to_the_billing_address_when_no_shipping_address_is_set(): void {
+		$order = $this->create_paid_order();
+
+		$snapshot = ( new WooOrderSource() )->find( $order->get_id() );
+
+		self::assertStringContainsString( 'Jane Doe', implode( '|', $snapshot->ship_to_lines() ) );
+	}
+
 	public function test_find_reads_correctly_regardless_of_which_hpos_storage_backend_is_active(): void {
 		// The integration bootstrap forces HPOS on; this assertion exists
 		// so a future run with HPOS off (the compatibility-matrix floor

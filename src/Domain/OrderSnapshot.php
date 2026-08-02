@@ -62,6 +62,16 @@ final class OrderSnapshot {
 	private array $items;
 
 	/**
+	 * Ship-to address, formatted as display lines — empty when the
+	 * platform has no address on file. Added for the packing slip
+	 * (Architecture Plan §IV.7); optional and defaulted so every caller
+	 * from before that need existed keeps working unchanged.
+	 *
+	 * @var list<string>
+	 */
+	private array $ship_to_lines;
+
+	/**
 	 * Assembles a snapshot. Use {@see create()} instead of calling this
 	 * directly.
 	 *
@@ -71,14 +81,16 @@ final class OrderSnapshot {
 	 * @param string                        $customer_name Customer display name.
 	 * @param string                        $status        Order status.
 	 * @param array<int, OrderLineSnapshot> $items         Line items.
+	 * @param array<int, string>            $ship_to_lines Ship-to address, as display lines.
 	 */
-	private function __construct( int $order_id, string $order_source, string $order_number, string $customer_name, string $status, array $items ) {
+	private function __construct( int $order_id, string $order_source, string $order_number, string $customer_name, string $status, array $items, array $ship_to_lines ) {
 		$this->order_id      = $order_id;
 		$this->order_source  = $order_source;
 		$this->order_number  = $order_number;
 		$this->customer_name = $customer_name;
 		$this->status        = $status;
 		$this->items         = $items;
+		$this->ship_to_lines = $ship_to_lines;
 	}
 
 	/**
@@ -90,9 +102,10 @@ final class OrderSnapshot {
 	 * @param string                        $customer_name Customer display name.
 	 * @param string                        $status        Order status.
 	 * @param array<int, OrderLineSnapshot> $items         Line items.
+	 * @param array<int, string>            $ship_to_lines Ship-to address, as display lines.
 	 */
-	public static function create( int $order_id, string $order_source, string $order_number, string $customer_name, string $status, array $items ): self {
-		return new self( $order_id, $order_source, $order_number, $customer_name, $status, $items );
+	public static function create( int $order_id, string $order_source, string $order_number, string $customer_name, string $status, array $items, array $ship_to_lines = array() ): self {
+		return new self( $order_id, $order_source, $order_number, $customer_name, $status, $items, $ship_to_lines );
 	}
 
 	/**
@@ -137,5 +150,14 @@ final class OrderSnapshot {
 	 */
 	public function items(): array {
 		return $this->items;
+	}
+
+	/**
+	 * Ship-to address, formatted as display lines.
+	 *
+	 * @return list<string>
+	 */
+	public function ship_to_lines(): array {
+		return $this->ship_to_lines;
 	}
 }

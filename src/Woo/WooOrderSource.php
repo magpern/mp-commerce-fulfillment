@@ -52,7 +52,8 @@ final class WooOrderSource implements OrderSource {
 			(string) $order->get_order_number(),
 			(string) $order->get_formatted_billing_full_name(),
 			(string) $order->get_status(),
-			$this->line_items( $order )
+			$this->line_items( $order ),
+			$this->ship_to_lines( $order )
 		);
 	}
 
@@ -103,5 +104,31 @@ final class WooOrderSource implements OrderSource {
 		}
 
 		return $lines;
+	}
+
+	/**
+	 * The order's ship-to address, formatted as display lines. Falls back
+	 * to the billing address when no shipping address is on file (a
+	 * pickup or digital order, or a store that never asked for one
+	 * separately) — the packing slip needs *an* address to print, and
+	 * billing is the only one guaranteed to exist for a paid order.
+	 *
+	 * @param WC_Order $order Order to read the address from.
+	 * @return list<string>
+	 */
+	private function ship_to_lines( WC_Order $order ): array {
+		$address = $order->get_address( 'shipping' );
+
+		if ( '' === trim( (string) ( $address['address_1'] ?? '' ) ) ) {
+			$address = $order->get_address( 'billing' );
+		}
+
+		$formatted = WC()->countries->get_formatted_address( $address, "\n" ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WC()'s own accessor, not a plugin symbol.
+
+		if ( '' === $formatted ) {
+			return array();
+		}
+
+		return array_values( array_filter( array_map( 'trim', explode( "\n", $formatted ) ) ) );
 	}
 }
