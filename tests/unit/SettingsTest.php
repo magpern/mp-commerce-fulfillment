@@ -28,6 +28,74 @@ final class SettingsTest extends TestCase {
 		self::assertSame( Settings::SCHEMA_VERSION, $defaults['schema_version'] );
 	}
 
+	public function test_defaults_match_the_approved_bridge_behavior_defaults(): void {
+		$defaults = Settings::defaults();
+
+		self::assertTrue( $defaults['outbound_bridge_enabled'], 'The outbound bridge defaults on, per architecture decision P2.' );
+		self::assertSame( Settings::BRIDGE_BEHAVIOR_CANCEL, $defaults['inbound_cancel_behavior'], 'Cancellation defaults to automatic.' );
+		self::assertSame( Settings::BRIDGE_BEHAVIOR_FLAG, $defaults['inbound_refund_behavior'], 'A full refund defaults to flagged for review.' );
+	}
+
+	public function test_sanitize_accepts_explicit_valid_bridge_behavior_values(): void {
+		$sanitized = Settings::sanitize(
+			array(
+				'outbound_bridge_enabled' => false,
+				'inbound_cancel_behavior' => Settings::BRIDGE_BEHAVIOR_FLAG,
+				'inbound_refund_behavior' => Settings::BRIDGE_BEHAVIOR_CANCEL,
+			)
+		);
+
+		self::assertFalse( $sanitized['outbound_bridge_enabled'] );
+		self::assertSame( Settings::BRIDGE_BEHAVIOR_FLAG, $sanitized['inbound_cancel_behavior'] );
+		self::assertSame( Settings::BRIDGE_BEHAVIOR_CANCEL, $sanitized['inbound_refund_behavior'] );
+	}
+
+	public function test_sanitize_falls_back_to_the_safe_default_for_an_unrecognized_behavior_value(): void {
+		$sanitized = Settings::sanitize(
+			array(
+				'inbound_cancel_behavior' => 'delete_everything',
+				'inbound_refund_behavior' => array( 'not', 'a', 'string' ),
+			)
+		);
+
+		self::assertSame( Settings::BRIDGE_BEHAVIOR_CANCEL, $sanitized['inbound_cancel_behavior'] );
+		self::assertSame( Settings::BRIDGE_BEHAVIOR_FLAG, $sanitized['inbound_refund_behavior'] );
+	}
+
+	public function test_sanitize_upgrades_a_pre_bridge_settings_array_while_preserving_its_own_values(): void {
+		// The exact shape a real install running the pre-D14 code would have
+		// persisted: schema_version 1, none of the bridge keys present yet,
+		// and an explicit non-default choice already made for the one key
+		// that did exist. Sanitizing it must fill in the new keys with their
+		// defaults and must not lose the pre-existing choice.
+		$legacy = array(
+			'schema_version'           => 1,
+			'remove_data_on_uninstall' => true,
+		);
+
+		$sanitized = Settings::sanitize( $legacy );
+
+		self::assertSame( Settings::SCHEMA_VERSION, $sanitized['schema_version'], 'Sanitizing always normalizes to the current schema version.' );
+		self::assertTrue( $sanitized['remove_data_on_uninstall'], 'A pre-existing explicit choice must survive the upgrade.' );
+		self::assertTrue( $sanitized['outbound_bridge_enabled'] );
+		self::assertSame( Settings::BRIDGE_BEHAVIOR_CANCEL, $sanitized['inbound_cancel_behavior'] );
+		self::assertSame( Settings::BRIDGE_BEHAVIOR_FLAG, $sanitized['inbound_refund_behavior'] );
+	}
+
+	public function test_accessors_read_the_bridge_settings(): void {
+		$settings = new Settings(
+			array(
+				'outbound_bridge_enabled' => false,
+				'inbound_cancel_behavior' => Settings::BRIDGE_BEHAVIOR_FLAG,
+				'inbound_refund_behavior' => Settings::BRIDGE_BEHAVIOR_CANCEL,
+			)
+		);
+
+		self::assertFalse( $settings->outbound_bridge_enabled() );
+		self::assertSame( Settings::BRIDGE_BEHAVIOR_FLAG, $settings->inbound_cancel_behavior() );
+		self::assertSame( Settings::BRIDGE_BEHAVIOR_CANCEL, $settings->inbound_refund_behavior() );
+	}
+
 	public function test_sanitize_coerces_invalid_input_instead_of_throwing(): void {
 		$sanitized = Settings::sanitize( 'not an array' );
 
