@@ -3,7 +3,7 @@
  * Plugin Name: Commerce Fulfillment
  * Plugin URI: https://github.com/magpern/mp-commerce-fulfillment
  * Description: Warehouse fulfillment platform for WooCommerce. WooCommerce remains the order source; Commerce Fulfillment owns everything from "paid" to "delivered" — picking, packing, shipping, tracking, documents and audit.
- * Version: 0.0.1
+ * Version: 0.1.0
  * Author: magpern
  * License: GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -14,18 +14,20 @@
  * WC requires at least: 8.2
  * WC tested up to: 10.9
  *
- * Milestone 0 scope: bootstrap, composition root, settings framework,
- * capability framework, migration framework (no business tables yet — see
- * docs/ARCHITECTURE_PLAN.md Part II §II.2), MPDS vendoring proof. The
- * plugin activates, installs its migration framework, declares HPOS
- * compatibility, and does nothing else.
+ * Milestone 1 scope: fulfillment core — intake (classic and Blocks
+ * checkout), a data-defined workflow engine driving the standard
+ * pick/pack/ship workflow, an append-only hash-chained audit trail,
+ * Fulfillment Queue/Detail/Dashboard admin screens, Warehouse Operator/Lead
+ * roles and capabilities with an optional Operator Mode, and a
+ * configurable WooCommerce status bridge. See docs/ARCHITECTURE_PLAN.md
+ * Part III and docs/M1_RELEASE_REPORT.md for the full scope and evidence.
  *
  * @package MPCommerceFulfillment
  */
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'MPCF_VERSION', '0.0.1' );
+define( 'MPCF_VERSION', '0.1.0' );
 define( 'MPCF_PLUGIN_FILE', __FILE__ );
 define( 'MPCF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
