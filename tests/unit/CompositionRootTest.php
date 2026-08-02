@@ -104,6 +104,8 @@ final class CompositionRootTest extends TestCase {
 			'TransitionContextFactory',
 			'ShippingService',
 			'ShipmentAutoShipSubscriber',
+			'RestApi',
+			'FulfillmentsController',
 			'IntakeService',
 			'WooOrderSource',
 			'EventDispatcher',

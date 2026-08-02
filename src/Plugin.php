@@ -14,6 +14,8 @@ use MPCF\Admin\DashboardPage;
 use MPCF\Admin\FulfillmentDetailPage;
 use MPCF\Admin\OperatorMode;
 use MPCF\Admin\QueuePage;
+use MPCF\Api\Rest\FulfillmentsController;
+use MPCF\Api\Rest\RestApi;
 use MPCF\Application\AssignmentService;
 use MPCF\Application\DashboardService;
 use MPCF\Application\EventDispatcher;
@@ -154,7 +156,7 @@ final class Plugin {
 			new TransitionContextFactory( $items, $shipments, $packages )
 		);
 
-		$this->wire_services( $fulfillments, $items, $events, $shipments, $packages, $dispatcher, $clock, $settings, $workflow_service );
+		$this->wire_services( $fulfillments, $items, $events, $shipments, $packages, $dispatcher, $clock, $settings, $definition, $workflow_service );
 
 		// Architecture Plan §5.4: menu/screens/assets are gated to is_admin()
 		// contexts only — a front-end or WP-CLI request never needs them.
@@ -189,6 +191,7 @@ final class Plugin {
 	 * @param EventDispatcher               $dispatcher   In-process event dispatch — the one instance {@see StatusBridge} subscribes to below and `$workflow_service` dispatches through.
 	 * @param SystemClock                   $clock        Source of "now", shared with {@see wire_admin()}.
 	 * @param Settings                      $settings     Plugin settings, shared with {@see wire_admin()}.
+	 * @param WorkflowDefinition            $definition   The governing workflow, shared with {@see wire_admin()}.
 	 * @param WorkflowService               $workflow_service The one {@see WorkflowService}, built in {@see init()} against `$dispatcher` and shared with {@see wire_admin()} — the fix that makes an admin-initiated transition reach `$dispatcher`'s subscribers, including the status bridge subscribed just below.
 	 */
 	private function wire_services(
@@ -200,6 +203,7 @@ final class Plugin {
 		EventDispatcher $dispatcher,
 		SystemClock $clock,
 		Settings $settings,
+		WorkflowDefinition $definition,
 		WorkflowService $workflow_service
 	): void {
 		$orders = new WooOrderSource();
@@ -247,6 +251,22 @@ final class Plugin {
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			( new BackfillCommand( $orders, $intake ) )->register();
 		}
+
+		// Architecture Plan §IV.9: mpcf/v1 is unconditional, not gated on
+		// is_admin() — a REST client is never an admin request. It reuses
+		// the same $workflow_service instance the admin screens do, so a
+		// transition submitted either way produces identical outcomes
+		// (§IV.15 criterion 2).
+		( new RestApi(
+			array(
+				new FulfillmentsController(
+					new QueueService( $fulfillments, new WpdbSearchQuery() ),
+					new FulfillmentDetailService( $fulfillments, $items, $events, new WpdbNoteRepository() ),
+					$workflow_service,
+					$definition
+				),
+			)
+		) )->register();
 	}
 
 	/**
