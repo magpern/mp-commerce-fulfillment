@@ -10,9 +10,11 @@ declare( strict_types=1 );
 namespace MPCF\Application;
 
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MPCF\Domain\Clock;
 use MPCF\Domain\Event\Actor;
 use MPCF\Domain\Event\DomainEvent;
+use MPCF\Domain\Event\PayloadGuard;
 use MPCF\Domain\Repository\EventRepository;
 use MPCF\Domain\Repository\FulfillmentItemRepository;
 use MPCF\Domain\Repository\FulfillmentRepository;
@@ -175,6 +177,26 @@ final class WorkflowService {
 		$previous_state = $fulfillment->state();
 		$now            = $this->clock->now();
 
+		$payload = array(
+			'from' => $previous_state,
+			'to'   => $result->new_state(),
+		);
+
+		if ( null !== $reason ) {
+			$payload['reason'] = $reason;
+		}
+
+		// Validated before anything is persisted: an unsafe payload must
+		// reject the whole transition, never leave the state change saved
+		// with the audit entry that was supposed to accompany it missing
+		// (invariant I10 — never break the shop with an uncaught exception
+		// mid-write).
+		try {
+			PayloadGuard::assert_safe( $payload );
+		} catch ( InvalidArgumentException $exception ) {
+			return TransitionOutcome::failed( 'unsafe_event_payload', $exception->getMessage() );
+		}
+
 		$fulfillment->apply_transition( $result->new_state(), $result->entering_exception_from(), $now );
 
 		if ( null !== $reason ) {
@@ -183,15 +205,6 @@ final class WorkflowService {
 
 		if ( ! $this->fulfillments->save( $fulfillment ) ) {
 			return TransitionOutcome::failed( 'version_conflict', 'Someone else updated this fulfillment. Reload and try again.' );
-		}
-
-		$payload = array(
-			'from' => $previous_state,
-			'to'   => $fulfillment->state(),
-		);
-
-		if ( null !== $reason ) {
-			$payload['reason'] = $reason;
 		}
 
 		$this->record_events( $fulfillment->id(), $result->events(), $actor, $now, $payload );

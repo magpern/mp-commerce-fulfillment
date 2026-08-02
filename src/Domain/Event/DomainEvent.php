@@ -112,6 +112,8 @@ final class DomainEvent {
 		array $payload = array(),
 		int $schema_version = 1
 	): self {
+		PayloadGuard::assert_safe( $payload );
+
 		return new self( $fulfillment_id, $event_type, $actor, $occurred_at, $payload, $schema_version );
 	}
 
@@ -131,6 +133,8 @@ final class DomainEvent {
 		array $payload = array(),
 		int $schema_version = 1
 	): self {
+		PayloadGuard::assert_safe( $payload );
+
 		return new self( null, $event_type, $actor, $occurred_at, $payload, $schema_version );
 	}
 

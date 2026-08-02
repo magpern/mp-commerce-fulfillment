@@ -199,6 +199,19 @@ final class WorkflowServiceTest extends TestCase {
 		self::assertSame( array(), $this->events->timeline_for_fulfillment( $id ), 'A rejected transition must not append any audit event.' );
 	}
 
+	public function test_an_unsafe_reason_rejects_the_whole_transition_and_persists_nothing(): void {
+		$id             = $this->seed_fulfillment( 'picking' );
+		$version_before = $this->fulfillments->find( $id )->version();
+
+		$outcome = $this->service->transition( $id, 'problem', Actor::system(), 'Contact the customer at jane@example.com about this.' );
+
+		self::assertFalse( $outcome->is_success() );
+		self::assertSame( 'unsafe_event_payload', $outcome->failure_code() );
+		self::assertSame( 'picking', $this->fulfillments->find( $id )->state(), 'An unsafe payload must not change the stored state.' );
+		self::assertSame( $version_before, $this->fulfillments->find( $id )->version(), 'An unsafe payload must not advance the stored version.' );
+		self::assertSame( array(), $this->events->timeline_for_fulfillment( $id ), 'An unsafe payload must not append any audit event.' );
+	}
+
 	public function test_a_reason_is_persisted_alongside_an_exception_transition(): void {
 		$id = $this->seed_fulfillment( 'picking' );
 

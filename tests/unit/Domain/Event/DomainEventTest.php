@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace MPCF\Tests\Unit\Domain\Event;
 
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MPCF\Domain\Event\Actor;
 use MPCF\Domain\Event\DomainEvent;
 use PHPUnit\Framework\TestCase;
@@ -58,5 +59,17 @@ final class DomainEventTest extends TestCase {
 		$event = DomainEvent::for_fulfillment( 1, 'fulfillment.state_changed', Actor::system(), $now );
 
 		self::assertSame( array( 'v' => 1 ), $event->hashable_payload() );
+	}
+
+	public function test_for_fulfillment_rejects_an_unsafe_payload_and_constructs_nothing(): void {
+		$this->expectException( InvalidArgumentException::class );
+
+		DomainEvent::for_fulfillment( 1, 'fulfillment.state_changed', Actor::system(), new DateTimeImmutable(), array( 'customer_email' => 'jane@example.com' ) );
+	}
+
+	public function test_global_event_rejects_an_unsafe_payload_and_constructs_nothing(): void {
+		$this->expectException( InvalidArgumentException::class );
+
+		DomainEvent::global_event( 'settings.changed', Actor::system(), new DateTimeImmutable(), array( 'admin_email' => 'admin@example.com' ) );
 	}
 }
