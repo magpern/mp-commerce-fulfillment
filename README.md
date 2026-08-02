@@ -7,9 +7,11 @@ everything between "paid" and "delivered" — while WooCommerce stays
 authoritative for products, checkout, payment, customers and the order
 record.
 
-**Current release:** 0.0.1 (Milestone 0 — bootstrap; the plugin activates,
-installs its migration framework, declares HPOS compatibility, and does
-nothing else. See `docs/ROADMAP.md`.)
+**Current release:** 0.0.1 (Milestone 0 — bootstrap). **Milestone 1**
+(fulfillment core — intake, workflow engine, Queue/Detail/Dashboard
+screens, audit trail, WooCommerce status bridge) is implemented and
+pending release as `0.1.0`; no tag exists yet. See `docs/ROADMAP.md` and
+`docs/ARCHITECTURE_PLAN.md` §III.7 for its actual outcomes.
 
 ## Invariants
 
@@ -70,6 +72,18 @@ persisted — see `docs/PERSISTED_DATA.md` for the exact inventory.
 | `docs/adr/` | Architecture decision records. |
 
 ## Changelog
+
+### 0.1.0 — Milestone 1: fulfillment core (pending release)
+
+Intake (`Woo\IntakeHooks`, classic and Blocks checkout, idempotent),
+a data-defined workflow engine driving the standard pick/pack/ship
+workflow, an append-only hash-chained audit trail, Fulfillment
+Queue/Detail/Dashboard admin screens, the Warehouse Operator/Lead roles
+and capabilities, an optional Operator Mode, and a configurable WooCommerce
+status bridge (outbound completion, inbound cancel/refund/item-change
+handling). Still no REST route and no public `do_action`/`apply_filters`
+hook — see `docs/HOOKS.md`. Full outcome record:
+`docs/ARCHITECTURE_PLAN.md` §III.7.
 
 ### 0.0.1 — Milestone 0: bootstrap
 

@@ -2,8 +2,11 @@
 
 ## Status
 
-Accepted (Milestone 0; the workflow engine and status bridge land in
-Milestone 1).
+Accepted (Milestone 0). Confirmed as implemented: Milestone 1 shipped the
+data-defined `WorkflowEngine`/standard workflow and a narrow, re-entrancy
+-guarded `Woo\StatusBridge` (outbound: all-shipped → WC `completed`;
+inbound: WC cancel/refund/item-change → fulfillment `cancelled`/`problem`)
+— no custom `wc-*` order status was registered.
 
 ## Context
 

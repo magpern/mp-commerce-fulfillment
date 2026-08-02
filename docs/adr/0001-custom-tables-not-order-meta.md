@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted (Milestone 0; first tables land in Milestone 1).
+Accepted (Milestone 0). Confirmed as implemented: Milestone 1 shipped the
+four tables exactly as decided (`mpcf_fulfillments`, `mpcf_fulfillment_items`,
+`mpcf_events`, `mpcf_notes` — see `docs/PERSISTED_DATA.md`), read/written
+only through `Infrastructure\Database` repositories, with the order itself
+still referenced by ID and read exclusively through `Woo\WooOrderSource`.
 
 ## Context
 

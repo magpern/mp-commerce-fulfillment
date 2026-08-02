@@ -15,9 +15,16 @@ actual state before work starts.
    clean. `mp-admin-design-system` extracted to its own repo and released
    as `v0.1.0`. The plugin activates, installs its migration framework,
    declares HPOS compatibility, and does nothing else.
-1. **M1 — Fulfillment core (Warehouse MVP)** — **approved for
-   implementation** (PO approval 2026-08-01; execution plan is Part III of
-   `ARCHITECTURE_PLAN.md`). In progress.
+1. **M1 — Fulfillment core (Warehouse MVP)** — **implemented, awaiting PO
+   acceptance review** (PO approval to implement 2026-08-01; execution plan
+   is Part III of `ARCHITECTURE_PLAN.md`, actual outcomes recorded in
+   §III.7). D1–D20 of the commit sequence are done: intake, workflow engine
+   + standard workflow, Queue/Fulfillment Detail/Dashboard screens, audit
+   hash chain, roles/capabilities + Operator Mode, status bridge, uninstall
+   policy, and documentation reconciliation. D21 (10k-row Queue performance
+   proof) and D22 (full acceptance pass + release candidate) are the
+   remaining steps before this milestone is ready to tag — no `v0.1.0` tag
+   or GitHub release exists yet.
 2. **M2 — Packing Workspace & REST** — not started.
 3. **M3 — Documents I** — not started.
 4. **M4 — Tracking & notifications** — not started.

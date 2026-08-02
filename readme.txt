@@ -29,6 +29,26 @@ Performance Order Storage (HPOS).
 
 == Changelog ==
 
+= 0.1.0 =
+(Milestone 1 — pending release, not yet tagged.)
+* Fulfillment core: paying a WooCommerce order (classic or Blocks checkout)
+  creates a fulfillment automatically and idempotently; `wp mpcf intake
+  backfill` ingests existing orders the same way.
+* A data-defined workflow engine drives the standard pick/pack/ship
+  workflow, with an append-only, hash-chained audit trail per fulfillment
+  (`wp mpcf audit verify` checks the chain).
+* Fulfillment Queue, Fulfillment Detail and Dashboard admin screens, built
+  on the MP Admin Design System.
+* Two roles (Warehouse Operator, Warehouse Lead) with their own
+  capabilities; an optional Operator Mode setting hides the rest of
+  wp-admin's navigation for the operator role.
+* A configurable WooCommerce status bridge: fulfillment progress can mark
+  an order completed; order cancellation, refunds and post-payment item
+  edits are reflected back onto the fulfillment.
+* Uninstall policy extended to the new tables, roles, capabilities and
+  scheduled actions — still all-or-nothing behind "Remove data on
+  uninstall", still keeping everything by default.
+
 = 0.0.1 =
 * Milestone 0: bootstrap, composition root, settings framework, capability
   framework, migration framework. No business features yet.
