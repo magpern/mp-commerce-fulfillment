@@ -24,6 +24,7 @@ use MPCF\Application\QueueService;
 use MPCF\Application\WorkflowService;
 use MPCF\Cli\BackfillCommand;
 use MPCF\Domain\Workflow\StandardWorkflow;
+use MPCF\Domain\Workflow\WorkflowDefinition;
 use MPCF\Engine\GuardRegistry;
 use MPCF\Engine\WorkflowEngine;
 use MPCF\Infrastructure\Database\Migrator;
@@ -49,15 +50,23 @@ use MPCF\Woo\WooOrderSource;
  * dependency is constructor-injected from here.
  *
  * Milestone 0 wired nothing beyond the textdomain and the migration
- * drift-check. Milestone 1 builds the plugin's real service graph across
- * two methods: {@see wire_services()} (repositories, the workflow engine,
- * the shared event dispatcher, intake, the status bridge, the inbound
- * observer, and — only under WP-CLI — the backfill command) always, and
- * {@see wire_admin()} (the Fulfillment menu and its three screens) only
- * when `is_admin()`. Every collaborator is constructed here, by name, and
- * handed to whatever needs it next; none is stored as a property (see
- * `CompositionRootTest::test_plugin_declares_only_singleton_bookkeeping_properties()`),
- * so this class still owns no service-holding state of its own.
+ * drift-check. Milestone 1 builds the plugin's real service graph.
+ * {@see init()} constructs every collaborator shared across contexts
+ * exactly once — repositories, the {@see EventDispatcher}, {@see Clock},
+ * {@see Settings} and the one {@see WorkflowService} — and hands the same
+ * instances to both {@see wire_services()} (intake, the status bridge, the
+ * inbound observer, and — only under WP-CLI — the backfill command,
+ * always) and {@see wire_admin()} (the Fulfillment menu and its three
+ * screens, only when `is_admin()`). A single shared dispatcher is load
+ * bearing, not tidiness: {@see StatusBridge} subscribes to it in
+ * {@see wire_services()}, so a `WorkflowService` built with any other
+ * dispatcher instance would transition fulfillments whose
+ * `fulfillment.state_changed` event reaches no subscriber at all — exactly
+ * the defect `v0.1.1` fixes (Architecture Plan §IV.2). None of these
+ * collaborators is stored as a property (see
+ * `CompositionRootTest::test_plugin_declares_only_singleton_bookkeeping_properties()`);
+ * they live only as `init()` locals passed down as parameters, so this
+ * class still owns no service-holding state of its own.
  */
 final class Plugin {
 
@@ -88,6 +97,11 @@ final class Plugin {
 
 	/**
 	 * Wires services and registers hooks. Idempotent.
+	 *
+	 * Builds every collaborator {@see wire_services()} and {@see wire_admin()}
+	 * both need exactly once, then hands the same instances to each — the
+	 * single-shared-dispatcher fix `v0.1.1` made to what was previously two
+	 * independent, disconnected service graphs (Architecture Plan §IV.2).
 	 */
 	public function init(): void {
 		if ( $this->booted ) {
@@ -113,12 +127,31 @@ final class Plugin {
 			}
 		);
 
-		$this->wire_services();
+		$fulfillments = new WpdbFulfillmentRepository();
+		$items        = new WpdbFulfillmentItemRepository();
+		$events       = new WpdbEventRepository();
+		$notes        = new WpdbNoteRepository();
+		$dispatcher   = new EventDispatcher();
+		$clock        = new SystemClock();
+		$settings     = new Settings();
+		$definition   = StandardWorkflow::definition();
+
+		$workflow_service = new WorkflowService(
+			$fulfillments,
+			$items,
+			$events,
+			new WorkflowEngine( GuardRegistry::standard() ),
+			$dispatcher,
+			$clock,
+			array( StandardWorkflow::NAME => $definition )
+		);
+
+		$this->wire_services( $fulfillments, $items, $events, $dispatcher, $clock, $settings, $workflow_service );
 
 		// Architecture Plan §5.4: menu/screens/assets are gated to is_admin()
 		// contexts only — a front-end or WP-CLI request never needs them.
 		if ( is_admin() ) {
-			$this->wire_admin();
+			$this->wire_admin( $fulfillments, $items, $events, $notes, $clock, $settings, $definition, $workflow_service );
 		}
 	}
 
@@ -132,31 +165,32 @@ final class Plugin {
 	}
 
 	/**
-	 * Builds every Milestone 1 service and registers its platform hooks.
-	 * Runs unconditionally from `init()` (itself gated on the order
-	 * platform being active by the main plugin file) — registering the
-	 * hooks here, rather than deferring to a later action, is what makes
-	 * them present in time for the same request's checkout/order-admin
+	 * Builds every Milestone 1 service that is not admin-only and registers
+	 * its platform hooks, from the collaborators {@see init()} already
+	 * built once. Runs unconditionally from `init()` (itself gated on the
+	 * order platform being active by the main plugin file) — registering
+	 * the hooks here, rather than deferring to a later action, is what
+	 * makes them present in time for the same request's checkout/order-admin
 	 * processing to fire them.
+	 *
+	 * @param WpdbFulfillmentRepository     $fulfillments Fulfillment persistence, shared with {@see wire_admin()}.
+	 * @param WpdbFulfillmentItemRepository $items        Line-item persistence, shared with {@see wire_admin()}.
+	 * @param WpdbEventRepository           $events       Audit-log persistence, shared with {@see wire_admin()}.
+	 * @param EventDispatcher               $dispatcher   In-process event dispatch — the one instance {@see StatusBridge} subscribes to below and `$workflow_service` dispatches through.
+	 * @param SystemClock                   $clock        Source of "now", shared with {@see wire_admin()}.
+	 * @param Settings                      $settings     Plugin settings, shared with {@see wire_admin()}.
+	 * @param WorkflowService               $workflow_service The one {@see WorkflowService}, built in {@see init()} against `$dispatcher` and shared with {@see wire_admin()} — the fix that makes an admin-initiated transition reach `$dispatcher`'s subscribers, including the status bridge subscribed just below.
 	 */
-	private function wire_services(): void {
-		$fulfillments = new WpdbFulfillmentRepository();
-		$items        = new WpdbFulfillmentItemRepository();
-		$events       = new WpdbEventRepository();
-		$dispatcher   = new EventDispatcher();
-		$clock        = new SystemClock();
-		$orders       = new WooOrderSource();
-		$settings     = new Settings();
-
-		$workflow_service = new WorkflowService(
-			$fulfillments,
-			$items,
-			$events,
-			new WorkflowEngine( GuardRegistry::standard() ),
-			$dispatcher,
-			$clock,
-			array( StandardWorkflow::NAME => StandardWorkflow::definition() )
-		);
+	private function wire_services(
+		WpdbFulfillmentRepository $fulfillments,
+		WpdbFulfillmentItemRepository $items,
+		WpdbEventRepository $events,
+		EventDispatcher $dispatcher,
+		SystemClock $clock,
+		Settings $settings,
+		WorkflowService $workflow_service
+	): void {
+		$orders = new WooOrderSource();
 
 		$intake = new IntakeService(
 			$orders,
@@ -174,6 +208,9 @@ final class Plugin {
 		// bus intake uses (invariant I4's single-writer rule already
 		// guarantees WorkflowService is the only thing that can ever
 		// dispatch a fulfillment.state_changed event for it to react to).
+		// `$dispatcher` is the same instance `$workflow_service` was built
+		// with — shared from `init()` — so this subscription now reacts to
+		// every transition dispatched through it, admin-initiated included.
 		$dispatcher->subscribe( 'fulfillment.state_changed', new StatusBridge( $fulfillments, $settings ) );
 
 		( new RefundObserver( $fulfillments, $items, $orders, $workflow_service, $settings ) )->register();
@@ -185,31 +222,37 @@ final class Plugin {
 
 	/**
 	 * Builds Milestone 1's admin screens (D15-D18: Queue, Fulfillment
-	 * Detail, Dashboard) and registers the Fulfillment menu. Fulfillment
-	 * Detail is registered as a real submenu page (so its capability check
-	 * and URL both work) and then immediately removed from the visible
-	 * menu — it is reached from the Queue/Dashboard, never a standalone nav
+	 * Detail, Dashboard) and registers the Fulfillment menu, from the
+	 * collaborators {@see init()} already built once — including
+	 * `$workflow_service`, the same instance {@see wire_services()} wired
+	 * against the shared {@see EventDispatcher}, so a transition submitted
+	 * from the Queue or Fulfillment Detail dispatches to the same
+	 * subscribers (the status bridge included) as one submitted any other
+	 * way (Architecture Plan §IV.2 — the `v0.1.1` fix). Fulfillment Detail
+	 * is registered as a real submenu page (so its capability check and
+	 * URL both work) and then immediately removed from the visible menu —
+	 * it is reached from the Queue/Dashboard, never a standalone nav
 	 * destination (Architecture Plan §9.3).
+	 *
+	 * @param WpdbFulfillmentRepository     $fulfillments     Fulfillment persistence, shared with {@see wire_services()}.
+	 * @param WpdbFulfillmentItemRepository $items            Line-item persistence, shared with {@see wire_services()}.
+	 * @param WpdbEventRepository           $events           Audit-log persistence, shared with {@see wire_services()}.
+	 * @param WpdbNoteRepository            $notes            Note persistence (admin-only in Milestone 1).
+	 * @param SystemClock                   $clock            Source of "now", shared with {@see wire_services()}.
+	 * @param Settings                      $settings         Plugin settings, shared with {@see wire_services()}.
+	 * @param WorkflowDefinition            $definition       The governing workflow, shared with {@see wire_services()} via `$workflow_service`.
+	 * @param WorkflowService               $workflow_service The one {@see WorkflowService}, shared with {@see wire_services()}.
 	 */
-	private function wire_admin(): void {
-		$fulfillments = new WpdbFulfillmentRepository();
-		$items        = new WpdbFulfillmentItemRepository();
-		$events       = new WpdbEventRepository();
-		$notes        = new WpdbNoteRepository();
-		$clock        = new SystemClock();
-		$settings     = new Settings();
-		$definition   = StandardWorkflow::definition();
-
-		$workflow_service = new WorkflowService(
-			$fulfillments,
-			$items,
-			$events,
-			new WorkflowEngine( GuardRegistry::standard() ),
-			new EventDispatcher(),
-			$clock,
-			array( StandardWorkflow::NAME => $definition )
-		);
-
+	private function wire_admin(
+		WpdbFulfillmentRepository $fulfillments,
+		WpdbFulfillmentItemRepository $items,
+		WpdbEventRepository $events,
+		WpdbNoteRepository $notes,
+		SystemClock $clock,
+		Settings $settings,
+		WorkflowDefinition $definition,
+		WorkflowService $workflow_service
+	): void {
 		$renderer = new ComponentRenderer();
 		$shell    = new AdminPageShell( new SectionNavigation() );
 
