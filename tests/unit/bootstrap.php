@@ -18,6 +18,11 @@ require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
 // Test doubles never match *Test.php, so PHPUnit's directory-based
 // discovery never loads them; required explicitly (house convention).
 require_once __DIR__ . '/Doubles/WPRoleDouble.php';
+require_once __DIR__ . '/Application/Doubles/InMemoryFulfillmentRepository.php';
+require_once __DIR__ . '/Application/Doubles/InMemoryFulfillmentItemRepository.php';
+require_once __DIR__ . '/Application/Doubles/InMemoryEventRepository.php';
+require_once __DIR__ . '/Application/Doubles/FixedClock.php';
+require_once __DIR__ . '/Application/Doubles/RecordingSubscriber.php';
 
 if ( ! defined( 'MPCF_VERSION' ) ) {
 	define( 'MPCF_VERSION', '0.0.0-test' );
