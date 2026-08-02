@@ -21,6 +21,9 @@ use MPCF\Application\FulfillmentDetailService;
 use MPCF\Application\IntakeService;
 use MPCF\Application\NoteService;
 use MPCF\Application\QueueService;
+use MPCF\Application\ShipmentAutoShipSubscriber;
+use MPCF\Application\ShippingService;
+use MPCF\Application\TransitionContextFactory;
 use MPCF\Application\WorkflowService;
 use MPCF\Cli\BackfillCommand;
 use MPCF\Domain\Workflow\StandardWorkflow;
@@ -32,7 +35,10 @@ use MPCF\Infrastructure\Database\WpdbEventRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentItemRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
 use MPCF\Infrastructure\Database\WpdbNoteRepository;
+use MPCF\Infrastructure\Database\WpdbPackageItemRepository;
+use MPCF\Infrastructure\Database\WpdbPackageRepository;
 use MPCF\Infrastructure\Database\WpdbSearchQuery;
+use MPCF\Infrastructure\Database\WpdbShipmentRepository;
 use MPCF\Infrastructure\SystemClock;
 use MPCF\Vendor\Mpds\ComponentRenderer;
 use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
@@ -131,6 +137,8 @@ final class Plugin {
 		$items        = new WpdbFulfillmentItemRepository();
 		$events       = new WpdbEventRepository();
 		$notes        = new WpdbNoteRepository();
+		$shipments    = new WpdbShipmentRepository();
+		$packages     = new WpdbPackageRepository();
 		$dispatcher   = new EventDispatcher();
 		$clock        = new SystemClock();
 		$settings     = new Settings();
@@ -138,15 +146,15 @@ final class Plugin {
 
 		$workflow_service = new WorkflowService(
 			$fulfillments,
-			$items,
 			$events,
 			new WorkflowEngine( GuardRegistry::standard() ),
 			$dispatcher,
 			$clock,
-			array( StandardWorkflow::NAME => $definition )
+			array( StandardWorkflow::NAME => $definition ),
+			new TransitionContextFactory( $items, $shipments, $packages )
 		);
 
-		$this->wire_services( $fulfillments, $items, $events, $dispatcher, $clock, $settings, $workflow_service );
+		$this->wire_services( $fulfillments, $items, $events, $shipments, $packages, $dispatcher, $clock, $settings, $workflow_service );
 
 		// Architecture Plan §5.4: menu/screens/assets are gated to is_admin()
 		// contexts only — a front-end or WP-CLI request never needs them.
@@ -176,6 +184,8 @@ final class Plugin {
 	 * @param WpdbFulfillmentRepository     $fulfillments Fulfillment persistence, shared with {@see wire_admin()}.
 	 * @param WpdbFulfillmentItemRepository $items        Line-item persistence, shared with {@see wire_admin()}.
 	 * @param WpdbEventRepository           $events       Audit-log persistence, shared with {@see wire_admin()}.
+	 * @param WpdbShipmentRepository        $shipments    Shipment persistence, shared with {@see wire_admin()} via `$workflow_service`'s context factory.
+	 * @param WpdbPackageRepository         $packages     Package persistence, shared with {@see wire_admin()} via `$workflow_service`'s context factory.
 	 * @param EventDispatcher               $dispatcher   In-process event dispatch — the one instance {@see StatusBridge} subscribes to below and `$workflow_service` dispatches through.
 	 * @param SystemClock                   $clock        Source of "now", shared with {@see wire_admin()}.
 	 * @param Settings                      $settings     Plugin settings, shared with {@see wire_admin()}.
@@ -185,6 +195,8 @@ final class Plugin {
 		WpdbFulfillmentRepository $fulfillments,
 		WpdbFulfillmentItemRepository $items,
 		WpdbEventRepository $events,
+		WpdbShipmentRepository $shipments,
+		WpdbPackageRepository $packages,
 		EventDispatcher $dispatcher,
 		SystemClock $clock,
 		Settings $settings,
@@ -203,6 +215,23 @@ final class Plugin {
 		);
 
 		( new IntakeHooks( $intake ) )->register();
+
+		$shipping_service = new ShippingService(
+			$fulfillments,
+			$items,
+			$shipments,
+			$packages,
+			new WpdbPackageItemRepository(),
+			$events,
+			$dispatcher,
+			$clock
+		);
+
+		// Architecture Plan §IV.5.8 step 11: a fulfillment reaching `shipped`
+		// ships every shipment still `pending` on it too. Same shared
+		// `$dispatcher` as the status bridge below, so this reacts to a
+		// transition dispatched through any path, admin-initiated included.
+		$dispatcher->subscribe( 'fulfillment.state_changed', new ShipmentAutoShipSubscriber( $shipping_service ) );
 
 		// The outbound bridge is just another subscriber on the same event
 		// bus intake uses (invariant I4's single-writer rule already

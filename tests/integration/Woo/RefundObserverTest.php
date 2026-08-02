@@ -11,6 +11,7 @@ declare( strict_types=1 );
 namespace MPCF\Tests\Integration\Woo;
 
 use MPCF\Application\EventDispatcher;
+use MPCF\Application\TransitionContextFactory;
 use MPCF\Application\WorkflowService;
 use MPCF\Domain\Event\Actor;
 use MPCF\Domain\Workflow\StandardWorkflow;
@@ -19,6 +20,8 @@ use MPCF\Engine\WorkflowEngine;
 use MPCF\Infrastructure\Database\WpdbEventRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentItemRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
+use MPCF\Infrastructure\Database\WpdbPackageRepository;
+use MPCF\Infrastructure\Database\WpdbShipmentRepository;
 use MPCF\Infrastructure\SystemClock;
 use MPCF\Settings;
 use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
@@ -79,12 +82,12 @@ final class RefundObserverTest extends WP_UnitTestCase {
 
 		$service = new WorkflowService(
 			$this->fulfillments,
-			$this->items,
 			$this->events,
 			new WorkflowEngine( GuardRegistry::standard() ),
 			new EventDispatcher(),
 			new SystemClock(),
-			array( StandardWorkflow::NAME => StandardWorkflow::definition() )
+			array( StandardWorkflow::NAME => StandardWorkflow::definition() ),
+			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository() )
 		);
 
 		( new RefundObserver( $this->fulfillments, $this->items, new WooOrderSource(), $service, $settings ) )->register();
@@ -98,12 +101,12 @@ final class RefundObserverTest extends WP_UnitTestCase {
 	private function advance_to_picking( int $fulfillment_id ): void {
 		$service = new WorkflowService(
 			$this->fulfillments,
-			$this->items,
 			$this->events,
 			new WorkflowEngine( GuardRegistry::standard() ),
 			new EventDispatcher(),
 			new SystemClock(),
-			array( StandardWorkflow::NAME => StandardWorkflow::definition() )
+			array( StandardWorkflow::NAME => StandardWorkflow::definition() ),
+			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository() )
 		);
 
 		$service->transition( $fulfillment_id, 'picking', Actor::system() );

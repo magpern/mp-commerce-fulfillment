@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace MPCF\Admin;
 
+use MPCF\Application\AvailableTransition;
 use MPCF\Application\FulfillmentDetailService;
 use MPCF\Application\FulfillmentDetailView;
 use MPCF\Application\NoteService;
@@ -17,10 +18,6 @@ use MPCF\Capabilities;
 use MPCF\Domain\Event\Actor;
 use MPCF\Domain\Fulfillment;
 use MPCF\Domain\Workflow\WorkflowDefinition;
-use MPCF\Engine\GuardRegistry;
-use MPCF\Engine\TransitionContext;
-use MPCF\Engine\TransitionResult;
-use MPCF\Engine\WorkflowEngine;
 use MPCF\Vendor\Mpds\ComponentRenderer;
 use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
 use MPCF\Vendor\Mpds\PageShell\Page;
@@ -28,13 +25,15 @@ use WP_User;
 
 /**
  * "The workspace is for doing; the detail page is for understanding"
- * (Architecture Plan Sec9.3). Transition availability is computed here by
- * consulting {@see WorkflowEngine} directly (pure, WordPress-free) against
- * the same {@see WorkflowDefinition} {@see WorkflowService} uses — never a
- * second, hand-maintained set of UI rules. No raw repository or direct
- * database access here; every read goes through {@see FulfillmentDetailService}, every
- * mutation through {@see NoteService}/{@see WorkflowService} (invariant
- * I11, `AdminBoundaryGuardTest`).
+ * (Architecture Plan Sec9.3). Transition availability comes entirely from
+ * {@see WorkflowService::available_transitions()} — this class holds no
+ * `WorkflowEngine` of its own (Architecture Plan §IV.3.B, finding D: an
+ * admin screen instantiating an Engine class was a peer construction
+ * outside the composition root, and duplicated rule knowledge at the
+ * edge). No raw repository or direct database access here; every read
+ * goes through {@see FulfillmentDetailService}, every mutation through
+ * {@see NoteService}/{@see WorkflowService} (invariant I11,
+ * `AdminBoundaryGuardTest`).
  */
 final class FulfillmentDetailPage implements Page {
 
@@ -96,13 +95,6 @@ final class FulfillmentDetailPage implements Page {
 	private WorkflowDefinition $definition;
 
 	/**
-	 * Pure transition-eligibility evaluation, for display only.
-	 *
-	 * @var WorkflowEngine
-	 */
-	private WorkflowEngine $engine;
-
-	/**
 	 * Builds the page.
 	 *
 	 * @param AdminPageShell           $shell      Page-shell chrome renderer.
@@ -126,7 +118,6 @@ final class FulfillmentDetailPage implements Page {
 		$this->notes      = $notes;
 		$this->workflow   = $workflow;
 		$this->definition = $definition;
-		$this->engine     = new WorkflowEngine( GuardRegistry::standard() );
 	}
 
 	/**
@@ -233,40 +224,22 @@ final class FulfillmentDetailPage implements Page {
 	}
 
 	/**
-	 * Renders every transition {@see WorkflowEngine} approves or rejects for
-	 * this fulfillment's current state, plus the dynamic exception-
-	 * resolution edge when applicable — never a hand-maintained UI list.
+	 * Renders every transition {@see WorkflowService::available_transitions()}
+	 * approves or rejects for this fulfillment — never a hand-maintained UI
+	 * list, and never a second evaluation of the engine's own rules.
 	 *
 	 * @param Fulfillment $fulfillment Fulfillment being detailed.
 	 */
 	private function render_transitions( Fulfillment $fulfillment ): void {
 		$this->shell->open_section_card( __( 'Transitions', 'mp-commerce-fulfillment' ) );
 
-		$context = new TransitionContext( array(), true, true, true );
-		$targets = array_map( static fn( $transition ) => $transition->to(), $this->definition->transitions_from( $fulfillment->state() ) );
+		$candidates = $this->workflow->available_transitions( (int) $fulfillment->id(), 'current_user_can' );
 
-		if ( $this->definition->has_state( $fulfillment->state() ) && $this->definition->state( $fulfillment->state() )->is_exception() && null !== $fulfillment->return_to_state() ) {
-			$targets[] = $fulfillment->return_to_state();
+		foreach ( $candidates as $candidate ) {
+			$this->render_transition_control( $candidate );
 		}
 
-		$rendered = 0;
-
-		foreach ( array_unique( $targets ) as $target ) {
-			$transition = $this->definition->transition( $fulfillment->state(), $target );
-			$capability = null !== $transition ? $transition->required_capability() : Capabilities::PROCESS_FULFILLMENTS;
-
-			if ( ! current_user_can( $capability ) ) {
-				continue;
-			}
-
-			$result = $this->engine->transition( $fulfillment, $target, $this->definition, $context );
-			$label  = $this->definition->has_state( $target ) ? $this->definition->state( $target )->label() : $target;
-
-			$this->render_transition_control( $target, $label, $result, null !== $transition && $transition->requires_reason() );
-			++$rendered;
-		}
-
-		if ( 0 === $rendered ) {
+		if ( array() === $candidates ) {
 			echo '<p>' . esc_html__( 'No transitions are available.', 'mp-commerce-fulfillment' ) . '</p>';
 		}
 
@@ -279,32 +252,29 @@ final class FulfillmentDetailPage implements Page {
 	 * approved and reason-required, or disabled text with the guard's
 	 * rejection reason when the engine rejects it.
 	 *
-	 * @param string           $target         Candidate target state.
-	 * @param string           $label          Target state's display label.
-	 * @param TransitionResult $result         The engine's decision for this attempt.
-	 * @param bool             $requires_reason Whether this edge requires an audited reason.
+	 * @param AvailableTransition $candidate One candidate the engine has already decided on.
 	 */
-	private function render_transition_control( string $target, string $label, TransitionResult $result, bool $requires_reason ): void {
-		if ( ! $result->is_approved() ) {
+	private function render_transition_control( AvailableTransition $candidate ): void {
+		if ( ! $candidate->is_approved() ) {
 			printf(
 				'<p><button type="button" class="button" disabled aria-disabled="true">%s</button> <span class="description">%s</span></p>',
-				esc_html( $label ),
-				esc_html( (string) $result->rejection_message() )
+				esc_html( $candidate->label() ),
+				esc_html( (string) $candidate->rejection_message() )
 			);
 
 			return;
 		}
 
-		if ( $requires_reason ) {
-			printf( '<button type="button" class="button" data-mpcf-modal-open="mpcf-reason-%s">%s</button> ', esc_attr( $target ), esc_html( $label ) );
+		if ( $candidate->requires_reason() ) {
+			printf( '<button type="button" class="button" data-mpcf-modal-open="mpcf-reason-%s">%s</button> ', esc_attr( $candidate->target() ), esc_html( $candidate->label() ) );
 
 			return;
 		}
 
 		printf( '<form method="post" style="display:inline">' );
 		wp_nonce_field( self::TRANSITION_NONCE_ACTION );
-		printf( '<input type="hidden" name="mpcf_transition_target" value="%s">', esc_attr( $target ) );
-		printf( '<button type="submit" class="button">%s</button>', esc_html( $label ) );
+		printf( '<input type="hidden" name="mpcf_transition_target" value="%s">', esc_attr( $candidate->target() ) );
+		printf( '<button type="submit" class="button">%s</button>', esc_html( $candidate->label() ) );
 		echo '</form> ';
 	}
 
@@ -317,30 +287,20 @@ final class FulfillmentDetailPage implements Page {
 	 * @param Fulfillment $fulfillment Fulfillment being detailed.
 	 */
 	private function render_reason_modals( Fulfillment $fulfillment ): void {
-		$context = new TransitionContext( array(), true, true, true );
+		$candidates = $this->workflow->available_transitions( (int) $fulfillment->id(), 'current_user_can' );
 
-		foreach ( $this->definition->transitions_from( $fulfillment->state() ) as $transition ) {
-			if ( ! $transition->requires_reason() ) {
+		foreach ( $candidates as $candidate ) {
+			if ( ! $candidate->requires_reason() || ! $candidate->is_approved() ) {
 				continue;
 			}
 
-			if ( ! current_user_can( $transition->required_capability() ) ) {
-				continue;
-			}
-
-			$result = $this->engine->transition( $fulfillment, $transition->to(), $this->definition, $context );
-
-			if ( ! $result->is_approved() ) {
-				continue;
-			}
-
-			$label = $this->definition->has_state( $transition->to() ) ? $this->definition->state( $transition->to() )->label() : $transition->to();
+			$label = $candidate->label();
 
 			printf( '<form method="post">' );
 			wp_nonce_field( self::TRANSITION_NONCE_ACTION );
-			printf( '<input type="hidden" name="mpcf_transition_target" value="%s">', esc_attr( $transition->to() ) );
+			printf( '<input type="hidden" name="mpcf_transition_target" value="%s">', esc_attr( $candidate->target() ) );
 			echo $this->renderer->reason_modal( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- reason_modal() escapes every arg internally; see per-line notes below.
-				'mpcf-reason-' . $transition->to(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- A workflow state key, never user input; reason_modal() escapes it internally as an element id.
+				'mpcf-reason-' . $candidate->target(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- A workflow state key, never user input; reason_modal() escapes it internally as an element id.
 				$label, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- A workflow state's own display label; reason_modal() escapes it internally.
 				'reason',
 				sprintf(
@@ -468,7 +428,7 @@ final class FulfillmentDetailPage implements Page {
 			return __( 'You are not allowed to make this change.', 'mp-commerce-fulfillment' );
 		}
 
-		$outcome = $this->workflow->transition( $fulfillment_id, $target, self::current_actor(), $reason, true, true );
+		$outcome = $this->workflow->transition( $fulfillment_id, $target, self::current_actor(), $reason );
 
 		return $outcome->is_success() ? null : (string) $outcome->failure_message();
 	}

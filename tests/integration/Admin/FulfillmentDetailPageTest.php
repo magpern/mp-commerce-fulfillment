@@ -15,6 +15,7 @@ use MPCF\Admin\FulfillmentDetailPage;
 use MPCF\Application\EventDispatcher;
 use MPCF\Application\FulfillmentDetailService;
 use MPCF\Application\NoteService;
+use MPCF\Application\TransitionContextFactory;
 use MPCF\Application\WorkflowService;
 use MPCF\Capabilities;
 use MPCF\Domain\Fulfillment;
@@ -27,6 +28,8 @@ use MPCF\Infrastructure\Database\WpdbEventRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentItemRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
 use MPCF\Infrastructure\Database\WpdbNoteRepository;
+use MPCF\Infrastructure\Database\WpdbPackageRepository;
+use MPCF\Infrastructure\Database\WpdbShipmentRepository;
 use MPCF\Infrastructure\SystemClock;
 use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
 use MPCF\Vendor\Mpds\ComponentRenderer;
@@ -75,12 +78,12 @@ final class FulfillmentDetailPageTest extends WP_UnitTestCase {
 
 		$workflow = new WorkflowService(
 			$fulfillments,
-			$this->items,
 			$events,
 			new WorkflowEngine( GuardRegistry::standard() ),
 			new EventDispatcher(),
 			new SystemClock(),
-			array( StandardWorkflow::NAME => $definition )
+			array( StandardWorkflow::NAME => $definition ),
+			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository() )
 		);
 
 		return new FulfillmentDetailPage(

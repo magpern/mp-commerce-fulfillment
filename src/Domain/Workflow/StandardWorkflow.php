@@ -187,7 +187,7 @@ final class StandardWorkflow {
 			self::forward_edge( 'picking', 'picked', array( 'all_items_picked' ) ),
 			self::forward_edge( 'picked', 'packing' ),
 			self::forward_edge( 'packing', 'packed', array( 'all_items_packed', 'package_spec_present', 'photo_required' ) ),
-			self::forward_edge( 'packed', 'shipped', array( 'has_shipment' ), Capabilities::MANAGE_SHIPMENTS ),
+			self::forward_edge( 'packed', 'shipped', array( 'has_shipment', 'has_tracking' ), Capabilities::MANAGE_SHIPMENTS ),
 			self::forward_edge( 'shipped', 'delivered' ),
 			self::forward_edge( 'delivered', 'completed' ),
 			self::forward_edge( 'shipped', 'completed' ),

@@ -11,24 +11,24 @@ namespace MPCF\Application;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MPCF\Capabilities;
 use MPCF\Domain\Clock;
 use MPCF\Domain\Event\Actor;
 use MPCF\Domain\Event\DomainEvent;
 use MPCF\Domain\Event\PayloadGuard;
 use MPCF\Domain\Repository\EventRepository;
-use MPCF\Domain\Repository\FulfillmentItemRepository;
 use MPCF\Domain\Repository\FulfillmentRepository;
 use MPCF\Domain\Workflow\WorkflowDefinition;
-use MPCF\Engine\TransitionContext;
 use MPCF\Engine\WorkflowEngine;
 
 /**
  * Invariant I4: every state mutation flows through this class — no other
  * code path writes `mpcf_fulfillments.state`. This class:
  *
- * 1. loads the fulfillment and its items (the only guard-relevant data
- *    this layer knows how to source itself; package/shipment/photo flags
- *    are supplied by the caller — see {@see transition()});
+ * 1. loads the fulfillment and asks {@see TransitionContextFactory} for
+ *    the rest of the guard-relevant data, all derived from real
+ *    persisted state (Architecture Plan §IV.3.B, findings B/C/D — no
+ *    caller-asserted boolean has been accepted here since Milestone 2);
  * 2. asks {@see WorkflowEngine} whether the request is approved;
  * 3. on approval, records the transition on the in-memory fulfillment and
  *    persists it through the optimistic lock;
@@ -41,7 +41,10 @@ use MPCF\Engine\WorkflowEngine;
  * this class (Application, invariant I6) stays platform-free exactly like
  * Domain and Engine. Every entry point (admin screens, and later the REST
  * API) checks its own capability before ever calling here; both consuming
- * the same service is what invariant I11 means.
+ * the same service is what invariant I11 means. {@see available_transitions()}
+ * accepts the capability predicate as a plain `callable` for the same
+ * reason — this class asks "is the edge approved", never "may this actor
+ * take it".
  */
 final class WorkflowService {
 
@@ -51,13 +54,6 @@ final class WorkflowService {
 	 * @var FulfillmentRepository
 	 */
 	private FulfillmentRepository $fulfillments;
-
-	/**
-	 * Line item persistence.
-	 *
-	 * @var FulfillmentItemRepository
-	 */
-	private FulfillmentItemRepository $items;
 
 	/**
 	 * Audit log persistence.
@@ -95,59 +91,57 @@ final class WorkflowService {
 	private array $definitions;
 
 	/**
+	 * Builds real-data transition contexts.
+	 *
+	 * @var TransitionContextFactory
+	 */
+	private TransitionContextFactory $context_factory;
+
+	/**
 	 * Builds the service.
 	 *
-	 * @param FulfillmentRepository             $fulfillments Fulfillment persistence.
-	 * @param FulfillmentItemRepository         $items        Line item persistence.
-	 * @param EventRepository                   $events       Audit log persistence.
-	 * @param WorkflowEngine                    $engine       Pure transition decision logic.
-	 * @param EventDispatcher                   $dispatcher   In-process event dispatch.
-	 * @param Clock                             $clock        Source of "now".
-	 * @param array<string, WorkflowDefinition> $definitions  Registered workflow definitions, keyed by name.
+	 * @param FulfillmentRepository             $fulfillments    Fulfillment persistence.
+	 * @param EventRepository                   $events          Audit log persistence.
+	 * @param WorkflowEngine                    $engine          Pure transition decision logic.
+	 * @param EventDispatcher                   $dispatcher      In-process event dispatch.
+	 * @param Clock                             $clock           Source of "now".
+	 * @param array<string, WorkflowDefinition> $definitions     Registered workflow definitions, keyed by name.
+	 * @param TransitionContextFactory          $context_factory Builds real-data transition contexts.
 	 */
 	public function __construct(
 		FulfillmentRepository $fulfillments,
-		FulfillmentItemRepository $items,
 		EventRepository $events,
 		WorkflowEngine $engine,
 		EventDispatcher $dispatcher,
 		Clock $clock,
-		array $definitions
+		array $definitions,
+		TransitionContextFactory $context_factory
 	) {
-		$this->fulfillments = $fulfillments;
-		$this->items        = $items;
-		$this->events       = $events;
-		$this->engine       = $engine;
-		$this->dispatcher   = $dispatcher;
-		$this->clock        = $clock;
-		$this->definitions  = $definitions;
+		$this->fulfillments    = $fulfillments;
+		$this->events          = $events;
+		$this->engine          = $engine;
+		$this->dispatcher      = $dispatcher;
+		$this->clock           = $clock;
+		$this->definitions     = $definitions;
+		$this->context_factory = $context_factory;
 	}
 
 	/**
-	 * Attempts to move a fulfillment to a target state.
+	 * Attempts to move a fulfillment to a target state. Guard-relevant data
+	 * beyond the fulfillment itself comes from {@see TransitionContextFactory},
+	 * built from real shipment/package/item state — never a caller-asserted
+	 * boolean (Architecture Plan §IV.3.B, findings B/C/D).
 	 *
-	 * `$package_spec_present`, `$has_shipment` and
-	 * `$photo_requirement_satisfied` are manual operator confirmation in
-	 * Milestone 1 (there is no package/shipment data model yet — see
-	 * {@see \MPCF\Engine\TransitionContext}); a future milestone's caller
-	 * supplies them from real data instead, with no change needed here.
-	 *
-	 * @param int         $fulfillment_id               Fulfillment to transition.
-	 * @param string      $target_state                 State being requested.
-	 * @param Actor       $actor                        Who is requesting this transition.
-	 * @param string|null $reason                       Reason text, required by some edges (guard-independent — the Engine layer does not enforce this; the caller is expected to have collected it whenever {@see \MPCF\Domain\Workflow\Transition::requires_reason()} is true).
-	 * @param bool        $package_spec_present         Whether a package spec has been confirmed.
-	 * @param bool        $has_shipment                 Whether a shipment has been confirmed.
-	 * @param bool        $photo_requirement_satisfied  Whether the photo-required setting is satisfied.
+	 * @param int         $fulfillment_id Fulfillment to transition.
+	 * @param string      $target_state   State being requested.
+	 * @param Actor       $actor          Who is requesting this transition.
+	 * @param string|null $reason         Reason text, required by some edges (guard-independent — the Engine layer does not enforce this; the caller is expected to have collected it whenever {@see \MPCF\Domain\Workflow\Transition::requires_reason()} is true).
 	 */
 	public function transition(
 		int $fulfillment_id,
 		string $target_state,
 		Actor $actor,
-		?string $reason = null,
-		bool $package_spec_present = false,
-		bool $has_shipment = false,
-		bool $photo_requirement_satisfied = true
+		?string $reason = null
 	): TransitionOutcome {
 		$fulfillment = $this->fulfillments->find( $fulfillment_id );
 
@@ -161,12 +155,7 @@ final class WorkflowService {
 			return TransitionOutcome::failed( 'unknown_workflow', "Workflow \"{$fulfillment->workflow()}\" is not registered." );
 		}
 
-		$context = new TransitionContext(
-			$this->items->find_for_fulfillment( $fulfillment_id ),
-			$package_spec_present,
-			$has_shipment,
-			$photo_requirement_satisfied
-		);
+		$context = $this->context_factory->build( $fulfillment_id );
 
 		$result = $this->engine->transition( $fulfillment, $target_state, $definition, $context );
 
@@ -210,6 +199,64 @@ final class WorkflowService {
 		$this->record_events( $fulfillment->id(), $result->events(), $actor, $now, $payload );
 
 		return TransitionOutcome::succeeded( $fulfillment );
+	}
+
+	/**
+	 * Every candidate next state for a fulfillment, with its real
+	 * eligibility — the one rule source {@see \MPCF\Admin\FulfillmentDetailPage},
+	 * the Packing Workspace and `GET /mpcf/v1/fulfillments/{id}/transitions`
+	 * all render from (Architecture Plan §IV.3.B). Candidates are every
+	 * statically declared edge from the fulfillment's current state, plus
+	 * — when that state is an exception state — the dynamic edge back to
+	 * `return_to_state()` {@see WorkflowEngine} resolves at attempt time.
+	 * A candidate whose required capability `$can` rejects is omitted
+	 * entirely, never shown as a disabled control.
+	 *
+	 * @param int      $fulfillment_id Fulfillment to list candidates for.
+	 * @param callable $can            Capability predicate: `fn(string $capability): bool`.
+	 * @return list<AvailableTransition>
+	 */
+	public function available_transitions( int $fulfillment_id, callable $can ): array {
+		$fulfillment = $this->fulfillments->find( $fulfillment_id );
+
+		if ( null === $fulfillment ) {
+			return array();
+		}
+
+		$definition = $this->definitions[ $fulfillment->workflow() ] ?? null;
+
+		if ( null === $definition || ! $definition->has_state( $fulfillment->state() ) ) {
+			return array();
+		}
+
+		$context = $this->context_factory->build( $fulfillment_id );
+
+		$targets = array_map(
+			static fn( $transition ) => $transition->to(),
+			$definition->transitions_from( $fulfillment->state() )
+		);
+
+		if ( $definition->state( $fulfillment->state() )->is_exception() && null !== $fulfillment->return_to_state() ) {
+			$targets[] = $fulfillment->return_to_state();
+		}
+
+		$available = array();
+
+		foreach ( array_unique( $targets ) as $target ) {
+			$transition = $definition->transition( $fulfillment->state(), $target );
+			$capability = null !== $transition ? $transition->required_capability() : Capabilities::PROCESS_FULFILLMENTS;
+
+			if ( ! $can( $capability ) ) {
+				continue;
+			}
+
+			$result = $this->engine->transition( $fulfillment, $target, $definition, $context );
+			$label  = $definition->has_state( $target ) ? $definition->state( $target )->label() : $target;
+
+			$available[] = AvailableTransition::from_result( $target, $label, $result, null !== $transition && $transition->requires_reason(), $capability );
+		}
+
+		return $available;
 	}
 
 	/**

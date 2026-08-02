@@ -1,6 +1,6 @@
 <?php
 /**
- * Tests for the three context-flag guards: package spec, shipment, and
+ * Tests for the context-flag guards: package spec, shipment, tracking, and
  * photo requirement.
  *
  * @package MPCommerceFulfillment
@@ -13,13 +13,14 @@ namespace MPCF\Tests\Unit\Engine\Guard;
 use DateTimeImmutable;
 use MPCF\Domain\Fulfillment;
 use MPCF\Engine\Guard\HasShipmentGuard;
+use MPCF\Engine\Guard\HasTrackingGuard;
 use MPCF\Engine\Guard\PackageSpecPresentGuard;
 use MPCF\Engine\Guard\PhotoRequiredGuard;
 use MPCF\Engine\TransitionContext;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Tests for the three context-flag guards: package spec, shipment, and
+ * Tests for the context-flag guards: package spec, shipment, tracking, and
  * photo requirement.
  */
 final class ContextFlagGuardsTest extends TestCase {
@@ -50,5 +51,13 @@ final class ContextFlagGuardsTest extends TestCase {
 		self::assertSame( 'photo_required', $guard->id() );
 		self::assertTrue( $guard->is_satisfied( $this->fulfillment(), new TransitionContext() ) );
 		self::assertFalse( $guard->is_satisfied( $this->fulfillment(), new TransitionContext( array(), false, false, false ) ) );
+	}
+
+	public function test_has_tracking_guard_defaults_to_satisfied(): void {
+		$guard = new HasTrackingGuard();
+
+		self::assertSame( 'has_tracking', $guard->id() );
+		self::assertTrue( $guard->is_satisfied( $this->fulfillment(), new TransitionContext() ) );
+		self::assertFalse( $guard->is_satisfied( $this->fulfillment(), new TransitionContext( array(), false, false, true, false ) ) );
 	}
 }

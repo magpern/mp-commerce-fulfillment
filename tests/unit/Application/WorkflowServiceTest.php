@@ -10,11 +10,16 @@ declare( strict_types=1 );
 namespace MPCF\Tests\Unit\Application;
 
 use DateTimeImmutable;
+use MPCF\Application\AvailableTransition;
 use MPCF\Application\EventDispatcher;
+use MPCF\Application\TransitionContextFactory;
 use MPCF\Application\WorkflowService;
 use MPCF\Domain\Event\Actor;
 use MPCF\Domain\Fulfillment;
 use MPCF\Domain\FulfillmentItem;
+use MPCF\Domain\Shipping\Package;
+use MPCF\Domain\Shipping\PackageSpec;
+use MPCF\Domain\Shipping\Shipment;
 use MPCF\Domain\Workflow\StandardWorkflow;
 use MPCF\Engine\GuardRegistry;
 use MPCF\Engine\WorkflowEngine;
@@ -22,6 +27,8 @@ use MPCF\Tests\Unit\Application\Doubles\FixedClock;
 use MPCF\Tests\Unit\Application\Doubles\InMemoryEventRepository;
 use MPCF\Tests\Unit\Application\Doubles\InMemoryFulfillmentItemRepository;
 use MPCF\Tests\Unit\Application\Doubles\InMemoryFulfillmentRepository;
+use MPCF\Tests\Unit\Application\Doubles\InMemoryPackageRepository;
+use MPCF\Tests\Unit\Application\Doubles\InMemoryShipmentRepository;
 use MPCF\Tests\Unit\Application\Doubles\RecordingSubscriber;
 use PHPUnit\Framework\TestCase;
 
@@ -39,6 +46,16 @@ final class WorkflowServiceTest extends TestCase {
 	 * @var InMemoryFulfillmentItemRepository
 	 */
 	private InMemoryFulfillmentItemRepository $items;
+
+	/**
+	 * @var InMemoryShipmentRepository
+	 */
+	private InMemoryShipmentRepository $shipments;
+
+	/**
+	 * @var InMemoryPackageRepository
+	 */
+	private InMemoryPackageRepository $packages;
 
 	/**
 	 * @var InMemoryEventRepository
@@ -63,18 +80,20 @@ final class WorkflowServiceTest extends TestCase {
 	protected function setUp(): void {
 		$this->fulfillments = new InMemoryFulfillmentRepository();
 		$this->items        = new InMemoryFulfillmentItemRepository();
+		$this->shipments    = new InMemoryShipmentRepository();
+		$this->packages     = new InMemoryPackageRepository();
 		$this->events       = new InMemoryEventRepository();
 		$this->dispatcher   = new EventDispatcher();
 		$this->clock        = new FixedClock( new DateTimeImmutable( '2026-08-02 10:00:00' ) );
 
 		$this->service = new WorkflowService(
 			$this->fulfillments,
-			$this->items,
 			$this->events,
 			new WorkflowEngine( GuardRegistry::standard() ),
 			$this->dispatcher,
 			$this->clock,
-			array( StandardWorkflow::NAME => StandardWorkflow::definition() )
+			array( StandardWorkflow::NAME => StandardWorkflow::definition() ),
+			new TransitionContextFactory( $this->items, $this->shipments, $this->packages )
 		);
 	}
 
@@ -173,12 +192,12 @@ final class WorkflowServiceTest extends TestCase {
 	public function test_fails_with_unknown_workflow_when_the_fulfillments_workflow_is_not_registered(): void {
 		$service = new WorkflowService(
 			$this->fulfillments,
-			$this->items,
 			$this->events,
 			new WorkflowEngine( GuardRegistry::standard() ),
 			$this->dispatcher,
 			$this->clock,
-			array() // No workflows registered.
+			array(), // No workflows registered.
+			new TransitionContextFactory( $this->items, $this->shipments, $this->packages )
 		);
 
 		$id      = $this->seed_fulfillment();
@@ -289,12 +308,12 @@ final class WorkflowServiceTest extends TestCase {
 
 		$service = new WorkflowService(
 			$fulfillments,
-			$this->items,
 			$this->events,
 			new WorkflowEngine( GuardRegistry::standard() ),
 			$this->dispatcher,
 			$this->clock,
-			array( StandardWorkflow::NAME => StandardWorkflow::definition() )
+			array( StandardWorkflow::NAME => StandardWorkflow::definition() ),
+			new TransitionContextFactory( $this->items, $this->shipments, $this->packages )
 		);
 
 		$outcome = $service->transition( $id, 'picking', Actor::system() );
@@ -315,5 +334,113 @@ final class WorkflowServiceTest extends TestCase {
 		self::assertTrue( $outcome->is_success() );
 		self::assertSame( 'picking', $outcome->fulfillment()->state() );
 		self::assertNull( $outcome->fulfillment()->return_to_state() );
+	}
+
+	/**
+	 * Architecture Plan §IV.3.B, finding B: `package_spec_present` used to
+	 * be a caller-asserted boolean. It is derived from a real package spec
+	 * now — this is the upgrade-relevant case: a `0.1.x` fulfillment
+	 * reaching `packing -> packed` has no shipment/package rows at all,
+	 * and must stay blocked until one is created with a spec.
+	 */
+	public function test_packing_to_packed_is_blocked_without_a_real_package_spec_and_permitted_once_one_exists(): void {
+		$id = $this->seed_fulfillment( 'packing' );
+		$this->items->insert_all( array( self::fully_packed_item( $id ) ) );
+
+		$blocked = $this->service->transition( $id, 'packed', Actor::system() );
+
+		self::assertFalse( $blocked->is_success() );
+		self::assertSame( 'package_spec_present', $blocked->failure_code() );
+
+		$shipment_id = $this->shipments->insert( Shipment::create( $id, new DateTimeImmutable() ) );
+		$package     = Package::create( $shipment_id, 1, new DateTimeImmutable() );
+		$package->set_spec( PackageSpec::create( 500, null, null, null ) );
+		$this->packages->insert( $package );
+
+		$permitted = $this->service->transition( $id, 'packed', Actor::system() );
+
+		self::assertTrue( $permitted->is_success() );
+	}
+
+	/**
+	 * Architecture Plan §IV.3.B, finding D / the upgrade consequence
+	 * flagged in §IV.15/M2-R8: a fulfillment sitting in `packed` with no
+	 * shipment row (whether from a `0.1.x` upgrade or simply because none
+	 * was ever created) cannot ship until one exists.
+	 */
+	public function test_packed_to_shipped_is_blocked_without_a_real_shipment_and_permitted_once_one_exists(): void {
+		$id = $this->seed_fulfillment( 'packed' );
+
+		$blocked = $this->service->transition( $id, 'shipped', Actor::system() );
+
+		self::assertFalse( $blocked->is_success() );
+		self::assertSame( 'has_shipment', $blocked->failure_code() );
+		self::assertSame( 'packed', $this->fulfillments->find( $id )->state() );
+
+		$this->shipments->insert( Shipment::create( $id, new DateTimeImmutable() ) );
+
+		$permitted = $this->service->transition( $id, 'shipped', Actor::system() );
+
+		self::assertTrue( $permitted->is_success() );
+		self::assertSame( 'shipped', $permitted->fulfillment()->state() );
+	}
+
+	public function test_available_transitions_omits_a_candidate_the_capability_predicate_rejects(): void {
+		$id = $this->seed_fulfillment( 'queued' );
+
+		$candidates = $this->service->available_transitions( $id, static fn( string $capability ): bool => false ); // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Always-false stub; the point of this test is that it is never even called for the omitted candidate's capability.
+
+		self::assertSame( array(), $candidates );
+	}
+
+	public function test_available_transitions_reports_the_real_guard_rejection_for_a_blocked_candidate(): void {
+		$id = $this->seed_fulfillment( 'packing' );
+		$this->items->insert_all( array( FulfillmentItem::intake( $id, 1, 1, 0, 'SKU', 'Widget', 2 ) ) );
+
+		$candidates = $this->service->available_transitions( $id, static fn( string $capability ): bool => true ); // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Always-true stub; this test exercises the engine's rejection, not the predicate.
+		$packed     = self::find_candidate( $candidates, 'packed' );
+
+		self::assertNotNull( $packed );
+		self::assertFalse( $packed->is_approved() );
+		self::assertSame( 'all_items_packed', $packed->rejection_code() );
+	}
+
+	public function test_available_transitions_includes_the_dynamic_exception_resolution_edge(): void {
+		$id          = $this->seed_fulfillment( 'picking' );
+		$fulfillment = $this->fulfillments->find( $id );
+		$fulfillment->apply_transition( 'problem', 'picking', new DateTimeImmutable() );
+		$this->fulfillments->save( $fulfillment );
+
+		$candidates = $this->service->available_transitions( $id, static fn( string $capability ): bool => true ); // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Always-true stub; this test exercises the dynamic resolve edge, not the predicate.
+		$resolution = self::find_candidate( $candidates, 'picking' );
+
+		self::assertNotNull( $resolution );
+		self::assertTrue( $resolution->is_approved() );
+	}
+
+	/**
+	 * @param array<int, AvailableTransition> $candidates Candidates to search.
+	 */
+	private static function find_candidate( array $candidates, string $target ): ?AvailableTransition {
+		foreach ( $candidates as $candidate ) {
+			if ( $candidate->target() === $target ) {
+				return $candidate;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * A single-line item, fully picked and packed — the minimum needed to
+	 * clear `all_items_packed` so a test can isolate the guard it actually
+	 * wants to exercise.
+	 */
+	private static function fully_packed_item( int $fulfillment_id ): FulfillmentItem {
+		$item = FulfillmentItem::intake( $fulfillment_id, 1, 1, 0, 'SKU', 'Widget', 1 );
+		$item->record_picked( 1 );
+		$item->record_packed( 1 );
+
+		return $item;
 	}
 }

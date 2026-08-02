@@ -9,9 +9,15 @@ declare( strict_types=1 );
 
 namespace MPCF\Tests\Integration\Admin;
 
+use DateTimeImmutable;
 use MPCF\Capabilities;
+use MPCF\Domain\Shipping\Package;
+use MPCF\Domain\Shipping\PackageSpec;
+use MPCF\Domain\Shipping\Shipment;
 use MPCF\Infrastructure\Database\WpdbFulfillmentItemRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
+use MPCF\Infrastructure\Database\WpdbPackageRepository;
+use MPCF\Infrastructure\Database\WpdbShipmentRepository;
 use MPCF\Plugin;
 use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
 use MPCF\Tests\Integration\Woo\OrderFactoryTrait;
@@ -140,6 +146,17 @@ final class AdminStatusBridgeWiringTest extends WP_UnitTestCase {
 			$items->save( $item );
 		}
 
+		// A real shipment + weighed package — package_spec_present and
+		// has_shipment are derived from this real data since Milestone 2
+		// (Architecture Plan §IV.3.B, findings B/C/D), never asserted by
+		// the caller.
+		$shipments   = new WpdbShipmentRepository();
+		$packages    = new WpdbPackageRepository();
+		$shipment_id = $shipments->insert( Shipment::create( $id, new DateTimeImmutable() ) );
+		$package     = Package::create( $shipment_id, 1, new DateTimeImmutable() );
+		$package->set_spec( PackageSpec::create( 500, null, null, null ) );
+		$packages->insert( $package );
+
 		self::assertNull( $detail_page->submit_transition( $id, 'packed', null ) );
 		self::assertFalse( wc_get_order( $order_id )->has_status( 'completed' ), 'Sanity check: the order must not already be completed before the last transition.' );
 
@@ -153,6 +170,12 @@ final class AdminStatusBridgeWiringTest extends WP_UnitTestCase {
 
 		self::assertFalse( BridgeReentrancyGuard::is_active(), 'The re-entrancy guard must be released once the bridge write completes.' );
 		self::assertSame( 1, did_action( 'woocommerce_order_status_completed' ), 'Exactly one completion write must happen, not a recursive cascade.' );
+
+		self::assertSame(
+			Shipment::STATUS_SHIPPED,
+			$shipments->find( $shipment_id )->status(),
+			'The fulfillment reaching "shipped" must cascade to every shipment still pending on it (Architecture Plan §IV.5.8 step 11), via the real ShipmentAutoShipSubscriber Plugin::wire_services() registers — not a hand-wired equivalent.'
+		);
 	}
 
 	public function test_an_admin_initiated_cancellation_is_still_capability_checked(): void {

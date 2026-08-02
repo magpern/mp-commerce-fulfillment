@@ -9,15 +9,22 @@ declare( strict_types=1 );
 
 namespace MPCF\Tests\Integration\Woo;
 
+use DateTimeImmutable;
 use MPCF\Application\EventDispatcher;
+use MPCF\Application\TransitionContextFactory;
 use MPCF\Application\WorkflowService;
 use MPCF\Domain\Event\Actor;
+use MPCF\Domain\Shipping\Package;
+use MPCF\Domain\Shipping\PackageSpec;
+use MPCF\Domain\Shipping\Shipment;
 use MPCF\Domain\Workflow\StandardWorkflow;
 use MPCF\Engine\GuardRegistry;
 use MPCF\Engine\WorkflowEngine;
 use MPCF\Infrastructure\Database\WpdbEventRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentItemRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
+use MPCF\Infrastructure\Database\WpdbPackageRepository;
+use MPCF\Infrastructure\Database\WpdbShipmentRepository;
 use MPCF\Infrastructure\SystemClock;
 use MPCF\Settings;
 use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
@@ -72,12 +79,12 @@ final class StatusBridgeTest extends WP_UnitTestCase {
 
 		return new WorkflowService(
 			$this->fulfillments,
-			$this->items,
 			new WpdbEventRepository(),
 			new WorkflowEngine( GuardRegistry::standard() ),
 			$dispatcher,
 			new SystemClock(),
-			array( StandardWorkflow::NAME => StandardWorkflow::definition() )
+			array( StandardWorkflow::NAME => StandardWorkflow::definition() ),
+			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository() )
 		);
 	}
 
@@ -105,7 +112,19 @@ final class StatusBridgeTest extends WP_UnitTestCase {
 			$this->items->save( $item );
 		}
 
-		$service->transition( $id, 'packed', Actor::system(), null, true );
+		// A real shipment + weighed package, matching what the workspace
+		// creates on the "first edit to any shipment field" (Architecture
+		// Plan §IV.5.8 step 6) — package_spec_present and has_shipment are
+		// derived from this real data now (§IV.3.B, findings B/C/D), not
+		// asserted by the caller.
+		$shipments   = new WpdbShipmentRepository();
+		$packages    = new WpdbPackageRepository();
+		$shipment_id = $shipments->insert( Shipment::create( $id, new DateTimeImmutable() ) );
+		$package     = Package::create( $shipment_id, 1, new DateTimeImmutable() );
+		$package->set_spec( PackageSpec::create( 500, null, null, null ) );
+		$packages->insert( $package );
+
+		$service->transition( $id, 'packed', Actor::system() );
 
 		return $id;
 	}
@@ -117,7 +136,7 @@ final class StatusBridgeTest extends WP_UnitTestCase {
 		$id       = $this->seed_packed_fulfillment( $service );
 		$order_id = $this->fulfillments->find( $id )->order_id();
 
-		$outcome = $service->transition( $id, 'shipped', Actor::system(), null, true, true );
+		$outcome = $service->transition( $id, 'shipped', Actor::system() );
 
 		self::assertTrue( $outcome->is_success() );
 
@@ -138,7 +157,7 @@ final class StatusBridgeTest extends WP_UnitTestCase {
 		$id       = $this->seed_packed_fulfillment( $service );
 		$order_id = $this->fulfillments->find( $id )->order_id();
 
-		$service->transition( $id, 'shipped', Actor::system(), null, true, true );
+		$service->transition( $id, 'shipped', Actor::system() );
 
 		$order = wc_get_order( $order_id );
 		self::assertFalse( $order->has_status( 'completed' ), 'Disabling the outbound setting must leave the order status untouched.' );
@@ -164,7 +183,7 @@ final class StatusBridgeTest extends WP_UnitTestCase {
 			}
 		);
 
-		$service->transition( $id, 'shipped', Actor::system(), null, true, true );
+		$service->transition( $id, 'shipped', Actor::system() );
 
 		self::assertTrue( $depth_during_write, 'The re-entrancy guard must be held while the bridge-initiated WC write is in flight.' );
 		self::assertFalse( BridgeReentrancyGuard::is_active(), 'The guard must be released once the write completes.' );
@@ -178,14 +197,14 @@ final class StatusBridgeTest extends WP_UnitTestCase {
 		$id       = $this->seed_packed_fulfillment( $service );
 		$order_id = $this->fulfillments->find( $id )->order_id();
 
-		$service->transition( $id, 'shipped', Actor::system(), null, true, true );
+		$service->transition( $id, 'shipped', Actor::system() );
 		self::assertSame( 1, did_action( 'woocommerce_order_status_completed' ) );
 
 		// A second call for the same fulfillment is rejected by the engine
 		// itself (already shipped, no such edge) — but even if a duplicate
 		// hook somehow re-dispatched the event, the bridge's own
 		// has_status('completed') check is the second line of defense.
-		$second = $service->transition( $id, 'shipped', Actor::system(), null, true, true );
+		$second = $service->transition( $id, 'shipped', Actor::system() );
 
 		self::assertFalse( $second->is_success() );
 		self::assertSame( 1, did_action( 'woocommerce_order_status_completed' ), 'A rejected duplicate transition must not cause a second completion write.' );

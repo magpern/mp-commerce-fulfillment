@@ -21,12 +21,14 @@ use MPCF\Domain\FulfillmentItem;
  * itself (into a repository, a setting, or a platform function) to answer
  * a guard question — the caller resolves all of that first.
  *
- * `package_spec_present` and `has_shipment` reflect manual operator
- * confirmation in Milestone 1 (there is no dedicated package/shipment data
- * model yet — that lands in Milestone 2); `photo_requirement_satisfied` is
- * pre-resolved by the caller against the photo-required setting and
- * whatever photo state exists, so this class never needs to read settings
- * itself.
+ * From Milestone 2 on, `package_spec_present` and `has_shipment` are
+ * derived from real `mpcf_shipments`/`mpcf_packages` data by
+ * {@see \MPCF\Application\TransitionContextFactory} (Architecture Plan
+ * §IV.3.B, findings B/C/D) — Milestone 1 had no shipment/package data model
+ * yet, so they were caller-asserted booleans then. `photo_requirement_satisfied`
+ * and `tracking_requirement_satisfied` are pre-resolved by the caller
+ * against a setting and whatever real state exists, so this class never
+ * needs to read a setting or a repository itself.
  */
 final class TransitionContext {
 
@@ -59,23 +61,33 @@ final class TransitionContext {
 	private bool $photo_requirement_satisfied;
 
 	/**
+	 * Whether the tracking-required setting, if any, has been satisfied.
+	 *
+	 * @var bool
+	 */
+	private bool $tracking_requirement_satisfied;
+
+	/**
 	 * Builds a transition context.
 	 *
-	 * @param array<int, FulfillmentItem> $items                        Line items belonging to the fulfillment.
-	 * @param bool                        $package_spec_present         Whether a package spec has been confirmed.
-	 * @param bool                        $has_shipment                 Whether a shipment has been confirmed.
-	 * @param bool                        $photo_requirement_satisfied  Whether the photo-required setting is satisfied.
+	 * @param array<int, FulfillmentItem> $items                           Line items belonging to the fulfillment.
+	 * @param bool                        $package_spec_present            Whether a package spec has been confirmed.
+	 * @param bool                        $has_shipment                    Whether a shipment has been confirmed.
+	 * @param bool                        $photo_requirement_satisfied     Whether the photo-required setting is satisfied.
+	 * @param bool                        $tracking_requirement_satisfied  Whether the tracking-required setting is satisfied.
 	 */
 	public function __construct(
 		array $items = array(),
 		bool $package_spec_present = false,
 		bool $has_shipment = false,
-		bool $photo_requirement_satisfied = true
+		bool $photo_requirement_satisfied = true,
+		bool $tracking_requirement_satisfied = true
 	) {
-		$this->items                       = $items;
-		$this->package_spec_present        = $package_spec_present;
-		$this->has_shipment                = $has_shipment;
-		$this->photo_requirement_satisfied = $photo_requirement_satisfied;
+		$this->items                          = $items;
+		$this->package_spec_present           = $package_spec_present;
+		$this->has_shipment                   = $has_shipment;
+		$this->photo_requirement_satisfied    = $photo_requirement_satisfied;
+		$this->tracking_requirement_satisfied = $tracking_requirement_satisfied;
 	}
 
 	/**
@@ -106,5 +118,12 @@ final class TransitionContext {
 	 */
 	public function photo_requirement_satisfied(): bool {
 		return $this->photo_requirement_satisfied;
+	}
+
+	/**
+	 * Whether the tracking-required setting, if any, has been satisfied.
+	 */
+	public function tracking_requirement_satisfied(): bool {
+		return $this->tracking_requirement_satisfied;
 	}
 }

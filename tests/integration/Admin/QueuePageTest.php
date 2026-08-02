@@ -16,6 +16,7 @@ use MPCF\Application\AssignmentService;
 use MPCF\Application\EventDispatcher;
 use MPCF\Application\FulfillmentDetailService;
 use MPCF\Application\QueueService;
+use MPCF\Application\TransitionContextFactory;
 use MPCF\Application\WorkflowService;
 use MPCF\Capabilities;
 use MPCF\Domain\Fulfillment;
@@ -26,7 +27,9 @@ use MPCF\Infrastructure\Database\WpdbEventRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentItemRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
 use MPCF\Infrastructure\Database\WpdbNoteRepository;
+use MPCF\Infrastructure\Database\WpdbPackageRepository;
 use MPCF\Infrastructure\Database\WpdbSearchQuery;
+use MPCF\Infrastructure\Database\WpdbShipmentRepository;
 use MPCF\Infrastructure\SystemClock;
 use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
 use WP_UnitTestCase;
@@ -62,12 +65,12 @@ final class QueuePageTest extends WP_UnitTestCase {
 		$definition = StandardWorkflow::definition();
 		$workflow   = new WorkflowService(
 			$this->fulfillments,
-			$items,
 			$events,
 			new WorkflowEngine( GuardRegistry::standard() ),
 			new EventDispatcher(),
 			new SystemClock(),
-			array( StandardWorkflow::NAME => $definition )
+			array( StandardWorkflow::NAME => $definition ),
+			new TransitionContextFactory( $items, new WpdbShipmentRepository(), new WpdbPackageRepository() )
 		);
 
 		$this->page = new QueuePage(

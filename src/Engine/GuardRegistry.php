@@ -14,6 +14,7 @@ use InvalidArgumentException;
 use MPCF\Engine\Guard\AllItemsPackedGuard;
 use MPCF\Engine\Guard\AllItemsPickedGuard;
 use MPCF\Engine\Guard\HasShipmentGuard;
+use MPCF\Engine\Guard\HasTrackingGuard;
 use MPCF\Engine\Guard\PackageSpecPresentGuard;
 use MPCF\Engine\Guard\PhotoRequiredGuard;
 
@@ -58,6 +59,7 @@ final class GuardRegistry {
 				new AllItemsPackedGuard(),
 				new PackageSpecPresentGuard(),
 				new HasShipmentGuard(),
+				new HasTrackingGuard(),
 				new PhotoRequiredGuard(),
 			)
 		);
