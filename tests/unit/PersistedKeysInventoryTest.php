@@ -30,6 +30,8 @@ final class PersistedKeysInventoryTest extends TestCase {
 		self::assertCount( 4, $inventory['tables'], 'Milestone 1 introduces the four fulfillment tables.' );
 		self::assertSame( Capabilities::all(), $inventory['capabilities'] );
 		self::assertSame( array( Capabilities::ROLE_OPERATOR, Capabilities::ROLE_LEAD ), $inventory['roles'] );
+		self::assertSame( array( 'mpcf' ), $inventory['action_scheduler_groups'] );
+		self::assertSame( array(), $inventory['user_meta'], 'Milestone 1 never wrote any user meta — see PersistedKeys::user_meta_keys().' );
 	}
 
 	public function test_every_inventoried_key_is_documented_in_persisted_data_md(): void {

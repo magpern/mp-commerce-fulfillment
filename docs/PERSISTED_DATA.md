@@ -57,6 +57,26 @@ process/shipments/notes/photos/documents) and `mpcf_warehouse_lead` (every
 `mpcf_*` capability. No capability is ever named directly in a permission
 check outside `MPCF\Capabilities`.
 
+## Scheduled actions
+
+| Action Scheduler group | Actions filed under it | Owner |
+|---|---|---|
+| `mpcf` | `mpcf_process_intake` (the Action Scheduler fallback path `Woo\IntakeHooks` uses when synchronous intake can't complete inline) | `Woo\IntakeHooks` |
+
+Action Scheduler's own tables belong to the required order platform and are
+never dropped or altered by this plugin — only the rows this plugin filed
+under the `mpcf` group are ever touched, and only on uninstall with
+`remove_data_on_uninstall` enabled (see below).
+
+## User meta
+
+None in Milestone 1. The architecture reserves `mpcf_ui_prefs` for saved
+Queue filter views (Architecture Plan §9.3), but that feature was never
+built — D15 shipped the Queue without it, deliberately, to keep the
+milestone minimal. `PersistedKeys::user_meta_keys()` returns an empty array
+for exactly this reason; the moment a future milestone writes real
+user-meta, extending that list is the only change `uninstall.php` needs.
+
 ## Directories
 
 None created in M0. Milestone 5 introduces the protected photo store under
@@ -65,7 +85,15 @@ None created in M0. Milestone 5 introduces the protected photo store under
 ## Uninstall policy
 
 All-or-nothing (invariant I12), default **keep everything**. With
-`remove_data_on_uninstall` disabled, `uninstall.php` is a no-op. Enabled, it
-removes: `mpcf_settings`, `mpcf_db_version`, all four tables above, the
-`mpcf_warehouse_operator` and `mpcf_warehouse_lead` roles, and every
-`mpcf_*` capability from every role that holds it.
+`remove_data_on_uninstall` disabled, `uninstall.php` is a no-op: every
+option, table, role, capability, scheduled action and user preference
+survives. Enabled, it removes, in this order: every scheduled action under
+the `mpcf` Action Scheduler group (via `as_unschedule_all_actions()`, a
+safe no-op if WooCommerce/Action Scheduler is no longer active — invariant
+I10), the `mpcf_warehouse_operator` and `mpcf_warehouse_lead` roles and
+every `mpcf_*` capability from every role that holds it, all four tables
+above, `mpcf_settings` and `mpcf_db_version`, and any user-meta key in
+`PersistedKeys::user_meta_keys()` (currently none — see above). Every step
+is safe to run more than once: `DROP TABLE IF EXISTS`, `delete_option()` on
+an already-missing option, and unscheduling an already-empty group are all
+no-ops the second time.

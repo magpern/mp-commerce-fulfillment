@@ -58,16 +58,47 @@ final class PersistedKeys {
 	}
 
 	/**
+	 * Every Action Scheduler group this plugin files its scheduled actions
+	 * under — `Woo\IntakeHooks`'s `mpcf_process_intake` retry is the only
+	 * one in Milestone 1. Removing this group's own scheduled rows on
+	 * uninstall never touches Action Scheduler's own tables, which belong
+	 * to the required order platform and are never dropped or altered by
+	 * this plugin.
+	 *
+	 * @return list<string>
+	 */
+	public static function action_scheduler_groups(): array {
+		return array( 'mpcf' );
+	}
+
+	/**
+	 * Every user-meta key this plugin owns. Empty in Milestone 1: the
+	 * architecture reserves `mpcf_ui_prefs` for saved Queue filter views
+	 * (Architecture Plan Sec9.3), but that feature was never built — D15
+	 * shipped the Queue without it, deliberately, to keep the milestone
+	 * minimal. Declared here (rather than omitted) so the moment a future
+	 * milestone introduces real user-meta, extending this list is the only
+	 * change `uninstall.php` needs.
+	 *
+	 * @return list<string>
+	 */
+	public static function user_meta_keys(): array {
+		return array();
+	}
+
+	/**
 	 * The complete inventory, keyed by kind.
 	 *
 	 * @return array<string, list<string>>
 	 */
 	public static function inventory(): array {
 		return array(
-			'options'      => self::option_keys(),
-			'tables'       => self::tables(),
-			'capabilities' => self::capabilities(),
-			'roles'        => self::roles(),
+			'options'                 => self::option_keys(),
+			'tables'                  => self::tables(),
+			'capabilities'            => self::capabilities(),
+			'roles'                   => self::roles(),
+			'action_scheduler_groups' => self::action_scheduler_groups(),
+			'user_meta'               => self::user_meta_keys(),
 		);
 	}
 }
