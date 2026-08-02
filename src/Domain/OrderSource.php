@@ -24,4 +24,14 @@ interface OrderSource {
 	 * @param int $order_id Order id.
 	 */
 	public function find( int $order_id ): ?OrderSnapshot;
+
+	/**
+	 * Every order id currently in a given status — the backfill CLI command's
+	 * only way to discover what to ingest, so it never needs to name a
+	 * platform query symbol itself (invariant I8).
+	 *
+	 * @param string $status Status to match.
+	 * @return list<int>
+	 */
+	public function find_ids_by_status( string $status ): array;
 }

@@ -34,6 +34,20 @@ interface FulfillmentRepository {
 	public function find_by_order_id( int $order_id ): ?Fulfillment;
 
 	/**
+	 * Every fulfillment created from a given order — Milestone 1's
+	 * `(order_id, order_source)` uniqueness constraint means this is at most
+	 * one row today, but {@see \MPCF\Woo\StatusBridge}'s outbound condition
+	 * ("all fulfillments for the order are shipped") is written against the
+	 * real, general architecture rather than against that constraint, so a
+	 * future milestone that relaxes it (per-order splits) needs no change
+	 * here.
+	 *
+	 * @param int $order_id Order id.
+	 * @return list<Fulfillment>
+	 */
+	public function find_all_by_order_id( int $order_id ): array;
+
+	/**
 	 * Inserts a brand-new fulfillment and returns its assigned id, or null if
 	 * the insert was rejected by the `(order_id, order_source)` uniqueness
 	 * constraint — the race {@see \MPCF\Application\IntakeService} falls back

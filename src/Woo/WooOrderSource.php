@@ -20,12 +20,12 @@ use WC_Product;
  * The only implementation of {@see OrderSource} (invariant I8 confines
  * every symbol this class names to this namespace).
  *
- * CRUD-only, per invariant I2: every read goes through `wc_get_order()` and
- * `WC_Order`/`WC_Order_Item_Product` getters — never a direct legacy
- * post-table read of any kind. That discipline is also what makes this
- * class HPOS-compatible with no special-casing: the CRUD API is the same
- * shape under either storage backend, so there is nothing here that could
- * behave differently between them.
+ * CRUD-only, per invariant I2: every read goes through `wc_get_order()`,
+ * `wc_get_orders()` and `WC_Order`/`WC_Order_Item_Product` getters — never a
+ * direct legacy post-table read of any kind. That discipline is also what
+ * makes this class HPOS-compatible with no special-casing: the CRUD API is
+ * the same shape under either storage backend, so there is nothing here
+ * that could behave differently between them.
  */
 final class WooOrderSource implements OrderSource {
 
@@ -54,6 +54,26 @@ final class WooOrderSource implements OrderSource {
 			(string) $order->get_status(),
 			$this->line_items( $order )
 		);
+	}
+
+	/**
+	 * Every order id currently in a given status.
+	 *
+	 * @param string $status Status to match, without the `wc-` prefix.
+	 * @return list<int>
+	 */
+	public function find_ids_by_status( string $status ): array {
+		$ids = wc_get_orders(
+			array(
+				'status'  => $status,
+				'limit'   => -1,
+				'return'  => 'ids',
+				'orderby' => 'ID',
+				'order'   => 'ASC',
+			)
+		);
+
+		return array_map( 'intval', $ids );
 	}
 
 	/**

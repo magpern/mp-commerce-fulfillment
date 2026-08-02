@@ -103,6 +103,13 @@ final class CompositionRootTest extends TestCase {
 			'EventDispatcher',
 			'SystemClock',
 			'IntakeHooks',
+			'Settings',
+			'WorkflowService',
+			'WorkflowEngine',
+			'GuardRegistry',
+			'StatusBridge',
+			'RefundObserver',
+			'BackfillCommand',
 		);
 		$disallowed = array_values( array_diff( $matches[1], $allowed ) );
 

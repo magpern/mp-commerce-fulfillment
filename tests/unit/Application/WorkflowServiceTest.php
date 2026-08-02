@@ -258,6 +258,10 @@ final class WorkflowServiceTest extends TestCase {
 				return $this->stored;
 			}
 
+			public function find_all_by_order_id( int $order_id ): array {
+				return null === $this->stored ? array() : array( $this->stored );
+			}
+
 			public function insert( Fulfillment $fulfillment ): int {
 				$this->stored = Fulfillment::from_array( array( 'id' => 1 ) + $fulfillment->to_array() );
 

@@ -11,13 +11,19 @@ namespace MPCF;
 
 use MPCF\Application\EventDispatcher;
 use MPCF\Application\IntakeService;
+use MPCF\Application\WorkflowService;
+use MPCF\Cli\BackfillCommand;
 use MPCF\Domain\Workflow\StandardWorkflow;
+use MPCF\Engine\GuardRegistry;
+use MPCF\Engine\WorkflowEngine;
 use MPCF\Infrastructure\Database\Migrator;
 use MPCF\Infrastructure\Database\WpdbEventRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentItemRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
 use MPCF\Infrastructure\SystemClock;
 use MPCF\Woo\IntakeHooks;
+use MPCF\Woo\RefundObserver;
+use MPCF\Woo\StatusBridge;
 use MPCF\Woo\WooOrderSource;
 
 /**
@@ -27,9 +33,12 @@ use MPCF\Woo\WooOrderSource;
  * dependency is constructor-injected from here.
  *
  * Milestone 0 wired nothing beyond the textdomain and the migration
- * drift-check. Milestone 1 adds its first real service graph — intake — in
- * {@see wire_intake()}: every collaborator is constructed here, by name, and
- * handed to the next; none is stored as a property (see
+ * drift-check. Milestone 1 builds the plugin's first real service graph in
+ * {@see wire_services()}: every collaborator — repositories, the workflow
+ * engine, the shared event dispatcher, intake, the status bridge, the
+ * inbound observer, and (only under WP-CLI) the backfill command — is
+ * constructed here, by name, and handed to whatever needs it next; none is
+ * stored as a property (see
  * `CompositionRootTest::test_plugin_declares_only_singleton_bookkeeping_properties()`),
  * so this class still owns no service-holding state of its own.
  */
@@ -87,7 +96,7 @@ final class Plugin {
 			}
 		);
 
-		$this->wire_intake();
+		$this->wire_services();
 	}
 
 	/**
@@ -100,28 +109,54 @@ final class Plugin {
 	}
 
 	/**
-	 * Builds intake's collaborators and registers its platform hooks. Runs
-	 * unconditionally from `init()` (itself gated on the order platform
-	 * being active by the main plugin file) — registering the hooks here, rather
-	 * than deferring to a later action, is what makes them present in time
-	 * for `woocommerce_payment_complete`/`woocommerce_order_status_processing`
-	 * to fire during the same request's checkout processing.
+	 * Builds every Milestone 1 service and registers its platform hooks.
+	 * Runs unconditionally from `init()` (itself gated on the order
+	 * platform being active by the main plugin file) — registering the
+	 * hooks here, rather than deferring to a later action, is what makes
+	 * them present in time for the same request's checkout/order-admin
+	 * processing to fire them.
 	 */
-	private function wire_intake(): void {
+	private function wire_services(): void {
 		$fulfillments = new WpdbFulfillmentRepository();
 		$items        = new WpdbFulfillmentItemRepository();
 		$events       = new WpdbEventRepository();
+		$dispatcher   = new EventDispatcher();
+		$clock        = new SystemClock();
+		$orders       = new WooOrderSource();
+		$settings     = new Settings();
 
-		$intake = new IntakeService(
-			new WooOrderSource(),
+		$workflow_service = new WorkflowService(
 			$fulfillments,
 			$items,
 			$events,
-			new EventDispatcher(),
-			new SystemClock(),
+			new WorkflowEngine( GuardRegistry::standard() ),
+			$dispatcher,
+			$clock,
+			array( StandardWorkflow::NAME => StandardWorkflow::definition() )
+		);
+
+		$intake = new IntakeService(
+			$orders,
+			$fulfillments,
+			$items,
+			$events,
+			$dispatcher,
+			$clock,
 			StandardWorkflow::definition()
 		);
 
 		( new IntakeHooks( $intake ) )->register();
+
+		// The outbound bridge is just another subscriber on the same event
+		// bus intake uses (invariant I4's single-writer rule already
+		// guarantees WorkflowService is the only thing that can ever
+		// dispatch a fulfillment.state_changed event for it to react to).
+		$dispatcher->subscribe( 'fulfillment.state_changed', new StatusBridge( $fulfillments, $settings ) );
+
+		( new RefundObserver( $fulfillments, $items, $orders, $workflow_service, $settings ) )->register();
+
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			( new BackfillCommand( $orders, $intake ) )->register();
+		}
 	}
 }

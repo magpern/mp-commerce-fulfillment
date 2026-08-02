@@ -54,6 +54,21 @@ final class WpdbFulfillmentRepository implements FulfillmentRepository {
 	}
 
 	/**
+	 * Every fulfillment created from a given order.
+	 *
+	 * @param int $order_id Order id.
+	 */
+	public function find_all_by_order_id( int $order_id ): array {
+		global $wpdb;
+
+		$table = Schema::table( Schema::FULFILLMENTS );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is Schema-built, never user input.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE order_id = %d ORDER BY id ASC", $order_id ), ARRAY_A );
+
+		return array_map( array( $this, 'hydrate' ), $rows );
+	}
+
+	/**
 	 * Inserts a brand-new fulfillment and returns its assigned id, or null if
 	 * the `(order_id, order_source)` uniqueness constraint rejected it (see
 	 * {@see Schema::fulfillments_order_unique_index_ddl()}) — a concurrent

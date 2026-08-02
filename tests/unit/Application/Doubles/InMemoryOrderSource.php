@@ -35,4 +35,16 @@ final class InMemoryOrderSource implements OrderSource {
 	public function find( int $order_id ): ?OrderSnapshot {
 		return $this->orders[ $order_id ] ?? null;
 	}
+
+	public function find_ids_by_status( string $status ): array {
+		return array_values(
+			array_map(
+				static fn( OrderSnapshot $order ): int => $order->order_id(),
+				array_filter(
+					$this->orders,
+					static fn( OrderSnapshot $order ): bool => $order->status() === $status
+				)
+			)
+		);
+	}
 }

@@ -47,6 +47,18 @@ final class InMemoryFulfillmentRepository implements FulfillmentRepository {
 		return null;
 	}
 
+	public function find_all_by_order_id( int $order_id ): array {
+		return array_values(
+			array_map(
+				static fn( Fulfillment $fulfillment ): Fulfillment => Fulfillment::from_array( $fulfillment->to_array() ),
+				array_filter(
+					$this->rows,
+					static fn( Fulfillment $fulfillment ): bool => $fulfillment->order_id() === $order_id
+				)
+			)
+		);
+	}
+
 	public function insert( Fulfillment $fulfillment ): ?int {
 		foreach ( $this->rows as $row ) {
 			// Mirrors the real repository's (order_id, order_source) unique

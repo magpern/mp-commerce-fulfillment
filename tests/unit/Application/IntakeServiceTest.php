@@ -163,6 +163,10 @@ final class IntakeServiceTest extends TestCase {
 				return $this->real->find_by_order_id( $order_id );
 			}
 
+			public function find_all_by_order_id( int $order_id ): array {
+				return $this->real->find_all_by_order_id( $order_id );
+			}
+
 			public function insert( \MPCF\Domain\Fulfillment $fulfillment ): ?int {
 				$this->real->insert( $fulfillment );
 
