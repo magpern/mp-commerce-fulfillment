@@ -27,19 +27,19 @@ use WP_UnitTestCase;
  */
 final class ActivationTest extends WP_UnitTestCase {
 
-	public function test_activation_creates_the_four_milestone_1_tables(): void {
+	public function test_activation_creates_every_table(): void {
 		global $wpdb;
 
 		Plugin::activate();
 
-		self::assertSame( 3, (int) get_option( Migrator::OPTION ), 'mpcf_db_version must reach target 3.' );
+		self::assertSame( 5, (int) get_option( Migrator::OPTION ), 'mpcf_db_version must reach target 5.' );
 
 		foreach ( Schema::all_tables() as $table ) {
 			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
 			self::assertNotNull( $exists, "{$table} must exist after activation." );
 		}
 
-		self::assertCount( 4, Schema::all_tables() );
+		self::assertCount( 8, Schema::all_tables() );
 	}
 
 	public function test_activation_grants_roles_and_capabilities(): void {
@@ -67,7 +67,7 @@ final class ActivationTest extends WP_UnitTestCase {
 		Plugin::activate();
 		Plugin::activate();
 
-		self::assertSame( 3, (int) get_option( Migrator::OPTION ) );
+		self::assertSame( 5, (int) get_option( Migrator::OPTION ) );
 		self::assertNotNull( get_role( Capabilities::ROLE_OPERATOR ) );
 	}
 }

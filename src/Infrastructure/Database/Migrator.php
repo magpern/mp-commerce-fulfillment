@@ -37,12 +37,16 @@ final class Migrator {
 	public const OPTION = 'mpcf_db_version';
 
 	/**
-	 * Schema version this build expects. Milestone 1 raises this to 3:
-	 * step 1 creates the four tables, step 2 adds the intake-idempotency
-	 * unique index, step 3 adds the two indexes SearchQuery v1 (D15) needs
-	 * to keep its lookups indexed rather than full-table scans.
+	 * Schema version this build expects. Milestone 1 raised this to 3:
+	 * step 1 creates the four Milestone 1 tables, step 2 adds the
+	 * intake-idempotency unique index, step 3 adds the two indexes
+	 * SearchQuery v1 (D15) needs to keep its lookups indexed rather than
+	 * full-table scans. Milestone 2 raises it to 5: step 4 creates the
+	 * shipping tables (`mpcf_shipments`, `mpcf_packages`,
+	 * `mpcf_package_items`, D19/ADR-0005), step 5 creates
+	 * `mpcf_documents` (§10).
 	 */
-	public const TARGET = 3;
+	public const TARGET = 5;
 
 	/**
 	 * Test-only step map override.
@@ -130,6 +134,8 @@ final class Migrator {
 			1 => array( $this, 'step_1_initial_tables' ),
 			2 => array( $this, 'step_2_order_unique_index' ),
 			3 => array( $this, 'step_3_search_indexes' ),
+			4 => array( $this, 'step_4_shipping_tables' ),
+			5 => array( $this, 'step_5_documents_table' ),
 		);
 	}
 
@@ -212,6 +218,45 @@ final class Migrator {
 
 		if ( null === $exists ) {
 			$wpdb->query( Schema::fulfillment_items_sku_index_ddl() ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
+		}
+	}
+
+	/**
+	 * Milestone 2: creates `mpcf_shipments`, `mpcf_packages` and
+	 * `mpcf_package_items` (D19/ADR-0005). Idempotent via the same
+	 * `SHOW TABLES LIKE` guard {@see step_1_initial_tables()} uses.
+	 */
+	private function step_4_shipping_tables(): void {
+		global $wpdb;
+
+		foreach ( Schema::shipping_create_statements() as $sql ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
+			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $this->table_name_from_ddl( $sql ) ) ) );
+
+			if ( null !== $exists ) {
+				continue;
+			}
+
+			$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
+		}
+	}
+
+	/**
+	 * Milestone 2: creates `mpcf_documents` (§10). Idempotent via the same
+	 * `SHOW TABLES LIKE` guard {@see step_1_initial_tables()} uses.
+	 */
+	private function step_5_documents_table(): void {
+		global $wpdb;
+
+		foreach ( Schema::documents_create_statements() as $sql ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
+			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $this->table_name_from_ddl( $sql ) ) ) );
+
+			if ( null !== $exists ) {
+				continue;
+			}
+
+			$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
 		}
 	}
 }

@@ -27,7 +27,7 @@ final class PersistedKeysInventoryTest extends TestCase {
 
 		self::assertSame( array( Settings::OPTION, Migrator::OPTION ), $inventory['options'] );
 		self::assertSame( Schema::all_tables(), $inventory['tables'] );
-		self::assertCount( 4, $inventory['tables'], 'Milestone 1 introduces the four fulfillment tables.' );
+		self::assertCount( 8, $inventory['tables'], 'Milestone 1 introduced four tables; Milestone 2 adds four more (shipments, packages, package_items, documents).' );
 		self::assertSame( Capabilities::all(), $inventory['capabilities'] );
 		self::assertSame( array( Capabilities::ROLE_OPERATOR, Capabilities::ROLE_LEAD ), $inventory['roles'] );
 		self::assertSame( array( 'mpcf' ), $inventory['action_scheduler_groups'] );

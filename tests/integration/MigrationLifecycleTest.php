@@ -99,7 +99,7 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 		self::assertSame( 1, $calls, 'maybe_migrate() must no-op once current_version() is already at target.' );
 	}
 
-	public function test_real_migrator_creates_the_four_milestone_1_tables_and_reaches_target_three(): void {
+	public function test_real_migrator_creates_every_table_and_reaches_target_five(): void {
 		global $wpdb;
 
 		foreach ( Schema::all_tables() as $table ) {
@@ -109,13 +109,37 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 		$migrator = new Migrator();
 		$migrator->migrate();
 
-		self::assertSame( 3, $migrator->current_version() );
-		self::assertSame( 3, (int) get_option( Migrator::OPTION ) );
+		self::assertSame( 5, $migrator->current_version() );
+		self::assertSame( 5, (int) get_option( Migrator::OPTION ) );
 
 		foreach ( Schema::all_tables() as $table ) {
 			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
 			self::assertNotNull( $exists, "{$table} must exist after the real migrator runs." );
 		}
+	}
+
+	public function test_real_migrator_step_4_creates_the_shipping_tables(): void {
+		global $wpdb;
+
+		$migrator = new Migrator();
+		$migrator->migrate();
+
+		foreach ( array( Schema::SHIPMENTS, Schema::PACKAGES, Schema::PACKAGE_ITEMS ) as $unprefixed ) {
+			$table  = Schema::table( $unprefixed );
+			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
+			self::assertNotNull( $exists, "{$table} must exist after the real migrator runs." );
+		}
+	}
+
+	public function test_real_migrator_step_5_creates_the_documents_table(): void {
+		global $wpdb;
+
+		$migrator = new Migrator();
+		$migrator->migrate();
+
+		$table  = Schema::table( Schema::DOCUMENTS );
+		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
+		self::assertNotNull( $exists, "{$table} must exist after the real migrator runs." );
 	}
 
 	public function test_real_migrator_step_2_adds_the_order_unique_index(): void {
@@ -160,6 +184,6 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 		$again = new Migrator();
 		$again->migrate();
 
-		self::assertSame( 3, $again->current_version() );
+		self::assertSame( 5, $again->current_version() );
 	}
 }

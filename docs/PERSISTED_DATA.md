@@ -6,28 +6,33 @@ its human-readable mirror, kept in sync by `PersistedKeysInventoryTest`
 `UninstallPolicyGuardTest` (fails if uninstall does not remove exactly this
 inventory when `remove_data_on_uninstall` is enabled).
 
-Milestone 1 introduces the plugin's first business tables (Architecture
-Plan §7.1). Milestone 0 persisted only framework state.
+Milestone 1 introduced the plugin's first business tables (Architecture
+Plan §7.1); Milestone 0 persisted only framework state. Milestone 2 adds
+four more tables (the shipping model, D19/ADR-0005, and the document
+generation record, §10).
 
 ## Options
 
 | Option | Owner | Notes |
 |---|---|---|
-| `mpcf_settings` | `MPCF\Settings` | Versioned settings array. M0's only key was `remove_data_on_uninstall` (default `false`). M1 raises the shape version to 3: v2 added `outbound_bridge_enabled` (default `true`) and `inbound_cancel_behavior`/`inbound_refund_behavior` (`cancel`\|`flag`, defaulting to `cancel` and `flag` respectively) for `Woo\StatusBridge`/`Woo\RefundObserver`; v3 adds `operator_mode_enabled` (default `false`) for `Admin\OperatorMode`. |
-| `mpcf_db_version` | `MPCF\Infrastructure\Database\Migrator` | Applied schema version. M1 raises `TARGET` to `3`: step 1 creates the four tables below, step 2 adds the `order_unique` index on `mpcf_fulfillments (order_id, order_source)` that makes intake idempotency a database-enforced guarantee, step 3 adds `customer_name_snapshot` (on `mpcf_fulfillments`) and `sku_snapshot` (on `mpcf_fulfillment_items`) indexes that `SearchQuery` v1 (D15) needs to keep its Queue-search lookups indexed. |
+| `mpcf_settings` | `MPCF\Settings` | Versioned settings array. M0's only key was `remove_data_on_uninstall` (default `false`). M1 raised the shape version to 3: v2 added `outbound_bridge_enabled` (default `true`) and `inbound_cancel_behavior`/`inbound_refund_behavior` (`cancel`\|`flag`, defaulting to `cancel` and `flag` respectively) for `Woo\StatusBridge`/`Woo\RefundObserver`; v3 added `operator_mode_enabled` (default `false`) for `Admin\OperatorMode`. M2 adds workspace-related keys later in its own commit sequence (§IV — see that commit's own documentation pass), not as part of this schema change. |
+| `mpcf_db_version` | `MPCF\Infrastructure\Database\Migrator` | Applied schema version. M1 raised `TARGET` to `3`: step 1 creates the first four tables below, step 2 adds the `order_unique` index on `mpcf_fulfillments (order_id, order_source)` that makes intake idempotency a database-enforced guarantee, step 3 adds `customer_name_snapshot` (on `mpcf_fulfillments`) and `sku_snapshot` (on `mpcf_fulfillment_items`) indexes that `SearchQuery` v1 (D15) needs to keep its Queue-search lookups indexed. M2 raises `TARGET` to `5`: step 4 creates the three shipping tables, step 5 creates `mpcf_documents`. |
 
 ## Tables
 
-All four created by `Migrator` step 1, DDL in
-`MPCF\Infrastructure\Database\Schema` (see `docs/ARCHITECTURE_PLAN.md` §7.1
-for the frozen column/index specification):
+DDL in `MPCF\Infrastructure\Database\Schema` (see `docs/ARCHITECTURE_PLAN.md`
+§7.1 for the frozen column/index specification):
 
-| Table | Purpose |
-|---|---|
-| `mpcf_fulfillments` | Aggregate root: one row per fulfillment, its workflow state, assignee, and order snapshot fields. |
-| `mpcf_fulfillment_items` | Line items per fulfillment, snapshotted (SKU, name) so picking lists and audit stay stable if a product is later renamed or deleted. |
-| `mpcf_events` | Append-only (I5), hash-chained audit log — every state change, item tick, and bridge action. |
-| `mpcf_notes` | Internal operator/lead notes per fulfillment. |
+| Table | Migrator step | Purpose |
+|---|---|---|
+| `mpcf_fulfillments` | 1 | Aggregate root: one row per fulfillment, its workflow state, assignee, and order snapshot fields. |
+| `mpcf_fulfillment_items` | 1 | Line items per fulfillment, snapshotted (SKU, name) so picking lists and audit stay stable if a product is later renamed or deleted. |
+| `mpcf_events` | 1 | Append-only (I5), hash-chained audit log — every state change, item tick, and bridge action. |
+| `mpcf_notes` | 1 | Internal operator/lead notes per fulfillment. |
+| `mpcf_shipments` | 4 | The consignment (one carrier handover) — carrier, tracking, status, timestamps. |
+| `mpcf_packages` | 4 | Physical boxes within a shipment (ADR-0005/D19) — weight, dimensions, colli tracking, a reserved `label_path` (NULL until M12). |
+| `mpcf_package_items` | 4 | Per-package line-quantity allocations. Milestone 2 always allocates every packed line to package 1 (PO decision, §IV.0.2); the shape already supports M4's line-allocation split. |
+| `mpcf_documents` | 5 | Document generation record (§10) — one row per render, `file_path` NULL for render-to-print (every Milestone 2 packing slip). |
 
 ## Capabilities and roles
 
@@ -91,7 +96,7 @@ survives. Enabled, it removes, in this order: every scheduled action under
 the `mpcf` Action Scheduler group (via `as_unschedule_all_actions()`, a
 safe no-op if WooCommerce/Action Scheduler is no longer active — invariant
 I10), the `mpcf_warehouse_operator` and `mpcf_warehouse_lead` roles and
-every `mpcf_*` capability from every role that holds it, all four tables
+every `mpcf_*` capability from every role that holds it, every table
 above, `mpcf_settings` and `mpcf_db_version`, and any user-meta key in
 `PersistedKeys::user_meta_keys()` (currently none — see above). Every step
 is safe to run more than once: `DROP TABLE IF EXISTS`, `delete_option()` on

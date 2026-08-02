@@ -52,6 +52,30 @@ final class Schema {
 	public const NOTES = 'mpcf_notes';
 
 	/**
+	 * Unprefixed table name for the shipment (carrier handover) aggregate,
+	 * added by {@see \MPCF\Infrastructure\Database\Migrator}'s step 4.
+	 */
+	public const SHIPMENTS = 'mpcf_shipments';
+
+	/**
+	 * Unprefixed table name for physical packages within a shipment
+	 * (ADR-0005), added by step 4.
+	 */
+	public const PACKAGES = 'mpcf_packages';
+
+	/**
+	 * Unprefixed table name for per-package line-quantity allocations,
+	 * added by step 4.
+	 */
+	public const PACKAGE_ITEMS = 'mpcf_package_items';
+
+	/**
+	 * Unprefixed table name for the document generation record (§10),
+	 * added by step 5.
+	 */
+	public const DOCUMENTS = 'mpcf_documents';
+
+	/**
 	 * Name of the unique index enforcing intake idempotency at the database
 	 * level (added by {@see \MPCF\Infrastructure\Database\Migrator}'s
 	 * second step — see {@see fulfillments_order_unique_index_ddl()}).
@@ -91,6 +115,10 @@ final class Schema {
 		return array(
 			self::table( self::NOTES ),
 			self::table( self::EVENTS ),
+			self::table( self::PACKAGE_ITEMS ),
+			self::table( self::PACKAGES ),
+			self::table( self::SHIPMENTS ),
+			self::table( self::DOCUMENTS ),
 			self::table( self::FULFILLMENT_ITEMS ),
 			self::table( self::FULFILLMENTS ),
 		);
@@ -251,6 +279,132 @@ final class Schema {
 			KEY fulfillment_id (fulfillment_id),
 			KEY event_type (event_type),
 			KEY created_at (created_at)
+		) ENGINE=InnoDB ROW_FORMAT=DYNAMIC {$charset_collate};";
+	}
+
+	/**
+	 * `CREATE TABLE` statements for Milestone 2's shipping tables
+	 * (Migrator step 4), in creation-safe order.
+	 *
+	 * @return list<string>
+	 */
+	public static function shipping_create_statements(): array {
+		return array(
+			self::shipments_ddl(),
+			self::packages_ddl(),
+			self::package_items_ddl(),
+		);
+	}
+
+	/**
+	 * `CREATE TABLE` statement for Milestone 2's document record table
+	 * (Migrator step 5).
+	 *
+	 * @return list<string>
+	 */
+	public static function documents_create_statements(): array {
+		return array(
+			self::documents_ddl(),
+		);
+	}
+
+	/**
+	 * DDL for `mpcf_shipments` — the consignment (one carrier handover).
+	 * Architecture Plan §IV.6: indexed on `fulfillment_id` (the workspace's
+	 * only lookup path), `status` (a future tracking-sync sweep), and
+	 * `tracking_number` (D22's search target — a scanned or pasted tracking
+	 * number must resolve without an unindexed scan).
+	 */
+	private static function shipments_ddl(): string {
+		$table           = self::table( self::SHIPMENTS );
+		$charset_collate = self::charset_collate();
+
+		return "CREATE TABLE {$table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			fulfillment_id BIGINT UNSIGNED NOT NULL,
+			carrier_id VARCHAR(64) NOT NULL,
+			service VARCHAR(128) NULL,
+			tracking_number VARCHAR(191) NULL,
+			tracking_url TEXT NULL,
+			status VARCHAR(32) NOT NULL DEFAULT 'pending',
+			shipped_at DATETIME NULL,
+			delivered_at DATETIME NULL,
+			created_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			KEY fulfillment_id (fulfillment_id),
+			KEY status (status),
+			KEY tracking_number (tracking_number)
+		) ENGINE=InnoDB ROW_FORMAT=DYNAMIC {$charset_collate};";
+	}
+
+	/**
+	 * DDL for `mpcf_packages` — physical boxes within a shipment (ADR-0005,
+	 * D19). `label_path` is created now and left NULL until M12; adding the
+	 * column later would mean an `ALTER TABLE` on a table that will be
+	 * large by then.
+	 */
+	private static function packages_ddl(): string {
+		$table           = self::table( self::PACKAGES );
+		$charset_collate = self::charset_collate();
+
+		return "CREATE TABLE {$table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			shipment_id BIGINT UNSIGNED NOT NULL,
+			seq SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+			weight_grams INT UNSIGNED NULL,
+			length_mm INT UNSIGNED NULL,
+			width_mm INT UNSIGNED NULL,
+			height_mm INT UNSIGNED NULL,
+			tracking_number VARCHAR(191) NULL,
+			label_path VARCHAR(255) NULL,
+			created_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			KEY shipment_id (shipment_id)
+		) ENGINE=InnoDB ROW_FORMAT=DYNAMIC {$charset_collate};";
+	}
+
+	/**
+	 * DDL for `mpcf_package_items` — per-package line-quantity
+	 * allocations. Milestone 2 always allocates every packed line to
+	 * package 1 (PO decision, Architecture Plan §IV.0.2); the table shape
+	 * already supports the M4 line-allocation split with no schema change.
+	 */
+	private static function package_items_ddl(): string {
+		$table           = self::table( self::PACKAGE_ITEMS );
+		$charset_collate = self::charset_collate();
+
+		return "CREATE TABLE {$table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			package_id BIGINT UNSIGNED NOT NULL,
+			fulfillment_item_id BIGINT UNSIGNED NOT NULL,
+			qty SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			PRIMARY KEY  (id),
+			KEY package_id (package_id),
+			KEY fulfillment_item_id (fulfillment_item_id)
+		) ENGINE=InnoDB ROW_FORMAT=DYNAMIC {$charset_collate};";
+	}
+
+	/**
+	 * DDL for `mpcf_documents` — the document generation record (§10).
+	 * `file_path` stays NULL for a rendered-to-print document (Milestone
+	 * 2's packing slip never stores a file); a future milestone's stored
+	 * renders populate it.
+	 */
+	private static function documents_ddl(): string {
+		$table           = self::table( self::DOCUMENTS );
+		$charset_collate = self::charset_collate();
+
+		return "CREATE TABLE {$table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			fulfillment_id BIGINT UNSIGNED NOT NULL,
+			doc_type VARCHAR(64) NOT NULL,
+			template_version VARCHAR(32) NOT NULL,
+			file_path VARCHAR(255) NULL,
+			rendered_by BIGINT UNSIGNED NOT NULL,
+			created_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			KEY fulfillment_id (fulfillment_id),
+			KEY doc_type (doc_type)
 		) ENGINE=InnoDB ROW_FORMAT=DYNAMIC {$charset_collate};";
 	}
 
