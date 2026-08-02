@@ -29,12 +29,13 @@ final class Settings {
 	 * Shape version of the settings array (not the database schema version —
 	 * that is `Infrastructure\Database\Migrator::TARGET`, deliberately in its
 	 * own option so a settings reset can never be mistaken for a schema
-	 * reset). Milestone 1 raises this to 2 for the bridge-behavior keys added
-	 * below; the bump is purely informational (`sanitize()` always rebuilds
-	 * the canonical shape from `defaults()`, so there is no destructive
-	 * migration step to write for a purely additive change like this one).
+	 * reset). Milestone 1 raises this to 3: 2 added the bridge-behavior
+	 * keys, 3 adds `operator_mode_enabled` (D18). Each bump is purely
+	 * informational (`sanitize()` always rebuilds the canonical shape from
+	 * `defaults()`, so there is no destructive migration step to write for
+	 * a purely additive change like either one).
 	 */
-	public const SCHEMA_VERSION = 2;
+	public const SCHEMA_VERSION = 3;
 
 	/**
 	 * Inbound cancel/refund behavior: move the fulfillment straight to
@@ -104,6 +105,14 @@ final class Settings {
 			 */
 			'inbound_cancel_behavior'  => self::BRIDGE_BEHAVIOR_CANCEL,
 			'inbound_refund_behavior'  => self::BRIDGE_BEHAVIOR_FLAG,
+
+			/*
+			 * Operator Mode (D18, Architecture Plan Sec9.1): default off.
+			 * When on, Warehouse Operator users see reduced wp-admin chrome
+			 * (Admin\OperatorMode) — administrators always keep full chrome
+			 * regardless of this setting.
+			 */
+			'operator_mode_enabled'    => false,
 		);
 	}
 
@@ -122,6 +131,7 @@ final class Settings {
 		$out['outbound_bridge_enabled']  = ! isset( $raw['outbound_bridge_enabled'] ) || ! empty( $raw['outbound_bridge_enabled'] );
 		$out['inbound_cancel_behavior']  = self::sanitize_behavior( $raw['inbound_cancel_behavior'] ?? null, self::BRIDGE_BEHAVIOR_CANCEL );
 		$out['inbound_refund_behavior']  = self::sanitize_behavior( $raw['inbound_refund_behavior'] ?? null, self::BRIDGE_BEHAVIOR_FLAG );
+		$out['operator_mode_enabled']    = ! empty( $raw['operator_mode_enabled'] );
 
 		return $out;
 	}
@@ -183,6 +193,14 @@ final class Settings {
 	 */
 	public function inbound_refund_behavior(): string {
 		return (string) $this->get()['inbound_refund_behavior'];
+	}
+
+	/**
+	 * Whether Operator Mode is enabled — reduced wp-admin chrome for
+	 * Warehouse Operator users ({@see \MPCF\Admin\OperatorMode}).
+	 */
+	public function operator_mode_enabled(): bool {
+		return (bool) $this->get()['operator_mode_enabled'];
 	}
 
 	/**

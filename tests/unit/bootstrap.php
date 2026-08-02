@@ -120,6 +120,16 @@ if ( ! function_exists( 'delete_option' ) ) {
 	}
 }
 
+if ( ! function_exists( 'is_admin' ) ) {
+	function is_admin() { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+		// Unit tests never exercise the is_admin()-gated wiring branch (that
+		// needs a real WP bootstrap) — always false here is what makes
+		// CompositionRootTest's Plugin::init() calls exercise exactly the
+		// same path a front-end/CLI request would.
+		return false;
+	}
+}
+
 if ( ! function_exists( 'add_action' ) ) {
 	function add_action( ...$args ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 		unset( $args );

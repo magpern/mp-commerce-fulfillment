@@ -96,6 +96,23 @@ final class SettingsTest extends TestCase {
 		self::assertSame( Settings::BRIDGE_BEHAVIOR_CANCEL, $settings->inbound_refund_behavior() );
 	}
 
+	public function test_defaults_keep_operator_mode_off(): void {
+		self::assertFalse( Settings::defaults()['operator_mode_enabled'] );
+	}
+
+	public function test_sanitize_coerces_operator_mode_truthy_and_falsy_values(): void {
+		self::assertTrue( Settings::sanitize( array( 'operator_mode_enabled' => '1' ) )['operator_mode_enabled'] );
+		self::assertTrue( Settings::sanitize( array( 'operator_mode_enabled' => true ) )['operator_mode_enabled'] );
+		self::assertFalse( Settings::sanitize( array( 'operator_mode_enabled' => 0 ) )['operator_mode_enabled'] );
+		self::assertFalse( Settings::sanitize( array() )['operator_mode_enabled'] );
+	}
+
+	public function test_accessor_reads_operator_mode(): void {
+		$settings = new Settings( array( 'operator_mode_enabled' => true ) );
+
+		self::assertTrue( $settings->operator_mode_enabled() );
+	}
+
 	public function test_sanitize_coerces_invalid_input_instead_of_throwing(): void {
 		$sanitized = Settings::sanitize( 'not an array' );
 

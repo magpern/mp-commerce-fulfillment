@@ -110,6 +110,22 @@ final class CompositionRootTest extends TestCase {
 			'StatusBridge',
 			'RefundObserver',
 			'BackfillCommand',
+			'WpdbNoteRepository',
+			'WpdbSearchQuery',
+			'ComponentRenderer',
+			'AdminPageShell',
+			'SectionNavigation',
+			'QueueService',
+			'FulfillmentDetailService',
+			'NoteService',
+			'AssignmentService',
+			'DashboardService',
+			'DashboardPage',
+			'QueuePage',
+			'FulfillmentDetailPage',
+			'Menu',
+			'Assets',
+			'OperatorMode',
 		);
 		$disallowed = array_values( array_diff( $matches[1], $allowed ) );
 

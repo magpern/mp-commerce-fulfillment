@@ -27,6 +27,7 @@ defined( 'ABSPATH' ) || exit;
 
 define( 'MPCF_VERSION', '0.0.1' );
 define( 'MPCF_PLUGIN_FILE', __FILE__ );
+define( 'MPCF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
 // PHP version guard. The "Requires PHP" header stops activation on WP 5.1+,
 // but a file-drop install can bypass it, so fail closed with a notice.

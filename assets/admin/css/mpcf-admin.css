@@ -1,0 +1,45 @@
+/*
+ * Commerce Fulfillment admin overrides layered on top of the vendored MPDS
+ * stylesheet (assets/mpds/css/). This file is plugin-owned, never hand-edits
+ * anything under assets/mpds/ (which is guarded by MpdsVendorGuardTest) —
+ * it only restyles the already-rewritten mpcf-ui-* classes, which the
+ * vendored JS is guaranteed never to depend on for its own behavior.
+ *
+ * Closes three accessibility gaps the vendored components leave to a
+ * consumer (documented in mp-admin-design-system's own CONSUMING.md):
+ * a visible keyboard-focus indicator for Queue rows, and 44px operational
+ * touch targets for the drawer/modal close buttons and filter controls.
+ */
+
+.mpcf-ui-data-table__row[data-mpcf-row-focused] {
+	outline: 2px solid currentColor;
+	outline-offset: -2px;
+}
+
+.mpcf-ui-drawer__close,
+.mpcf-ui-modal__close {
+	min-width: 44px;
+	min-height: 44px;
+}
+
+.mpcf-ui-filter-bar__field select,
+.mpcf-ui-filter-bar__field input,
+.mpcf-ui-filter-bar input[type="search"] {
+	min-height: 44px;
+}
+
+/* Operator Mode (Settings-owned, default off): reduces wp-admin chrome to
+ * the Fulfillment workspace for the Warehouse Operator role only. Applied
+ * via the mpcf-operator-mode body class Admin\OperatorMode adds — never a
+ * role-name check in behavior, only this presentational scope. Security-
+ * critical chrome (admin bar's own account/logout menu, update nags) is
+ * deliberately left alone; only the site-wide navigation menu is hidden. */
+body.mpcf-operator-mode #adminmenumain,
+body.mpcf-operator-mode #wpfooter {
+	display: none;
+}
+
+body.mpcf-operator-mode #wpcontent,
+body.mpcf-operator-mode #wpfooter {
+	margin-left: 0;
+}
