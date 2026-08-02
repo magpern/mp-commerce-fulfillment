@@ -11,10 +11,13 @@ namespace MPCF\Api\Rest;
 
 use DateTimeImmutable;
 use MPCF\Application\AvailableTransition;
+use MPCF\Domain\Event\Actor;
 use MPCF\Domain\Fulfillment;
 use MPCF\Domain\FulfillmentItem;
+use MPCF\Domain\Note;
 use WP_Error;
 use WP_REST_Response;
+use WP_User;
 
 /**
  * Architecture Plan §IV.9: controllers are thin (permission_callback → DTO
@@ -61,11 +64,12 @@ abstract class AbstractRestController implements RestController {
 
 	/**
 	 * Maps an Application-layer failure code (from `*Outcome::failure_code()`)
-	 * to one of the three failure shapes this table owns: `mpcf_not_found`
-	 * (404), `mpcf_version_conflict` (409), or `mpcf_guard_rejected` (422) —
-	 * every other business-rule rejection (a guard id, `not_deletable`,
-	 * `unsafe_event_payload`, …) is a 422, since the request was
-	 * syntactically valid but rejected by a rule.
+	 * to one of the four failure shapes this table owns: `mpcf_not_found`
+	 * (404), `mpcf_version_conflict` (409), `mpcf_invalid_payload` (400 —
+	 * a malformed request, e.g. `PackingService`'s `invalid_payload`), or
+	 * `mpcf_guard_rejected` (422) — every other business-rule rejection (a
+	 * guard id, `not_deletable`, `unsafe_event_payload`, …) is a 422, since
+	 * the request was syntactically valid but rejected by a rule.
 	 *
 	 * @param string $code    Machine-readable failure code.
 	 * @param string $message Human-readable failure message.
@@ -77,6 +81,10 @@ abstract class AbstractRestController implements RestController {
 
 		if ( 'version_conflict' === $code ) {
 			return new WP_Error( 'mpcf_version_conflict', $message, array( 'status' => 409 ) );
+		}
+
+		if ( 'invalid_payload' === $code ) {
+			return new WP_Error( 'mpcf_invalid_payload', $message, array( 'status' => 400 ) );
 		}
 
 		return new WP_Error(
@@ -148,6 +156,19 @@ abstract class AbstractRestController implements RestController {
 	}
 
 	/**
+	 * A note as the wire shape `GET|POST .../notes` uses.
+	 *
+	 * @param Note $note Note to serialize.
+	 * @return array<string, mixed>
+	 */
+	protected static function note_resource( Note $note ): array {
+		$data               = $note->to_array();
+		$data['created_at'] = $data['created_at']->format( DATE_ATOM );
+
+		return $data;
+	}
+
+	/**
 	 * A list of candidate transitions as the wire shape
 	 * `GET .../transitions` and every mutation response embeds.
 	 *
@@ -156,5 +177,21 @@ abstract class AbstractRestController implements RestController {
 	 */
 	protected static function transitions_resource( array $transitions ): array {
 		return array_map( static fn( AvailableTransition $transition ): array => $transition->to_array(), $transitions );
+	}
+
+	/**
+	 * The current REST-authenticated user as an {@see Actor} — every
+	 * mutating route's audit trail is attributed to this, never a bare
+	 * user id, matching {@see \MPCF\Admin\FulfillmentDetailPage::current_actor()}'s
+	 * shape for the same reason (§8's audit legibility requirement).
+	 */
+	protected static function current_actor(): Actor {
+		$user = wp_get_current_user();
+
+		if ( ! $user instanceof WP_User || 0 === $user->ID ) {
+			return Actor::api( 'REST API' );
+		}
+
+		return Actor::user( $user->ID, $user->display_name );
 	}
 }

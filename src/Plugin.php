@@ -14,7 +14,10 @@ use MPCF\Admin\DashboardPage;
 use MPCF\Admin\FulfillmentDetailPage;
 use MPCF\Admin\OperatorMode;
 use MPCF\Admin\QueuePage;
+use MPCF\Api\Rest\AssignmentController;
 use MPCF\Api\Rest\FulfillmentsController;
+use MPCF\Api\Rest\ItemsController;
+use MPCF\Api\Rest\NotesController;
 use MPCF\Api\Rest\RestApi;
 use MPCF\Application\AssignmentService;
 use MPCF\Application\DashboardService;
@@ -22,6 +25,7 @@ use MPCF\Application\EventDispatcher;
 use MPCF\Application\FulfillmentDetailService;
 use MPCF\Application\IntakeService;
 use MPCF\Application\NoteService;
+use MPCF\Application\PackingService;
 use MPCF\Application\QueueService;
 use MPCF\Application\ShipmentAutoShipSubscriber;
 use MPCF\Application\ShippingService;
@@ -257,14 +261,22 @@ final class Plugin {
 		// the same $workflow_service instance the admin screens do, so a
 		// transition submitted either way produces identical outcomes
 		// (§IV.15 criterion 2).
+		$notes_repository = new WpdbNoteRepository();
+
 		( new RestApi(
 			array(
 				new FulfillmentsController(
 					new QueueService( $fulfillments, new WpdbSearchQuery() ),
-					new FulfillmentDetailService( $fulfillments, $items, $events, new WpdbNoteRepository() ),
+					new FulfillmentDetailService( $fulfillments, $items, $events, $notes_repository ),
 					$workflow_service,
 					$definition
 				),
+				new ItemsController(
+					new PackingService( $fulfillments, $items, $events, $dispatcher, $clock ),
+					$workflow_service
+				),
+				new NotesController( new NoteService( $notes_repository, $clock ) ),
+				new AssignmentController( new AssignmentService( $fulfillments ) ),
 			)
 		) )->register();
 	}

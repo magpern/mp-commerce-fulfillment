@@ -13,14 +13,12 @@ use MPCF\Application\FulfillmentDetailService;
 use MPCF\Application\QueueService;
 use MPCF\Application\WorkflowService;
 use MPCF\Capabilities;
-use MPCF\Domain\Event\Actor;
 use MPCF\Domain\FulfillmentQuery;
 use MPCF\Domain\Workflow\WorkflowDefinition;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
-use WP_User;
 
 /**
  * `GET /fulfillments`, `GET /fulfillments/{id}`,
@@ -338,18 +336,5 @@ final class FulfillmentsController extends AbstractRestController {
 		}
 
 		return $assignee;
-	}
-
-	/**
-	 * The current REST-authenticated user as an {@see Actor}.
-	 */
-	private static function current_actor(): Actor {
-		$user = wp_get_current_user();
-
-		if ( ! $user instanceof WP_User || 0 === $user->ID ) {
-			return Actor::api( 'REST API' );
-		}
-
-		return Actor::user( $user->ID, $user->display_name );
 	}
 }
