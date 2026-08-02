@@ -14,7 +14,7 @@ Plan §7.1). Milestone 0 persisted only framework state.
 | Option | Owner | Notes |
 |---|---|---|
 | `mpcf_settings` | `MPCF\Settings` | Versioned settings array; sole key in M0 is `remove_data_on_uninstall` (default `false`). |
-| `mpcf_db_version` | `MPCF\Infrastructure\Database\Migrator` | Applied schema version. M1 raises `TARGET` to `1` (see Tables below). |
+| `mpcf_db_version` | `MPCF\Infrastructure\Database\Migrator` | Applied schema version. M1 raises `TARGET` to `2`: step 1 creates the four tables below, step 2 adds the `order_unique` index on `mpcf_fulfillments (order_id, order_source)` that makes intake idempotency a database-enforced guarantee. |
 
 ## Tables
 

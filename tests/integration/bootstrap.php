@@ -40,6 +40,7 @@ require_once $mpcf_tests_dir . '/includes/functions.php';
 // discovery never loads them; required explicitly (same house convention
 // as tests/unit/bootstrap.php's Doubles/ requires).
 require_once __DIR__ . '/Woo/OrderFactoryTrait.php';
+require_once __DIR__ . '/CleanFulfillmentTablesTrait.php';
 
 tests_add_filter(
 	'muplugins_loaded',

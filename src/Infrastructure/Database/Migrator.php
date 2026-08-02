@@ -37,10 +37,11 @@ final class Migrator {
 	public const OPTION = 'mpcf_db_version';
 
 	/**
-	 * Schema version this build expects. Milestone 1 raises this to 1
-	 * alongside its first step, {@see step_1_initial_tables()}.
+	 * Schema version this build expects. Milestone 1 raises this to 2:
+	 * step 1 creates the four tables, step 2 adds the intake-idempotency
+	 * unique index once that requirement made the gap concrete.
 	 */
-	public const TARGET = 1;
+	public const TARGET = 2;
 
 	/**
 	 * Test-only step map override.
@@ -126,6 +127,7 @@ final class Migrator {
 	private function steps(): array {
 		return $this->steps_override ?? array(
 			1 => array( $this, 'step_1_initial_tables' ),
+			2 => array( $this, 'step_2_order_unique_index' ),
 		);
 	}
 
@@ -163,5 +165,26 @@ final class Migrator {
 		preg_match( '/CREATE TABLE (\S+)\s*\(/', $create_table_sql, $matches );
 
 		return $matches[1] ?? '';
+	}
+
+	/**
+	 * Adds the unique index intake idempotency depends on
+	 * ({@see Schema::fulfillments_order_unique_index_ddl()}). Idempotent:
+	 * checked via `SHOW INDEX` before adding, the same re-run safety
+	 * {@see step_1_initial_tables()} applies to its `CREATE TABLE`s.
+	 */
+	private function step_2_order_unique_index(): void {
+		global $wpdb;
+
+		$table = Schema::table( Schema::FULFILLMENTS );
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from Schema, no user input; only the index name is a %s placeholder.
+		$exists = $wpdb->get_var( $wpdb->prepare( "SHOW INDEX FROM {$table} WHERE Key_name = %s", Schema::FULFILLMENTS_ORDER_UNIQUE_INDEX ) );
+
+		if ( null !== $exists ) {
+			return;
+		}
+
+		$wpdb->query( Schema::fulfillments_order_unique_index_ddl() ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
 	}
 }

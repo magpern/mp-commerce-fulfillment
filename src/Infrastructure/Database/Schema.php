@@ -52,6 +52,13 @@ final class Schema {
 	public const NOTES = 'mpcf_notes';
 
 	/**
+	 * Name of the unique index enforcing intake idempotency at the database
+	 * level (added by {@see \MPCF\Infrastructure\Database\Migrator}'s
+	 * second step — see {@see fulfillments_order_unique_index_ddl()}).
+	 */
+	public const FULFILLMENTS_ORDER_UNIQUE_INDEX = 'order_unique';
+
+	/**
 	 * Prefixes a table name with the current site's table prefix.
 	 *
 	 * @param string $name Unprefixed table name.
@@ -130,6 +137,32 @@ final class Schema {
 			KEY assignee_state (assignee_type, assignee_id, state),
 			KEY created_at (created_at)
 		) ENGINE=InnoDB ROW_FORMAT=DYNAMIC {$charset_collate};";
+	}
+
+	/**
+	 * `ALTER TABLE` statement adding the unique index that makes intake
+	 * idempotency a database-enforced guarantee, not only an
+	 * application-level check-then-insert. Added as a separate migration
+	 * step ({@see \MPCF\Infrastructure\Database\Migrator}) rather than
+	 * folded into {@see fulfillments_ddl()} — this schema had already been
+	 * applied to a running database (this milestone's own dev/test
+	 * environments) by the time intake's idempotency requirement (D9) made
+	 * the gap concrete, and step-based migration is exactly the mechanism
+	 * this framework has for that, pre-tag or not.
+	 *
+	 * One order can have more than one fulfillment in the aggregate's own
+	 * general design (a future multi-warehouse split, for instance) — this
+	 * index does not foreclose that permanently, it enforces the Milestone
+	 * 1 reality that intake creates exactly one fulfillment per order. A
+	 * milestone that introduces real per-order splitting will need its own
+	 * ADR to relax or replace this constraint; that is a deliberate future
+	 * decision, not an oversight now.
+	 */
+	public static function fulfillments_order_unique_index_ddl(): string {
+		$table = self::table( self::FULFILLMENTS );
+		$index = self::FULFILLMENTS_ORDER_UNIQUE_INDEX;
+
+		return "ALTER TABLE {$table} ADD UNIQUE KEY {$index} (order_id, order_source)";
 	}
 
 	/**

@@ -17,6 +17,13 @@ use WP_UnitTestCase;
 
 /**
  * Real-WordPress activation tests.
+ *
+ * Milestone 0's version of this class included a test asserting the
+ * plugin registered no `woocommerce_*` callback anywhere — true only
+ * because nothing here needed one yet. Milestone 1 deliberately registers
+ * real intake hooks (see Woo\IntakeHooksTest), so that assertion's premise
+ * no longer holds and the test was removed rather than kept as a check for
+ * the absence of intended behavior.
  */
 final class ActivationTest extends WP_UnitTestCase {
 
@@ -25,7 +32,7 @@ final class ActivationTest extends WP_UnitTestCase {
 
 		Plugin::activate();
 
-		self::assertSame( 1, (int) get_option( Migrator::OPTION ), 'mpcf_db_version must reach target 1.' );
+		self::assertSame( 2, (int) get_option( Migrator::OPTION ), 'mpcf_db_version must reach target 2.' );
 
 		foreach ( Schema::all_tables() as $table ) {
 			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
@@ -56,38 +63,11 @@ final class ActivationTest extends WP_UnitTestCase {
 		}
 	}
 
-	public function test_activation_does_not_alter_storefront_behavior(): void {
-		// No frontend hook is registered in Milestone 0 (docs/HOOKS.md); the
-		// clearest proof available at this milestone is that activation
-		// touches no WooCommerce filter/action state — verified by the
-		// absence of any `woocommerce_*` callback this plugin could have
-		// added. Real storefront/checkout coverage arrives with Milestone 1.
-		global $wp_filter;
-
-		foreach ( array_keys( $wp_filter ) as $hook ) {
-			if ( ! str_starts_with( (string) $hook, 'woocommerce_' ) ) {
-				continue;
-			}
-
-			foreach ( $wp_filter[ $hook ]->callbacks as $callbacks ) {
-				foreach ( $callbacks as $callback ) {
-					$function = $callback['function'];
-
-					if ( is_array( $function ) && is_object( $function[0] ) ) {
-						self::assertStringNotContainsString( 'MPCF', get_class( $function[0] ) );
-					}
-				}
-			}
-		}
-
-		$this->addToAssertionCount( 1 );
-	}
-
 	public function test_reactivation_is_idempotent(): void {
 		Plugin::activate();
 		Plugin::activate();
 
-		self::assertSame( 1, (int) get_option( Migrator::OPTION ) );
+		self::assertSame( 2, (int) get_option( Migrator::OPTION ) );
 		self::assertNotNull( get_role( Capabilities::ROLE_OPERATOR ) );
 	}
 }

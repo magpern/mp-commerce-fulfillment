@@ -11,14 +11,16 @@ namespace MPCF\Tests\Integration\Infrastructure;
 
 use DateTimeImmutable;
 use MPCF\Domain\Fulfillment;
-use MPCF\Infrastructure\Database\Migrator;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
+use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
 use WP_UnitTestCase;
 
 /**
  * Integration tests for the fulfillment repository against a real database.
  */
 final class WpdbFulfillmentRepositoryTest extends WP_UnitTestCase {
+
+	use CleanFulfillmentTablesTrait;
 
 	/**
 	 * Repository under test.
@@ -29,7 +31,7 @@ final class WpdbFulfillmentRepositoryTest extends WP_UnitTestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
-		( new Migrator() )->migrate();
+		$this->clean_fulfillment_tables(); // Ensures the tables exist and are empty; see the trait's docblock.
 		$this->repository = new WpdbFulfillmentRepository();
 	}
 

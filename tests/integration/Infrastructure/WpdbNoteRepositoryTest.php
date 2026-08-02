@@ -13,9 +13,9 @@ namespace MPCF\Tests\Integration\Infrastructure;
 use DateTimeImmutable;
 use MPCF\Domain\Fulfillment;
 use MPCF\Domain\Note;
-use MPCF\Infrastructure\Database\Migrator;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
 use MPCF\Infrastructure\Database\WpdbNoteRepository;
+use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
 use WP_UnitTestCase;
 
 /**
@@ -23,6 +23,8 @@ use WP_UnitTestCase;
  * database.
  */
 final class WpdbNoteRepositoryTest extends WP_UnitTestCase {
+
+	use CleanFulfillmentTablesTrait;
 
 	/**
 	 * Repository under test.
@@ -40,7 +42,7 @@ final class WpdbNoteRepositoryTest extends WP_UnitTestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
-		( new Migrator() )->migrate();
+		$this->clean_fulfillment_tables(); // Ensures the tables exist and are empty; see the trait's docblock.
 		$this->repository     = new WpdbNoteRepository();
 		$this->fulfillment_id = ( new WpdbFulfillmentRepository() )->insert(
 			Fulfillment::intake( 1001, 'woocommerce', 1, 'standard', 'queued', '#1001', 'Jane Doe', 1, new DateTimeImmutable() )

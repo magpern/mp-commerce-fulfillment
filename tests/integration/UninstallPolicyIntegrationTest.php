@@ -22,7 +22,20 @@ use WP_UnitTestCase;
  */
 final class UninstallPolicyIntegrationTest extends WP_UnitTestCase {
 
+	use CleanFulfillmentTablesTrait;
+
 	private const UNINSTALL_FILE = __DIR__ . '/../../uninstall.php';
+
+	protected function setUp(): void {
+		parent::setUp();
+		// This class's own "remove_data_on_uninstall=true" test really does
+		// DROP every table this plugin owns — a DDL statement, so it is
+		// never undone by WP_UnitTestCase's per-test rollback the way the
+		// option/role changes around it are. See the trait's docblock: that
+		// mismatch can leave mpcf_db_version claiming a schema state that no
+		// longer matches physical reality for whichever test runs next.
+		$this->clean_fulfillment_tables();
+	}
 
 	public function test_deactivate_then_reactivate_loses_nothing(): void {
 		Plugin::activate();

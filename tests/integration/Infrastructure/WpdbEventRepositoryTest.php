@@ -15,9 +15,9 @@ use MPCF\Domain\Event\Actor;
 use MPCF\Domain\Event\Canonicalizer;
 use MPCF\Domain\Event\DomainEvent;
 use MPCF\Domain\Fulfillment;
-use MPCF\Infrastructure\Database\Migrator;
 use MPCF\Infrastructure\Database\WpdbEventRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
+use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
 use WP_UnitTestCase;
 
 /**
@@ -25,6 +25,8 @@ use WP_UnitTestCase;
  * real database.
  */
 final class WpdbEventRepositoryTest extends WP_UnitTestCase {
+
+	use CleanFulfillmentTablesTrait;
 
 	/**
 	 * Repository under test.
@@ -42,7 +44,7 @@ final class WpdbEventRepositoryTest extends WP_UnitTestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
-		( new Migrator() )->migrate();
+		$this->clean_fulfillment_tables(); // Ensures the tables exist and are empty; see the trait's docblock.
 		$this->repository     = new WpdbEventRepository();
 		$this->fulfillment_id = ( new WpdbFulfillmentRepository() )->insert(
 			Fulfillment::intake( 1001, 'woocommerce', 1, 'standard', 'queued', '#1001', 'Jane Doe', 1, new DateTimeImmutable() )
