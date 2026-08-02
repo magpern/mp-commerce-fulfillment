@@ -105,116 +105,116 @@ msgstr ""
 msgid "Shipped today"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:143
-#: src/Admin/FulfillmentDetailPage.php:150
-#: src/Admin/FulfillmentDetailPage.php:176
-#: src/Admin/FulfillmentDetailPage.php:189
+#: src/Admin/FulfillmentDetailPage.php:134
+#: src/Admin/FulfillmentDetailPage.php:141
+#: src/Admin/FulfillmentDetailPage.php:167
+#: src/Admin/FulfillmentDetailPage.php:180
 msgid "Fulfillment Detail"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:177
+#: src/Admin/FulfillmentDetailPage.php:168
 msgid "No fulfillment selected"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:177
+#: src/Admin/FulfillmentDetailPage.php:168
 msgid "Open a fulfillment from the Queue to see its detail."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:190
+#: src/Admin/FulfillmentDetailPage.php:181
 msgid "Not found"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:190
+#: src/Admin/FulfillmentDetailPage.php:181
 msgid "This fulfillment no longer exists."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:218
+#: src/Admin/FulfillmentDetailPage.php:209
 msgid "Fulfillment for order"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:220
+#: src/Admin/FulfillmentDetailPage.php:211
 msgid "Customer:"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:221
+#: src/Admin/FulfillmentDetailPage.php:212
 msgid "Items:"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:224
+#: src/Admin/FulfillmentDetailPage.php:215
 msgid "State:"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:229
+#: src/Admin/FulfillmentDetailPage.php:220
 msgid "View order"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:243
+#: src/Admin/FulfillmentDetailPage.php:234
 msgid "Transitions"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:270
+#: src/Admin/FulfillmentDetailPage.php:243
 msgid "No transitions are available."
 msgstr ""
 
 #. translators: %s: target state label
-#: src/Admin/FulfillmentDetailPage.php:348
+#: src/Admin/FulfillmentDetailPage.php:308
 #, php-format
 msgid "Why is this fulfillment moving to \"%s\"?"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:363
+#: src/Admin/FulfillmentDetailPage.php:323
 msgid "Audit trail"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:368
+#: src/Admin/FulfillmentDetailPage.php:328
 msgid "System"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:369
+#: src/Admin/FulfillmentDetailPage.php:329
 msgid "ago"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:394
+#: src/Admin/FulfillmentDetailPage.php:354
 msgid "Fulfillment created from order."
 msgstr ""
 
 #. translators: 1: origin state, 2: destination state, 3: optional reason
-#: src/Admin/FulfillmentDetailPage.php:402
+#: src/Admin/FulfillmentDetailPage.php:362
 #, php-format
 msgid "Moved from \"%1$s\" to \"%2$s\".%3$s"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:422
+#: src/Admin/FulfillmentDetailPage.php:382
 msgid "Notes"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:426
+#: src/Admin/FulfillmentDetailPage.php:386
 msgid "pinned"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:430
+#: src/Admin/FulfillmentDetailPage.php:390
 msgid "Unknown"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:439
+#: src/Admin/FulfillmentDetailPage.php:399
 msgid "Add note"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:461
+#: src/Admin/FulfillmentDetailPage.php:421
 #: src/Admin/QueuePage.php:273
 msgid "Fulfillment not found."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:468
+#: src/Admin/FulfillmentDetailPage.php:428
 #: src/Admin/QueuePage.php:280
 msgid "You are not allowed to make this change."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:486
+#: src/Admin/FulfillmentDetailPage.php:446
 msgid "You are not allowed to add notes."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:490
+#: src/Admin/FulfillmentDetailPage.php:450
 msgid "A note cannot be empty."
 msgstr ""
 
@@ -378,6 +378,6 @@ msgstr ""
 msgid "Warehouse Lead"
 msgstr ""
 
-#: src/Plugin.php:271
+#: src/Plugin.php:300
 msgid "Fulfillment"
 msgstr ""
