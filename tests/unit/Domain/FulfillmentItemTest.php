@@ -65,4 +65,14 @@ final class FulfillmentItemTest extends TestCase {
 		self::assertSame( 0, $item->qty_picked() );
 		self::assertSame( 0, $item->qty_packed() );
 	}
+
+	public function test_record_picked_and_record_packed_never_exceed_qty_ordered(): void {
+		$item = FulfillmentItem::intake( 1, 501, 900, 0, 'SKU-1', 'Widget', 4 );
+
+		$item->record_picked( 999 );
+		$item->record_packed( 999 );
+
+		self::assertSame( 4, $item->qty_picked() );
+		self::assertSame( 4, $item->qty_packed() );
+	}
 }

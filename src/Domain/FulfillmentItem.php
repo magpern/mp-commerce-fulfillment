@@ -280,21 +280,23 @@ final class FulfillmentItem {
 	}
 
 	/**
-	 * Records the quantity picked so far.
+	 * Records the quantity picked so far, clamped to `0..qty_ordered`
+	 * (Architecture Plan §IV.5.2) — a picked/packed quantity can never
+	 * exceed what was ordered, regardless of what a caller supplies.
 	 *
 	 * @param int $qty New picked quantity.
 	 */
 	public function record_picked( int $qty ): void {
-		$this->qty_picked = max( 0, $qty );
+		$this->qty_picked = max( 0, min( $qty, $this->qty_ordered ) );
 	}
 
 	/**
-	 * Records the quantity packed so far.
+	 * Records the quantity packed so far, clamped to `0..qty_ordered`.
 	 *
 	 * @param int $qty New packed quantity.
 	 */
 	public function record_packed( int $qty ): void {
-		$this->qty_packed = max( 0, $qty );
+		$this->qty_packed = max( 0, min( $qty, $this->qty_ordered ) );
 	}
 
 	/**

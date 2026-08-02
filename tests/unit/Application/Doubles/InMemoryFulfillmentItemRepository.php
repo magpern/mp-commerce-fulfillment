@@ -28,10 +28,18 @@ final class InMemoryFulfillmentItemRepository implements FulfillmentItemReposito
 	private int $next_id = 1;
 
 	public function find_for_fulfillment( int $fulfillment_id ): array {
+		// A fresh hydration per call, exactly like the real Wpdb-backed
+		// repository (and matching InMemoryFulfillmentRepository::find()'s
+		// own convention) — a caller that mutates a returned item and then
+		// decides not to save() it must never see that mutation reflected
+		// back in a later find_for_fulfillment() call.
 		return array_values(
-			array_filter(
-				$this->rows,
-				static fn( FulfillmentItem $item ): bool => $item->fulfillment_id() === $fulfillment_id
+			array_map(
+				static fn( FulfillmentItem $item ): FulfillmentItem => FulfillmentItem::from_array( $item->to_array() ),
+				array_filter(
+					$this->rows,
+					static fn( FulfillmentItem $item ): bool => $item->fulfillment_id() === $fulfillment_id
+				)
 			)
 		);
 	}
