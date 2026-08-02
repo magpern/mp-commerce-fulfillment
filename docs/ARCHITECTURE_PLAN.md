@@ -1,6 +1,6 @@
 # Commerce Fulfillment for WooCommerce — Architecture Specification
 
-**Status:** **Architecture Freeze v1.0** — Architecture Plan Rev 2.1 and Milestone 0 Execution Plan Rev 1 approved by the Product Owner 2026-07-31 as the permanent architectural baseline for Commerce Fulfillment. M0 is closed (`v0.0.1` released). **Milestone 1 Execution Plan Rev 1 (Part III) approved by the Product Owner 2026-08-01 — M1 is approved for implementation.**
+**Status:** **Architecture Freeze v1.0** — Architecture Plan Rev 2.1 and Milestone 0 Execution Plan Rev 1 approved by the Product Owner 2026-07-31 as the permanent architectural baseline for Commerce Fulfillment. M0 is closed (`v0.0.1` released). M1 is closed (`v0.1.0` released, `v0.1.1` defect patch tracked separately). **Milestone 2 Execution Plan (Part IV — Packing Workspace & REST) approved by the Product Owner 2026-08-02 — M2 is approved for implementation through release-candidate preparation; final `v0.3.0`/`v0.2.0` tags require separate PO approval.**
 **Working name:** Commerce Fulfillment (commercial name TBD — internal identifiers are rename-proof and never churn).
 **Internal identity (fixed, PO-approved 2026-07-31):** namespace `MPCF\`, prefix `mpcf_`, tables `{$wpdb->prefix}mpcf_*`, text domain `mp-commerce-fulfillment`, constants `MPCF_*`, capability prefix `mpcf_`.
 **Repo (to create):** private GitHub `magpern/mp-commerce-fulfillment`, plus sibling `magpern/mp-admin-design-system` (PO-approved 2026-07-31).
@@ -27,6 +27,8 @@ This document is the **authoritative architectural specification** for Commerce 
 | M1 Execution Plan Rev 1 | 2026-08-01 | Part III appended: Milestone 1 (Fulfillment core — Warehouse MVP) execution plan, reconciled against M0's actual shipped state. Three open scope questions resolved by explicit PO decision (MPDS component work in-scope as an early M1 phase; Queue drawer ships in M1 and opens Fulfillment Detail; Dashboard's picking-list quick action omitted, not stubbed). PO approved for implementation 2026-08-01. Part I/II baseline unchanged — no architectural decision altered. |
 | M1 doc reconciliation | 2026-08-02 | §III.7 appended: actual outcomes of the D1–D19 commit sequence (schema reached version 3 via two additive index steps found during D9/D15, not only at the D21 proof; the two §19.1 guard tests missing since D6 added in D20; PO decisions from III.1/III.2 confirmed shipped as decided). No architectural decision altered — a documentation-only pass, per this document's own governance rule that implementation may not change architecture without an ADR. |
 | M1 performance proof | 2026-08-02 | §III.7's D21 outcome updated with the actual 10k-row proof result: no full scan, no N+1, no non-scaling plan, no migration amendment required (`docs/QUEUE_PERFORMANCE_VALIDATION.md`). No architectural decision altered. |
+| M1 released | 2026-08-02 | PO accepted M1 and its release-candidate verification; `mp-admin-design-system` tagged `v0.2.0` and `mp-commerce-fulfillment` tagged `v0.1.0`, both published and independently re-verified against the downloaded release assets (`docs/M1_RELEASE_REPORT.md`). |
+| M2 Execution Plan (Part IV) | 2026-08-02 | Part IV appended: Milestone 2 (Packing Workspace & REST) execution plan, reconciled against M1's actual shipped state — reconciliation found one real M1 defect (the admin-side composition root wires a subscriber-less `EventDispatcher`, so admin-initiated transitions never reach `Woo\StatusBridge`) and three related findings in how transition eligibility is derived, all resolved by a single fix (§IV.3.B). Four PO decisions captured at approval: the dispatcher defect ships as its own `v0.1.1` patch before M2 feature work starts; multi-package "add package" ships in M2 without line-quantity allocation (M4); a minimal packing slip is pulled forward from M3 into M2; a dev/CI-only Playwright toolchain is added under new **ADR-0006**, which narrows ADR-0003's *Consequences* (shipped code stays framework-free and build-free) without altering its Decision. Two roadmap-sequencing amendments (§20's M2/M3 rows, §7.1's `mpcf_documents` milestone number) and ADR-0006 are the only document changes; no invariant, D-decision, layer rule, data-model semantic, engine contract or public-surface rule is altered. PO approved for implementation 2026-08-02. |
 
 ## Governance
 
@@ -953,3 +955,933 @@ Both steps are additive-only (`ALTER TABLE ... ADD KEY`/`ADD UNIQUE KEY`), idemp
 
 **No REST route, no `do_action`/`apply_filters` extension point exists in M1** — confirmed by a full scan of `src/`. §16.2's "extension points at v1" (`mpcf_workflows`, `mpcf_carriers`, `mpcf_document_types`, `mpcf_event`, `mpcf_workspace_flags`, `mpcf_intake_should_create`) name the eventual v1.0 commercial-release surface, not an M1 commitment — III.3's own scope list never included them. The superseded `docs/HOOKS.md` draft paraphrased this as "Milestone 1 onward introduces...", which read as an M1 promise it was never architecturally obligated to keep; D20 corrects that paraphrase so the document stops implying these hooks exist today. This is a documentation-wording fix, not a scope cut — M2's REST layer remains the next place a public extension surface is actually planned.
 
+
+---
+---
+
+# Part IV — Milestone 2 Execution Plan (Rev 1 — approved for implementation)
+
+**Scope:** Packing Workspace & REST → plugin `v0.2.0`, MPDS `v0.3.0`; preceded by a
+prerequisite defect-patch release `v0.1.1`. **Approved by the PO 2026-08-02.** Architecture
+(Part I) is frozen; M1 (Part III) is closed — `v0.1.0` released, `v0.2.0` (MPDS) released,
+both CI-green, both independently re-verified against their published release assets
+(`docs/M1_RELEASE_REPORT.md`). Four scope questions were put to the PO before this plan was
+written and resolved by explicit decision at approval time (recorded in IV.0) rather than left
+implicit — the same house discipline III.1 applied to M1's three open questions.
+
+**Context.** Milestone 1 shipped and closed on 2026-08-02 (`mp-commerce-fulfillment v0.1.0`,
+`mp-admin-design-system v0.2.0`). The plugin can now ingest paid orders, run them through a
+data-defined workflow, and show a lead a Queue, a Detail page and an operational Dashboard. What it
+cannot do is **pack anything**. There is no screen where an operator checks items off, records a box
+weight, enters a tracking number and hands the parcel to a carrier — every state change today is a
+form POST on a read-oriented page built for understanding, not for doing.
+
+M2 closes that gap. It is the milestone the whole architecture was shaped around: the REST-first
+Packing Workspace (D6, I11, §9.4), the shipment/package data model (D19, ADR-0005), and the first
+public API surface. After M2 a warehouse operator processes an order end to end without leaving one
+screen, without a page reload, and — if they want — without touching the mouse.
+
+This document was appended to `docs/ARCHITECTURE_PLAN.md` as **Part IV** on PO approval
+(2026-08-02), exactly as D0 appended Part III for M1 — the same house ritual (house rule I14).
+
+---
+
+## Deliverable shape
+
+| Artifact | Version | Repo |
+|---|---|---|
+| Patch release (M1 defect) | `v0.1.1` | `mp-commerce-fulfillment` |
+| Design system | `v0.3.0` | `mp-admin-design-system` |
+| Milestone 2 | `v0.2.0` | `mp-commerce-fulfillment` |
+
+Files that change most: [src/Plugin.php](src/Plugin.php),
+[src/Infrastructure/Database/Schema.php](src/Infrastructure/Database/Schema.php),
+[src/Infrastructure/Database/Migrator.php](src/Infrastructure/Database/Migrator.php),
+[src/Application/WorkflowService.php](src/Application/WorkflowService.php),
+[src/Admin/FulfillmentDetailPage.php](src/Admin/FulfillmentDetailPage.php),
+[src/Admin/QueuePage.php](src/Admin/QueuePage.php), [src/Admin/Assets.php](src/Admin/Assets.php),
+[src/Settings.php](src/Settings.php), [src/PersistedKeys.php](src/PersistedKeys.php),
+plus new `src/Api/`, `src/Documents/`, `src/Domain/Shipping/`, `assets/admin/js/`, `tests/browser/`.
+
+---
+
+## IV.0 Product Owner decisions captured at planning (binding)
+
+Four scope questions were put to the PO before this plan was written. All four are answered and
+binding for this milestone:
+
+1. **The M1 event-dispatcher defect ships as its own patch release `v0.1.1` before M2 implementation
+   starts** — not folded into M2. Rationale: the M1 line stays honest for anyone already running
+   `0.1.0`. Scope in IV.2.
+2. **Multi-package: "add package" ships in M2** with per-package weight, dimensions and colli
+   tracking number. Allocating individual line quantities across packages stays M4 ("multi-package
+   UX polish"); M2 auto-allocates every packed line to package 1.
+3. **A minimal packing slip is pulled forward from M3 into M2.** A packing station with nothing to
+   put in the box is not a finished workflow. Scope is deliberately narrow (IV.7) — print-HTML only,
+   one document type, no storage, no PDF, no template override chain.
+4. **Playwright joins the repo as a dev-and-CI-only browser test toolchain.** Constraints set by the
+   PO, binding: Node artifacts never ship; `package.json`, Playwright config and browser tests are
+   development artifacts; the release audit must actively prove no Node artifact reaches the zip;
+   PHPUnit remains the primary correctness tier; Playwright complements it for real browser
+   behaviour, accessibility, keyboard workflows and JS interaction. Requires **ADR-0006** (IV.4).
+
+---
+
+## IV.1 Objectives
+
+1. An operator processes a fulfillment from `queued` to `shipped` on one screen, with no full-page
+   reload, no mouse required, and a slip printed for the box.
+2. `mpcf/v1` exists and is the only path the workspace uses — no privileged admin side-channel
+   (I11). Every workspace capability is an API capability, which is what makes M14's tablet mode a
+   frontend project.
+3. `Shipment` and `Package` become real: multiple shipments per fulfillment, multiple packages per
+   shipment, tracking at either level, carrier recorded through a port.
+4. Guard evaluation stops being caller-asserted and starts being data-derived (IV.3, finding B).
+5. The public surface that freezes additive-only at this milestone (§4 governance) is designed
+   deliberately, documented completely in `docs/API.md`, and reviewed before it is written.
+
+Non-objectives, stated so they cannot creep: no carrier API calls, no label purchase, no rate
+shopping, no photos, no batch picking, no analytics, no scanning semantics beyond the focus
+architecture, no returns.
+
+---
+
+## IV.2 Pre-milestone patch: `v0.1.1`
+
+Not part of M2's scope table; a separate, tiny release that must be tagged before F1 begins.
+
+**The defect.** [src/Plugin.php:208](src/Plugin.php#L208) constructs `wire_admin()`'s
+`WorkflowService` with `new EventDispatcher()` — a *second*, empty dispatcher. The one carrying the
+`StatusBridge` subscription is built in `wire_services()` at
+[src/Plugin.php:146](src/Plugin.php#L146)/[:177](src/Plugin.php#L177). Consequence: **every
+transition initiated from the Queue or the Fulfillment Detail screen dispatches to nobody.** The
+outbound bridge ("all fulfillments shipped → WC order `completed`") only ever fires for transitions
+driven by `RefundObserver`. M1's `StatusBridgeTest` passes because it exercises the service graph
+directly, never the admin graph — a genuine coverage blind spot, not a flaky test.
+
+| # | Commit | Content |
+|---|---|---|
+| P1 | Composition-root fix | One `EventDispatcher` and one `WorkflowService`, built once and shared by `wire_services()`/`wire_admin()`. Repositories, `Clock` and `Settings` likewise constructed once. `CompositionRootTest`'s allowlist is unchanged (no new class). New integration test: an admin-initiated `packed → shipped` on the last open fulfillment for an order moves the WC order to `completed` — asserted through the real admin code path, not the service graph. |
+| P2 | Vendor stamp correction | `assets/mpds/SOURCE_TAG` still reads `v0.2.0-rc (pending PO tag approval…)` — accurate when vendored during D1, stale since the tag was published. Re-run `bin/sync-mpds.sh v0.2.0`; `MpdsVendorGuardTest` green. Nominated for a patch release by `docs/M1_RELEASE_REPORT.md` itself. |
+| P3 | Release ritual | Version four-place bump to `0.1.1`; a short post-release addendum to `docs/M1_RELEASE_REPORT.md` and to `ARCHITECTURE_PLAN.md` §III.7 recording the defect and its fix (the milestone-history-stays-truthful rule); `ROADMAP.md` M1 entry updated. CI green → tag `v0.1.1` **on explicit PO approval**. |
+
+`v0.1.1` is a prerequisite for F1, not a gate on planning approval.
+
+---
+
+## IV.3 Reconciliation record
+
+Every M1 assumption M2 depends on, verified by inspection of the shipped code — not assumed.
+
+| # | Checkpoint | Verdict | Notes |
+|---|---|---|---|
+| 1 | Architecture Freeze v1.0 still authoritative | ✅ | No invariant, D-decision, layer rule, data-model semantic, engine contract or public-surface rule is changed by this plan. Two roadmap-sequencing amendments (IV.4) and one ADR (IV.4) are the only document changes. |
+| 2 | M1 shipped what ROADMAP/§III.7 claim | ✅ with one defect | Everything in the M1 release report is present in the tree. The one thing neither the report nor §III.7 records is the dispatcher defect above — found by this plan's inspection, fixed by `v0.1.1`. |
+| 3 | Application services are genuinely reusable by REST (I11) | ✅ | `QueueService`, `FulfillmentDetailService`, `NoteService`, `AssignmentService`, `WorkflowService`, `DashboardService` are all WordPress-free and take no `$_POST`. `AdminBoundaryGuardTest` already proves Admin never bypasses them. M2's REST controllers call the same objects — this is the single biggest reason M2 is cheap. |
+| 4 | `WorkflowService::transition()` guard flags are caller-asserted | ❌ **finding B — must change** | `$package_spec_present`/`$has_shipment`/`$photo_requirement_satisfied` are booleans supplied by the caller. `FulfillmentDetailPage::submit_transition()` passes `true, true` unconditionally ([FulfillmentDetailPage.php:471](src/Admin/FulfillmentDetailPage.php#L471)); `QueuePage::apply_advance()` passes the defaults `false, false` ([QueuePage.php:283](src/Admin/QueuePage.php#L283)). The same edge therefore behaves differently depending on which screen you are on. Correct for M1 (no shipment model existed); indefensible in M2 (one does). Resolution in IV.3.B. |
+| 5 | Display-path guard evaluation is honest | ❌ **finding C — must change** | `FulfillmentDetailPage::render_transitions()` builds `new TransitionContext( array(), true, true, true )` — an **empty item list**, so `all_items_picked`/`all_items_packed` pass vacuously and the button renders enabled even when nothing is picked. Same fix as finding B. |
+| 6 | Admin does not instantiate Engine classes | ❌ **finding D — must change** | `FulfillmentDetailPage::__construct()` does `new WorkflowEngine( GuardRegistry::standard() )` ([FulfillmentDetailPage.php:129](src/Admin/FulfillmentDetailPage.php#L129)) — a peer construction outside the composition root, and duplicated rule knowledge at the edge. §9.4 already specifies the correct shape: the UI *asks* (`GET /fulfillments/{id}/transitions`). Resolution in IV.3.B. |
+| 7 | I4 (single state writer) survives M2's new writers | ✅ | `SingleStateWriterGuardTest` scans for callers of `Fulfillment::apply_transition()`. `PackingService` and `ShippingService` never call it — they mutate items, shipments and packages. **Shipment status is explicitly not fulfillment state** (IV.6); I4 governs `mpcf_fulfillments.state` only, and this plan states that boundary in the document so a future reader does not mistake `mpcf_shipments.status` for a second state machine that escaped the engine. |
+| 8 | I5 (append-only audit) survives | ✅ | Every new mutation appends to `mpcf_events` through the same `EventRepository::append()`. No update, no delete. |
+| 9 | `PayloadGuard` accepts M2's payload shapes | ⚠️ constraint | The key denylist forbids `address`, `street`, `city`, `zip`, `postal`, `phone`, `email` at any nesting level ([PayloadGuard.php](src/Domain/Event/PayloadGuard.php)). Shipment payloads must therefore use `carrier_id`, `service`, `tracking_number`, `weight_grams`, `length_mm` — never a recipient-address copy. This is the guard working as designed; every new event type gets an explicit PayloadGuard test. |
+| 10 | `order_unique` UNIQUE (order_id, order_source) blocks nothing M2 needs | ✅ | Partial shipment in M2 is *N shipments under one fulfillment*, never *N fulfillments per order*. The constraint stands; relaxing it remains a future ADR (IV.13). |
+| 11 | `FulfillmentItem::record_picked()/record_packed()` exist and are tested but unused | ✅ | Confirmed: only tests call them today. `FulfillmentItemRepository::save()` likewise. M2's `PackingService` is their first production caller — the domain mutators need no change. |
+| 12 | Optimistic lock is usable as the workspace's concurrency token | ✅ with an addition | `WpdbFulfillmentRepository::save()` always advances `version` in its own `SET`, so a matched row reports an affected row even when nothing else changed — deliberate, documented, and exactly what M2 needs. M2 adds `FulfillmentRepository::touch()` (bump `version` only, conditioned on the current value) so item/shipment writes can advance the aggregate's token without a non-workflow path rewriting state columns. |
+| 13 | Schema is at `mpcf_db_version = 3`; migration framework proven | ✅ | Steps are idempotent and resumable, guarded by `SHOW TABLES`/`SHOW INDEX`. M2 appends steps 4 and 5; no framework change. |
+| 14 | `Settings::SCHEMA_VERSION = 3`, purely additive bumps | ✅ | M2 → 4. `sanitize()` always rebuilds from `defaults()`, so no destructive migration step exists to write. |
+| 15 | Capabilities cover M2 | ✅ | All eleven exist since M0. `mpcf_manage_shipments` already gates the `packed → shipped` edge in `StandardWorkflow`; `mpcf_render_documents` exists for the slip. **No new capability string.** |
+| 16 | MPDS v0.2.0 has the components the workspace needs | ❌ — the gap this plan closes first | Verified against `css/components.css`: no toast, stepper, checklist, quantity control, unit input, repeater, action bar, workspace layout or scan input. Nine components are missing. The MPDS sub-track (E1–E9) opens the commit sequence, exactly as C1–C7 opened M1's. |
+| 17 | `timeline_for_fulfillment()` is unbounded | ⚠️ | Returns the whole chain. Fine at M1's ~8 events/fulfillment; M2 roughly doubles that and §13 mandates burst-aggregated item events specifically to avoid row explosions. M2 paginates the timeline and implements burst aggregation (IV.10). |
+| 18 | Perf proof's index conclusions still hold | ⚠️ re-measure | `docs/QUEUE_PERFORMANCE_VALIDATION.md` explicitly says the Dashboard's today-counters preferred `created_at` over `event_type` *because M1 has only one event type*, and to "revisit if a future milestone adds enough additional event types". M2 adds eight. The proof is re-run (F23). |
+| 19 | ADR-0003 permits a dev-only Node toolchain | ❌ — needs ADR-0006 | Its Consequences clause says "No `package.json`, no npm, no bundler in this repository". The PO's Playwright decision contradicts that sentence literally. Governance requires the ADR first, then the document, then the code. ADR-0006 is commit F0. |
+| 20 | ADR-0005 vs §9.4 on multi-package UI | ⚠️ resolved by PO | ADR-0005 says the M2 UI "only exercises the single-package path"; §9.4 describes an "add package" action. Resolved by PO decision 2: add-package ships, line allocation does not. ADR-0005's Consequences gain a one-line note that its M2-UI remark was about schema economics, not a UI ceiling. |
+
+### IV.3.B Resolution for findings B, C and D (one change, three symptoms)
+
+All three are the same root cause: **transition eligibility is assembled by the caller instead of by
+the application layer.** M2 fixes it once:
+
+- New `Application\TransitionContextFactory` builds a `TransitionContext` from real data —
+  `FulfillmentItemRepository` for line quantities, `ShipmentRepository`/`PackageRepository` for
+  `package_spec_present`/`has_shipment`/`has_tracking`, `Settings` for the photo requirement (still
+  trivially satisfied until M5).
+- `WorkflowService::transition()` drops its three boolean parameters and uses the factory. Signature
+  becomes `transition( int $id, string $target, Actor $actor, ?string $reason = null )`. Internal
+  class structure is not public API (§16.2), so no ADR.
+- New `WorkflowService::available_transitions( int $id, callable $can ): list<AvailableTransition>`
+  returns, per candidate target: target key, label, whether approved, guard rejection code and
+  message, whether a reason is required, and the required capability. `$can` is the injected
+  capability predicate, keeping the service WordPress-free (I6).
+- `FulfillmentDetailPage` consumes `available_transitions()` and **deletes its private
+  `WorkflowEngine`**. `GET /mpcf/v1/fulfillments/{id}/transitions` returns the same list. One rule
+  source, three consumers.
+
+**Upgrade consequence, which must be tested.** Once `has_shipment` is derived from real data,
+fulfillments already sitting in `packed` on a `0.1.x` install can no longer be shipped until a
+shipment exists. That is correct behaviour, but it is a visible behaviour change on upgrade. It gets
+its own integration test and a line in the release notes.
+
+---
+
+## IV.4 Documents to amend, and the one new ADR
+
+| Change | Kind | Why it is not an architecture change |
+|---|---|---|
+| **ADR-0006 — Dev-only browser test toolchain** (new, Accepted at F0) | ADR | Narrows ADR-0003's *Consequences*, not its Decision. Shipped code stays framework-free and build-free; the runtime path is untouched; Node exists only in `devDependencies` and CI. ADR-0003's Status gains "Superseded in part by ADR-0006". |
+| §20 roadmap: M2 row gains `mpcf_shipments/packages/package_items/documents` + packing slip; M3 row loses the packing slip and becomes "Documents I — pick list, stored renders, PDF port, template overrides, branding, reprint history" | Roadmap sequencing | §20 is not in the ADR-gated list (§3 invariants, §18 D-decisions, §5 layer rules, §7 data-model *semantics*, §6 engine contract, §16 public surface). Moving *when* a specified feature lands is the PO's call; nothing about the five-stage pipeline (§10) or the table's shape (§7.1) changes. |
+| §7.1: `mpcf_documents` annotated (M2) instead of (M3) | Roadmap sequencing | Same reasoning. Same DDL. |
+| ADR-0005 Consequences: one-line clarification on the M2-UI remark | Editorial | Records PO decision 2. |
+| `docs/API.md` (new) | Documentation | Mandated by §16.2 for M2. |
+| `docs/PRINT_VALIDATION.md` (new) | Documentation | Spike S1 evidence record. |
+
+---
+
+## IV.5 The Packing Workspace
+
+The heart of the milestone. Everything below derives from P0 (§2.1) — speed, clarity, low cognitive
+load, auditability, minimal clicks, deterministic workflows — and §9.4.
+
+### IV.5.1 Placement, entry and exit
+
+- Slug `mpcf-workspace`, URL `admin.php?page=mpcf-workspace&fulfillment_id=N`. Registered as a real
+  submenu page then immediately `remove_submenu_page()`d, exactly as `FulfillmentDetailPage` is
+  ([Plugin.php:234-248](src/Plugin.php#L234-L248)) — reachable, capability-checked, never a nav item.
+- Entry points: Queue row `Enter`, Queue drawer's primary action (repointed from Fulfillment Detail
+  — the repoint §III.2.5 promised, requiring no drawer change), Dashboard next-actions rows, and a
+  direct URL.
+- **Entry points are real `<a href>` anchors, never JS-only buttons.** Middle-click and
+  `Shift`+click must open a second monitor's worth of workspace. This is a hard requirement, not a
+  nicety (IV.5.6).
+- Exit: `Esc` from a clean workspace returns to the Queue with filters preserved; with unsent
+  changes it warns first.
+- Capability to view: `mpcf_view_queue`. Every action re-checks its own capability server-side.
+
+### IV.5.2 Layout
+
+Three regions, named in the MPDS `workspace-layout` primitive so the same grammar serves M14's
+tablet mode.
+
+```
+┌─ context ────────┬─ the work ───────────────────┬─ the outcome ────────┐
+│ Order #1042      │  ●━━━━●━━━━○━━━━○━━━━○       │ SHIPMENT             │
+│ 2026-08-02       │  queued picking picked …     │  Carrier  [PostNord] │
+│ Card · Blocks    │                              │  Service  [MyPack]   │
+│                  │  ┌──────────────────────┐    │  Tracking [________] │
+│ SHIP TO      [⧉] │  │[img] Blue Widget     │    │                      │
+│ Anna Andersson   │  │      SKU-1042        │    │ PACKAGES             │
+│ Storgatan 1      │  │      − [ 2 / 3 ] +   │    │  #1  1200 g          │
+│ 111 22 Stockholm │  └──────────────────────┘    │      30×20×10 cm     │
+│ SE               │  ┌──────────────────────┐    │  [+ Add package]     │
+│                  │  │[img] Red Gadget   ✓  │    │                      │
+│ ⚑ Customer note  │  │      SKU-2001        │    │ DOCUMENTS            │
+│ ⚑ High value     │  │      − [ 1 / 1 ] +   │    │  [Print packing slip]│
+│                  │  └──────────────────────┘    │                      │
+│ 📌 Fragile —     │                              │ NOTES  [+]           │
+│    double box    │  [ Complete all ]            │ TIMELINE (last 5)    │
+│                  │  ⌨ scanner ready             │                      │
+├──────────────────┴──────────────────────────────┴──────────────────────┤
+│ #1042 · Packing        [ Problem… ] [ ⋯ ]     [   Mark packed  ⌃⏎   ]  │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Breakpoints.**
+
+| Width | Layout |
+|---|---|
+| ≥1280px | Three columns, 22% / 48% / 30%. Action bar spans full width, sticky bottom. |
+| 1024–1279px | Two columns: context collapses into a header strip above the work column (address behind a disclosure, flags and pinned notes always visible). Outcome column keeps its width. |
+| 768–1023px (tablet portrait) | Single column, stacked: context strip → work → outcome. Action bar stays sticky bottom. All targets ≥56px. |
+| <768px | Same single column; the outcome column's package repeater collapses to one card at a time. Not a supported target in M2, but must not break. |
+
+**Region contents.**
+
+*Context (left).* Order number, order date, payment-method badge, channel; ship-to address block
+formatted per the store's country format, with a copy button (MPDS `clipboard.js` already exists);
+`View order` link for `manage_woocommerce` holders only (M1's existing rule); flag row — customer
+note present, high value, repeat problem customer — rendered from the `mpcf_workspace_flags` filter
+(§9.4's named extension slot, shipping in M2 with three bundled flags); pinned notes rendered
+prominently *before* packing starts, which is their entire job (§14).
+
+*The work (centre).* The MPDS `stepper` showing the fulfillment's position in its workflow
+definition (not a hardcoded list — states come from `WorkflowDefinition`, so a custom workflow gets
+a correct stepper for free). Then the item checklist:
+
+- One MPDS `checklist-row` per `mpcf_fulfillment_items` row, minimum 64px tall.
+- Product thumbnail 48px (read live through `OrderSource`, never a stored copy), name, SKU in a
+  monospace, user-selectable span, location placeholder (empty until M11).
+- MPDS `quantity-stepper`: `−  2 / 3  +`, both buttons ≥56px, `aria-valuenow/min/max` on the group,
+  clamped `0..qty_ordered` client-side and server-side.
+- **The whole row is the increment target.** Clicking or tapping anywhere that is not the `−` button
+  increments by one. That is the single biggest click-count win available and it is why the row is
+  64px, not 40px.
+- Row renders complete (checkmark, muted, reduced contrast weight) at `qty == qty_ordered`.
+- `Complete all` button sets every line to its ordered quantity in one batch call.
+- `Collapse completed` toggle for long orders, so a 30-line order stays a one-screen job.
+- **Scan sink**: a single always-focused, visually-hidden-but-focusable input (MPDS `scan-input`)
+  that captures keyboard-wedge output. In M2 it *captures and displays* the scanned string and
+  echoes an inline "scanning is not yet wired to items — M6" hint; it does not decode. Its purpose
+  in M2 is the focus architecture (§9.4: "the DOM/focus architecture for it exists from M2 so M6 is
+  additive"). A visible `⌨ scanner ready / paused` indicator tells the operator whether keystrokes
+  will land there.
+
+*The outcome (right).* Shipment panel: carrier `<select>` from the `CarrierRegistry` port, service
+free text, consignment tracking number, tracking-URL override behind a disclosure. Packages
+repeater: one card per package with weight and L×W×H, each an MPDS `unit-input` whose suffix comes
+from the store's own configured units; `+ Add package` appends a card; remove is available while the
+shipment is `pending`. Documents: `Print packing slip`. Notes: add field + list, pinned first.
+Timeline: last five events with a link to Fulfillment Detail for the full chain.
+
+*Action bar (sticky bottom, full width).* Left: fulfillment identity, current state badge, and a
+conflict/pending-writes indicator. Right: `Problem…` (opens the reason modal), an overflow `⋯` menu
+for rarer approved transitions, and exactly **one primary button** whose label and target come from
+`available_transitions()` — `Start picking` → `Mark picked` → `Start packing` → `Mark packed` →
+`Ship`. Primary is ≥56px tall, ≥200px wide, and sits in the bottom-right corner (Fitts's law: a
+screen corner is an infinitely large target). When the engine rejects the next forward edge, the
+button is disabled and the guard's own message renders directly beneath it — never a generic error,
+never a silent no-op.
+
+### IV.5.3 Keyboard-first operation
+
+The complete map. It is rendered by `?` into a shortcut sheet composed from the existing MPDS
+`modal` + `kbd-hints` components (no new component needed).
+
+| Key | Action |
+|---|---|
+| `Ctrl/Cmd + Enter` | Primary action |
+| `j` / `k` | Move item focus down / up |
+| `Space` or `Enter` | Increment focused line by 1 |
+| `Shift + Space` | Decrement focused line by 1 |
+| `a` | Complete focused line |
+| `Shift + A` | Complete all lines |
+| `c` | Toggle collapse-completed |
+| `/` | Focus the scan sink |
+| `t` | Focus tracking number |
+| `w` | Focus package 1 weight |
+| `n` | Focus new-note field |
+| `p` | Open the Problem modal |
+| `P` (shift) | Print packing slip |
+| `[` / `]` | Previous / next fulfillment in the queue slice |
+| `?` | Shortcut sheet |
+| `Esc` | Close modal/drawer → return focus to the scan sink; from a clean workspace, back to Queue |
+
+Suppression rules, matching the existing `data-table-keynav.js` convention: every single-letter
+binding is ignored while focus is inside a form field and while any modifier is held, so normal
+typing and browser shortcuts are never intercepted.
+
+**The queue cursor** (`[` / `]`) is the milestone's second-biggest click saver. The workspace
+receives the queue's current filter/sort slice as an opaque cursor in the URL; `]` navigates to the
+next fulfillment in that slice without a trip back through the Queue. After a successful `Ship`, a
+toast offers `Next order →` with focus already on it; `]` or `Enter` takes it. Auto-advance is a
+setting (`auto_advance_after_ship`), **default off** — surprise is reserved for exception states
+(P0, principle 6).
+
+### IV.5.4 Focus discipline
+
+One `FocusManager` owns focus for the whole screen. Three rules, and they are testable:
+
+1. **Resting focus is the scan sink.** Whenever no field is deliberately focused, focus returns
+   there. This is what makes a scan gun work without the operator clicking anything.
+2. **A network response never steals focus.** Optimistic rendering means the DOM updates while the
+   operator is still typing; the manager records the active element and selection before a re-render
+   and restores both after.
+3. **Modals trap focus and return it.** MPDS `modal.js` already autofocuses
+   `[data-mpds-modal-autofocus]`; M2 adds return-focus-to-opener on close.
+
+### IV.5.5 Barcode / scanner preparation
+
+M2 builds the architecture, M6 builds the semantics. Concretely, M2 delivers:
+
+- The always-focused sink and its ready/paused indicator.
+- Terminator normalisation: `Enter`, `Tab` and CR/LF suffixes are all treated as "scan complete", so
+  M6 inherits a normalised string regardless of scanner configuration (spike S2's known variance).
+- A dispatch seam: the sink emits a `mpcf:scan` custom event carrying the raw string. M6 subscribes
+  a decoder; M2 subscribes only the debug echo.
+- Timing tolerance: a scan arrives as a burst of keystrokes in <100ms. The sink buffers on a
+  50ms-quiet-period boundary, so partial bursts are never dispatched.
+- Everything the sink does is also achievable by hand — manual entry is never removed (R11).
+
+### IV.5.6 Ergonomics: the warehouse-floor checklist
+
+| Constraint | How the design answers it |
+|---|---|
+| **Minimal clicks** | Default-configured simple order: open from queue (1) → `Shift+A` complete all (1) → type tracking (typing) → `Ctrl+Enter` ×2 (`Mark packed`, `Ship`) = **4 interactions**, zero mouse. §2.1's stated target is met and beaten. |
+| **Minimal scrolling** | Everything for a ≤6-line order fits above the fold at 1280×800. `Collapse completed` keeps long orders one-screen. The action bar is always visible without scrolling — it is sticky, not at the page end. |
+| **Minimal mouse travel** | Primary action in the bottom-right corner; the checklist is the largest continuous target region; nothing critical lives in the top-right (the classic wp-admin trap). |
+| **Large touch targets** | MPDS floor is 44px; the workspace raises the operational controls (quantity ±, primary action, add-package, print) to **56px**, with ≥8px separation between adjacent targets. |
+| **Warehouse gloves** | No hover-only affordances anywhere. No drag-and-drop. No double-click. No right-click menus. No targets smaller than 44px, including the remove-package control. |
+| **Fast repetitive work** | The queue cursor, `Shift+A`, and a primary button whose position never moves between states. Muscle memory is a feature: the primary button is in the same pixel for every fulfillment in every state. |
+| **Multiple monitors** | Real anchors everywhere (middle-click opens a tab); a bookmarkable, shareable URL; the Queue and the workspace are independent screens that do not need each other in the same window. |
+| **Keyboard-only** | Complete map in IV.5.3, no action reachable only by pointer, visible focus ring on every interactive element (the M1 `mpcf-admin.css` focus work extends to the workspace). |
+| **Scan gun** | IV.5.5. |
+| **Future tablet** | The 768–1023px single-column layout is *designed*, not merely tolerated; every target is already ≥44px; the REST API is the same one a PWA would use (I11, §9.5). |
+
+### IV.5.7 State transitions, validation and error recovery
+
+**Transitions.** The client never decides what is allowed. On load, and in the response body of
+every mutation, the server returns the current `available_transitions()` list. The action bar
+re-renders from it. There is no polling.
+
+**Validation, in three layers, each of which alone is sufficient for correctness:**
+
+1. Client: clamps, required-field hints, disabled states. A hint, never an enforcement.
+2. REST controller: capability + nonce + payload schema (`args` with `validate_callback`/
+   `sanitize_callback`) + optimistic-lock version.
+3. Application/Engine: guards, workflow edges, domain VO constructors.
+
+**Concurrency.** Every mutating request carries the fulfillment's `version`. A mismatch returns
+**409 `mpcf_version_conflict`** with the current server state in the body. The client then: reverts
+the optimistic change, raises a persistent (non-auto-dismissing) toast "Someone else updated this
+fulfillment", and offers `Reload`. **Never a silent overwrite** — this is the §9.4 requirement.
+Item and package writes advance the same `version` via `FulfillmentRepository::touch()`, so one
+token covers the whole aggregate.
+
+**Soft claim, not a hard lock.** Opening the workspace on an unassigned fulfillment self-assigns it
+(audited). Opening one assigned to somebody else shows a non-blocking banner naming them and a
+`Take over` action (audited). No hard lock: abandoned locks in a warehouse are worse than
+collisions, and the optimistic version already prevents lost updates.
+
+**Error recovery.**
+
+| Failure | Behaviour |
+|---|---|
+| Guard rejection (422 `mpcf_guard_rejected`) | Guard's own message renders under the primary button. Nothing is lost. |
+| Version conflict (409) | Above. |
+| Forbidden (403) | Control disables itself with the reason; the page does not navigate away. |
+| Network failure / 5xx | The store queues the mutation and retries with backoff (3 attempts). A persistent banner shows "Working offline — N changes pending". Item quantities are **absolute, not deltas**, so every retry is idempotent and a double-submit cannot double-count. |
+| Tab closed with pending writes | `beforeunload` warning, plus a best-effort `navigator.sendBeacon` flush. |
+| Scan mismatch (M6 groundwork) | Inline error region with `aria-live="assertive"`; the sink keeps focus; a `Report problem` shortcut is one keystroke away. |
+| Unknown workflow state on the row | Already handled by the engine (`unknown_current_state` rejection); the workspace renders the state read-only with a link to Detail. |
+
+### IV.5.8 Packing completion and shipment creation — the happy path, precisely
+
+1. Operator opens the workspace. Fulfillment is `queued`. Primary reads `Start picking`.
+2. `Ctrl+Enter` → `picking`. The checklist becomes live; focus moves to the scan sink.
+3. Operator ticks lines (row click, `Space`, or `Shift+A`). Each burst flushes as one batch write
+   (IV.10) → one `items.picked` audit event with an itemized payload.
+4. All lines complete → the `all_items_picked` guard is satisfied → primary becomes `Mark picked`,
+   enabled. `Ctrl+Enter` → `picked`. Primary becomes `Start packing`. `Ctrl+Enter` → `packing`.
+5. Packing repeats the checklist against `qty_packed`. On entering `packing`, a shipment row is
+   **not** created yet — an operator who abandons a pack must not leave orphan shipments.
+6. Operator opens the shipment panel (or presses `t`/`w`). The **first** edit to any shipment field
+   creates the shipment (`status = pending`) *and* its package seq 1, and allocates every packed
+   line quantity to package 1 in `mpcf_package_items`. Audited as `shipment.created` +
+   `package.created`.
+7. `+ Add package` appends package seq 2… Each package carries its own weight, dimensions and
+   optional colli tracking number. Line allocation stays on package 1 (PO decision 2; M4 adds the
+   split UI).
+8. All lines packed + at least one package has a weight → `all_items_packed` and
+   `package_spec_present` are satisfied → primary becomes `Mark packed`. `Ctrl+Enter` → `packed`.
+9. `Print packing slip` renders and opens the print dialog (IV.7). Recorded in `mpcf_documents` +
+   `document.rendered`.
+10. Operator enters the tracking number. Primary becomes `Ship` (guard `has_shipment`, plus
+    `has_tracking` when `require_tracking_before_ship` is on). Requires `mpcf_manage_shipments`.
+11. `Ctrl+Enter` → `shipped`. `ShippingService` sets every `pending` shipment on the fulfillment to
+    `shipped` and stamps `shipped_at`, audited. The `fulfillment.state_changed` event reaches
+    `StatusBridge` — which, after `v0.1.1`, actually fires from an admin/REST path — and the WC
+    order moves to `completed` if every fulfillment for it has shipped.
+12. Success toast with `Next order →`. `]` or `Enter` moves on.
+
+**Partial shipment.** M2's answer is deliberate and simple: a fulfillment cannot reach `packed` with
+unpacked lines (`all_items_packed`), so "ship what we have" is expressed through the exception band —
+move to `backordered` with a reason, ship nothing, and resolve later; or pack and ship the available
+lines after the lead reduces the order in WooCommerce (which `RefundObserver` already flags). The
+data model supports N shipments per fulfillment today, so a second carrier handover after an
+exception resolves needs no schema change. **True split fulfillment** (one order → several
+independently-shipping fulfillments) requires relaxing the `order_unique` index and is a post-1.0
+ADR (IV.13). Stating this now prevents a well-meaning future implementer from quietly dropping the
+index.
+
+---
+
+## IV.6 Shipment model
+
+### Tables (Architecture Plan §7.1, verbatim shapes — migration step 4)
+
+`mpcf_shipments` — `id, fulfillment_id (idx), carrier_id VARCHAR(64), service VARCHAR(128) NULL,
+tracking_number VARCHAR(191) NULL, tracking_url TEXT NULL, status VARCHAR(32) DEFAULT 'pending',
+shipped_at NULL, delivered_at NULL, created_at`. Additional index `(status)` for the future
+tracking-sync sweep; `(tracking_number)` because `SearchQuery` must resolve a scanned tracking
+number (D22's stated design target) without an unindexed scan.
+
+`mpcf_packages` — `id, shipment_id (idx), seq SMALLINT, weight_grams INT NULL, length_mm/width_mm/
+height_mm INT NULL, tracking_number VARCHAR(191) NULL, label_path VARCHAR(255) NULL, created_at`.
+`label_path` is created and left NULL — M12 fills it; creating the column now costs nothing and
+avoids an ALTER on a table that will be large.
+
+`mpcf_package_items` — `id, package_id (idx), fulfillment_item_id (idx), qty`.
+
+Weights in grams, dimensions in millimetres, integers only (D15). Display conversion is a UI
+concern, sourced from the store's own unit settings through a `Woo\StoreUnits` port — **no new
+setting and no new user meta**, because WooCommerce already owns that preference and duplicating it
+would be a second source of truth.
+
+### Lifecycle
+
+`pending` → `shipped` → `delivered`, with `exception` reachable from `shipped`. Owned entirely by
+`Application\ShippingService`.
+
+**This is not a second workflow engine, and the plan says so explicitly.** I4 governs
+`mpcf_fulfillments.state`. Shipment status is a four-value field with three legal moves, mutated
+only by `ShippingService`, always audited. Routing it through `WorkflowEngine` would require a
+second `WorkflowDefinition`, a second guard vocabulary and a second optimistic lock for no benefit.
+If a future milestone needs carrier-driven shipment state (M12's tracking sync), that is the moment
+to reconsider — by ADR.
+
+- `pending` → `shipped`: set when the fulfillment transitions to `shipped`, or explicitly via
+  `POST /shipments/{id}/ship`. Stamps `shipped_at`.
+- `shipped` → `delivered`: manual in v1; carrier-driven in M12. Stamps `delivered_at`.
+- `shipped` → `exception`: manual, reason-required, audited. A shipped shipment is **corrected, never
+  deleted**.
+- Deletion is allowed only while `pending`, requires `mpcf_manage_shipments`, and is audited.
+
+### Tracking
+
+Consignment-level `mpcf_shipments.tracking_number` is the common case. Per-package
+`mpcf_packages.tracking_number` (colli) is supported from M2 and takes display precedence when
+present. `tracking_url` is normally derived from the carrier's URL template and stored only when the
+operator overrides it. Every add/edit/remove is audited with before/after values.
+
+### Carrier abstraction
+
+`Application\Ports\CarrierRegistry` (the port §5.2 already names) with
+`Infrastructure\Carriers\BundledCarrierRegistry` in M2. Each carrier: `id`, `label`,
+`tracking_url_template`. The bundled set is **deliberately minimal** and includes `other`, which
+accepts a free-text carrier label and a manual tracking URL — so no merchant is blocked on a carrier
+we did not bundle, and no `mpcf_carriers` filter needs to be frozen before M4 has designed the real
+registry shape (format-validation hints, phone-required flags, the EU-skewed set).
+
+### Label printing integration points — defined, not built
+
+No `CarrierPort`, no HTTP, no credentials, no label rendering in M2. Three seams exist so M12 is
+additive: `mpcf_packages.label_path` (created, NULL); `ShippingService::attach_tracking()` and
+`ShippingService::attach_label()` are shaped to be callable by a future adapter without touching the
+workspace; and `shipment.*` domain events are dispatched, so an adapter subscribes rather than being
+wired into the packing path.
+
+---
+
+## IV.7 Documents in M2
+
+Per PO decision 3, one document type is pulled forward. Everything else stays M3.
+
+**In M2:**
+
+- `Domain\Document\DocumentType` registry (filter `mpcf_document_types`, one bundled entry).
+- `Domain\Document\DocumentModel` — pure assembled data: store block, ship-to and bill-to blocks,
+  line items from the fulfillment's own snapshots (stable even if the product was renamed —
+  precisely why the snapshots exist), package summary, order number, fulfillment id, and the
+  **barcode payload** (Code 128 payload of the order number). §10 requires the payload in the model
+  from the milestone the slip ships, so slips are scannable the day M6 lands.
+- `Engine\DocumentAssembler\PackingSlipAssembler` — `(Fulfillment, OrderSnapshot, items, packages,
+  Settings) → DocumentModel`. Pure, WordPress-free, exhaustively unit-tested. No HTML.
+- `Documents\TemplateRegistry` — bundled resolution only. The filter → theme-directory → bundled
+  override chain is M3.
+- `Documents\HtmlRenderer` + `templates/documents/packing-slip.php` + a dedicated print stylesheet
+  (`@page`, `@media print`, A4 default).
+- `Application\DocumentService` — the only orchestrator of assemble → render → record → audit.
+  Guard-tested: `DocumentPipelineGuardTest` asserts no class outside `DocumentService` calls a
+  renderer, which is what makes "documents printed" a reliable audit fact (§10).
+- `mpcf_documents` row per render with `file_path = NULL` (rendered-to-print, not stored) and
+  `template_version`, plus a `document.rendered` audit event.
+- `POST /mpcf/v1/fulfillments/{id}/documents/render` returning the print URL.
+- Capability `mpcf_render_documents` (already exists).
+
+**The barcode is a payload, not an image, in M2.** Rendering a scannable Code 128 needs either a
+runtime dependency (the zip has exactly zero, a property confirmed at M1 release and worth keeping)
+or ~150 lines of pure-PHP SVG encoding. Neither belongs in a pulled-forward slice. The slip prints
+the payload as human-readable text; M6 renders it as SVG when there is a scanner to read it.
+
+**Explicitly M3+:** pick list, batch picking list, stored renders in the protected file store, the
+PDF renderer port, the template override chain, the store-branding settings block, the reprint
+history screen, commercial invoice, CN22/CN23, return slip, shipping label (M12 — labels come from
+carrier APIs as files, never from our renderer).
+
+**Invoice links:** none added. The existing `View order` link on Fulfillment Detail
+([FulfillmentDetailPage.php:227-230](src/Admin/FulfillmentDetailPage.php#L227-L230)) is carried into
+the workspace's context column under the same `manage_woocommerce` gate. WooCommerce owns invoicing.
+
+**Spike S1 (reduced), commit F14.** Pulling the slip forward pulls its spike forward. Scope is
+narrowed to what M2 actually ships: an A4 packing slip must print with correct field positions and
+no clipped content from both Chrome and Firefox print dialogs. Falsification: if either engine
+cannot produce an acceptable slip from print-HTML, the PDF renderer moves into M2 and the milestone
+grows — which is exactly what a spike is for. Evidence recorded in `docs/PRINT_VALIDATION.md`.
+
+---
+
+## IV.8 Printing
+
+| Question | M2 answer | Why |
+|---|---|---|
+| Automatic printing | **No** | Browsers cannot print silently. Doing it needs a print server, a kiosk-mode browser flag, or a native helper — all of which are merchant-infrastructure decisions, not plugin decisions. |
+| Manual printing | **Yes** | `Print packing slip` button and `Shift+P`. Renders into a hidden same-origin iframe and calls `window.print()` — no new tab to close, no lost focus, and the workspace state survives. Focus returns to the scan sink after the dialog closes. |
+| Print queue | **No** | A queue only earns its complexity once there is batch work to queue (M7). One slip per pack is not a queue. |
+| Browser print | **Yes, the only mechanism in M2** | Print-optimised HTML with `@page`/`@media print`, zero dependencies, correct for a packing station with an A4 printer. |
+| PDF generation | **No** | The `PdfRendererPort` binding arrives with customs/labels where a stored file is contractually required (§10). Adding dompdf now buys nothing and costs the zero-dependency property. |
+| Print server | **No** | Post-1.0. The seam is `DocumentService` — a future `PrintTarget` port sits behind it without touching assemblers or templates. |
+
+---
+
+## IV.9 REST — decision and surface
+
+### The decision
+
+**M2 introduces `mpcf/v1`. Traditional wp-admin form POSTs continue for the M1 screens.** Both
+halves are deliberate.
+
+*Why REST is not optional here.* It is already decided and frozen — D6 ("REST-first workspace
+`mpcf/v1` from M2"), I11 ("Admin UI and REST API consume the same application services"), §16.2
+("REST namespace `mpcf/v1` exists from M2 because the workspace runs on it"), and §9.5 (mobile is a
+UI project *because* of this). This plan does not get to relitigate it, and would not want to: the
+workspace's requirements — no full-page reload inside a pack, optimistic updates with rollback,
+409-conflict surfacing, per-tick persistence — are exactly what a form-POST screen cannot do. The
+supporting evidence is that M1 was built for this: `AdminBoundaryGuardTest` already proves Admin
+holds no business logic, so the controllers are genuinely thin.
+
+*Why the M1 screens are not rewritten.* Queue, Detail and Dashboard are server-rendered,
+POST-redirect-GET screens that work, are tested, and are read-oriented. Rewriting them onto REST
+would be churn with no operator benefit, would put three working screens at risk, and would enlarge
+this milestone by a third. They keep their form POSTs; the REST routes exist alongside for
+integrators and for M14. The one change they get is the Queue drawer's primary action repointing at
+the Workspace (§III.2.5's promised, zero-rework repoint).
+
+*What this costs.* Two entry paths into the same services. That is exactly what I11 was written to
+make safe, and a new `RestBoundaryGuardTest` keeps the controllers as thin as the screens.
+
+### The surface
+
+Frozen additive-only from the `v0.2.0` tag (§4 governance). **This raises the review bar: the shape
+below is reviewed and agreed before F8 is written, not discovered during it.**
+
+| Method | Route | Capability |
+|---|---|---|
+| GET | `/mpcf/v1/fulfillments` | `mpcf_view_queue` |
+| GET | `/mpcf/v1/fulfillments/{id}` | `mpcf_view_queue` |
+| GET | `/mpcf/v1/fulfillments/{id}/transitions` | `mpcf_view_queue` |
+| POST | `/mpcf/v1/fulfillments/{id}/transitions` | per-edge, from the workflow definition |
+| PUT | `/mpcf/v1/fulfillments/{id}/items` | `mpcf_process_fulfillments` |
+| GET/POST | `/mpcf/v1/fulfillments/{id}/notes` | `mpcf_view_queue` / `mpcf_add_notes` |
+| PUT/DELETE | `/mpcf/v1/fulfillments/{id}/assignment` | `mpcf_process_fulfillments` |
+| GET/POST | `/mpcf/v1/fulfillments/{id}/shipments` | `mpcf_view_queue` / `mpcf_manage_shipments` |
+| PATCH/DELETE | `/mpcf/v1/shipments/{id}` | `mpcf_manage_shipments` |
+| POST | `/mpcf/v1/shipments/{id}/ship` | `mpcf_manage_shipments` |
+| POST | `/mpcf/v1/shipments/{id}/packages` | `mpcf_manage_shipments` |
+| PATCH/DELETE | `/mpcf/v1/packages/{id}` | `mpcf_manage_shipments` |
+| POST | `/mpcf/v1/fulfillments/{id}/documents/render` | `mpcf_render_documents` |
+| GET | `/mpcf/v1/carriers` | `mpcf_view_queue` |
+
+**Conventions.**
+
+- Every mutating request carries `version`; mismatch → 409.
+- `PUT /items` takes **absolute** quantities: `{ version, lines: [ { item_id, qty_picked?, qty_packed? } ] }`.
+  Absolute, never deltas — retries, double-submits and offline replays become idempotent by
+  construction. One call = one coalesced audit event (§13's burst rule).
+- Every mutation response returns the fresh `available_transitions()` list and the new `version`, so
+  the client never needs a follow-up round trip.
+- Auth: cookie + `X-WP-Nonce` for admin JS; Application Passwords work for integrations and are
+  documented, not specially implemented. Scoped `mpcf_api_keys` stays post-1.0.
+- Errors map typed application failures to stable codes: `mpcf_version_conflict` (409),
+  `mpcf_guard_rejected` (422, body carries the guard id and message), `mpcf_forbidden` (403),
+  `mpcf_not_found` (404), `mpcf_invalid_payload` (400).
+- Controllers are thin: `permission_callback` → DTO → Application service → response shaped by the
+  same view-model factories the admin screens use.
+
+### Other public surface added in M2
+
+`mpcf_event` action + per-type actions (`mpcf_fulfillment_state_changed`, `mpcf_shipment_created`,
+…) bridged in `Woo\EventBridge` per §6.4; `mpcf_workspace_flags` (§9.4's named slot);
+`mpcf_document_types`. **Not** added: `mpcf_workflows`, `mpcf_carriers`,
+`mpcf_intake_should_create`, template overrides — each belongs to the milestone that designs its
+data shape, and each is cheaper to add later than to un-freeze.
+
+---
+
+## IV.10 Performance
+
+**Throughput model.** A sustained operator packs 30–60 orders/hour (60–120s per order including
+physical work). A busy small-to-mid warehouse runs 5–8 concurrent operators → 300–500 orders/hour at
+peak.
+
+**Per-order request budget.** 1 workspace load + 1–2 item batches (picking, packing) + 1–3 shipment/
+package writes + 1–2 transitions + 1 document render ≈ **8–12 requests**. At 500 orders/hour that is
+~6,000 req/hour ≈ **1.7 req/s**, of which ~0.7/s are writes. This is not a load problem; it is a
+correctness-under-concurrency problem, which is why the effort goes into the optimistic lock rather
+than into caching.
+
+**Burst aggregation (architecture-mandated, §13).** Ticking 5 lines individually would be 5 requests
+and 5 audit rows. Instead the client debounces line changes (≤750ms, plus a forced flush on blur,
+on state transition, and on `visibilitychange`/`beforeunload` via `sendBeacon`) and sends one batch.
+One request, one `items.picked`/`items.packed` event with an itemized payload. **~5× fewer writes
+and ~5× fewer audit rows**, and the operator sees no latency because the UI is optimistic.
+
+**Queue sizes.** Design target remains 50k open rows (R6); M1 proved 10k with every p95 under 89ms.
+M2 does not change the Queue's query shapes. It does add joined reads on the workspace, which are
+per-fulfillment and bounded (1–2 shipments, 1–3 packages, N package_items).
+
+**Database impact.**
+
+| Table | Rows per fulfillment | Growth note |
+|---|---|---|
+| `mpcf_shipments` | 1 (rarely 2) | Negligible |
+| `mpcf_packages` | 1–3 | Negligible |
+| `mpcf_package_items` | = line count | Bounded by order size |
+| `mpcf_documents` | 1 per render, reprints included | Small |
+| `mpcf_events` | **+6 to +10** (was ~8) | The one that matters |
+
+At 1,000 orders/day, `mpcf_events` grows from ~2.9M to ~6M rows/year. Mitigations already in the
+architecture and enforced here: events never join Queue queries; the timeline paginates (M2 fixes
+the currently-unbounded `timeline_for_fulfillment()`); rollups arrive at M8; archival guidance is a
+documented post-1.0 operation.
+
+**Locking.** Optimistic only. No `SELECT … FOR UPDATE`, no transaction spanning a request boundary,
+no advisory locks, no application-level row locks. An item batch is one `UPDATE` per changed row
+plus one version-bumping `touch()`; InnoDB row locks are held for microseconds and there are no
+range predicates, so no gap locks. Two operators on the same fulfillment collide at the version
+check, not in the database.
+
+**Index re-measurement (F23).** The M1 proof concluded that the Dashboard's today-counters correctly
+prefer the `created_at` index over `event_type` *because M1 has exactly one event type* — and
+explicitly flagged that conclusion for revisiting when more types exist. M2 adds eight. F23 re-runs
+`QueuePerformanceProofTest` with an M2-shaped event distribution, adds a workspace-load query shape
+and a tracking-number search shape, and adds a composite `(event_type, created_at)` index as
+migration step 6 **only if the re-measurement demands it** — measured, not assumed.
+
+**Future scaling concerns, recorded now:** `mpcf_events` partitioning or archival at ~50M rows;
+`mpcf_search_index` (the reserved D22 projection) if tracking/SKU search degrades; per-warehouse
+sharding of the Queue at M11; REST response caching is deliberately *not* on this list — a warehouse
+queue that shows stale data is worse than a slow one.
+
+---
+
+## IV.11 MPDS — generic versus plugin-specific
+
+The separation rule, applied consistently: **generic if a second MP Commerce plugin's operational
+screen would use it unchanged; plugin-specific if it encodes fulfillment vocabulary.**
+
+### Generic → `mp-admin-design-system v0.3.0`
+
+| # | Component | Notes |
+|---|---|---|
+| 1 | `toast` + `toast.js` | §8.4's named async-save feedback, deferred from M1 (§III.2.6 correctly used an admin notice instead). `aria-live="polite"`, optional action slot, auto-dismiss with pause-on-hover/focus, persistent variant for conflicts, `prefers-reduced-motion` companion. |
+| 2 | `stepper` | §8.4's segmented workflow-position indicator. Ordered steps with complete/current/upcoming, `aria-current="step"`. |
+| 3 | `workspace-layout` | Three/two/one-column responsive grid primitive with named regions. The layout grammar every future operational screen inherits. |
+| 4 | `action-bar` + `action-bar.js` | Sticky bottom operational bar — the operational sibling of the existing `sticky-save`. The JS binds `Ctrl/Cmd+Enter` to `[data-mpds-primary-action]`. |
+| 5 | `checklist` / `checklist-row` | Large-target row: leading control slot, media slot, primary/secondary text, trailing control, complete state. |
+| 6 | `quantity-stepper` | `− n / m +` with ≥56px targets, `aria-valuenow/valuemin/valuemax`, `ArrowUp`/`ArrowDown` support. |
+| 7 | `unit-input` | Numeric input with a unit-suffix affordance. |
+| 8 | `repeater` | Add/remove item-group scaffold with a stable add-button contract. |
+| 9 | `scan-input` + `scan-sink.js` | Focus-retaining capture field with a ready/paused indicator and terminator normalisation. §8.4 pencilled this in at M6, but §9.4 requires the focus architecture at M2 and §8.4 itself says components "land with the milestones that need them" — decoding stays with the consumer, and M6 adds it. |
+
+**Deliberately reused rather than rebuilt:** the mismatch/error banner reuses `panel--warning`/
+`panel--error`; the shortcut sheet composes `modal` + the existing `kbd-hints`; the address block is
+plain markup. Three components not built is a result, not an omission.
+
+**Not in v0.3.0:** `stat trend` (§8.4, needed at M8).
+
+Every component ships with markup-contract tests, passes the CSS token lint (every `var()` defined)
+and the JS-hook lint (JS never keys on `mpds-ui-*` classes), and is added to `MANIFEST`.
+
+### Plugin-specific → `mp-commerce-fulfillment`
+
+`assets/admin/js/api.js` (REST client, nonce, error mapping), `store.js` (observable state,
+optimistic apply/rollback, retry queue, debounce/flush), `workspace.js` (bootstrap, focus manager,
+queue cursor), `packing.js` (checklist and quantity semantics), `shipment.js` (shipment/package
+panel, carrier, units), `documents.js` (print iframe), `shortcuts.js` (the key map and the shortcut
+sheet); `assets/admin/css/mpcf-workspace.css`; `templates/documents/packing-slip.php` and its print
+CSS; the carrier list, the flag definitions, and the `event_type` → icon/label map.
+
+---
+
+## IV.12 Commit sequence
+
+Each commit independently green: `composer phpcs`, unit, integration, guards.
+
+### MPDS repo — E1–E9 → `mp-admin-design-system v0.3.0`
+
+E1 toast + `toast.js` + contract tests → E2 stepper → E3 workspace-layout → E4 action-bar +
+`action-bar.js` → E5 checklist/checklist-row → E6 quantity-stepper + unit-input → E7 repeater →
+E8 scan-input + `scan-sink.js` + JS-hook lint pass → E9 `README.md`/`docs/CONSUMING.md` update +
+`MANIFEST` regeneration → **tag `v0.3.0` on explicit PO approval.**
+
+### Plugin repo — F0–F25 → `mp-commerce-fulfillment v0.2.0`
+
+| # | Commit |
+|---|---|
+| F0 | **ADR-0006** (dev-only browser test toolchain) Accepted; ADR-0003 Status gains "Superseded in part"; ADR README index updated. Governance order: ADR first, then document, then code. |
+| F1 | Vendor MPDS `v0.3.0` via `bin/sync-mpds.sh`; `MpdsVendorGuardTest` green; `SOURCE_TAG` correct. |
+| F2 | `Schema` + `Migrator` step 4 (`mpcf_shipments`, `mpcf_packages`, `mpcf_package_items`) and step 5 (`mpcf_documents`); `TARGET` 3 → 5; `PersistedKeys` + `docs/PERSISTED_DATA.md` + `uninstall.php`; migration lifecycle tests 3→5 including resume-after-interruption. |
+| F3 | Domain: `Shipping/{Shipment,Package,PackageSpec,TrackingReference,CarrierId}`, `Document/{DocumentType,DocumentModel}`, repository interfaces, `CarrierRegistry` port. `DomainPurityGuardTest` still green. |
+| F4 | Infrastructure: `WpdbShipmentRepository`, `WpdbPackageRepository`, `WpdbPackageItemRepository`, `BundledCarrierRegistry`; `FulfillmentRepository::touch()`; integration tests. |
+| F5 | Application: `ShippingService` (create/update/delete shipment and package, attach tracking, ship, mark delivered/exception), all audited; the eight new event types; `Woo\EventBridge` (`mpcf_event` + per-type actions); PayloadGuard tests per payload shape. |
+| F6 | Application: `PackingService` — batch absolute quantities, coalesced audit event per burst, `touch()`-based version advance. |
+| F7 | **Findings B/C/D**: `TransitionContextFactory`, `WorkflowService::available_transitions()`, boolean params removed from `transition()`, `FulfillmentDetailPage` rewired and its private `WorkflowEngine` deleted; new `has_tracking` guard; upgrade test for legacy `packed` rows with no shipment. |
+| F8 | `Api\Rest`: controller base (permission callback, nonce, version handling, error-code map) + `FulfillmentsController` (list, get, transitions GET/POST). |
+| F9 | `Api\Rest`: `ItemsController` (batch), `NotesController`, `AssignmentController`. |
+| F10 | `Api\Rest`: `ShipmentsController`, `PackagesController`, `CarriersController`. |
+| F11 | `RestBoundaryGuardTest` (no `$wpdb`, no repository, no WooCommerce symbol, every route has a capability-checked `permission_callback`) + `docs/API.md` complete enough that an integrator needs no other document. |
+| F12 | Documents: `PackingSlipAssembler` (pure, exhaustively unit-tested), `TemplateRegistry` (bundled only), `HtmlRenderer`, bundled template + print CSS. |
+| F13 | `DocumentService` + `mpcf_documents` write + `document.rendered` audit + `DocumentsController` + `DocumentPipelineGuardTest`. |
+| F14 | **Spike S1 (reduced)**: A4 packing-slip print fidelity, Chrome + Firefox; `docs/PRINT_VALIDATION.md`. Fails → PDF renderer enters M2 and the plan is amended. |
+| F15 | `Admin\WorkspacePage`: server-rendered initial state (fast first paint, no skeleton flash), three regions, hidden-submenu registration, `Assets::SCREEN_SLUGS` extended. |
+| F16 | Workspace JS core: `api.js`, `store.js` (optimistic, rollback, retry queue, debounce/flush), `workspace.js` bootstrap, focus manager. |
+| F17 | Workspace JS: checklist, quantity semantics, scan sink, full key map, shortcut sheet. |
+| F18 | Workspace JS: shipment/package panel, carrier select, tracking, `Woo\StoreUnits` port for display units. |
+| F19 | Workspace JS: action bar, transitions, reason modal, toast, 409/422/offline recovery, queue cursor and `Next order`. |
+| F20 | Queue/Dashboard integration: drawer primary action repointed to the Workspace, row `Enter` opens it, real anchors for new-tab/second-monitor use. |
+| F21 | Settings: `auto_advance_after_ship` (default off), `default_carrier_id`, `require_tracking_before_ship` (default off); `SCHEMA_VERSION` 3 → 4. |
+| F22 | **Playwright harness**: dev-only `package.json` + `playwright.config.js` + `tests/browser/`, Docker runner (`mcr.microsoft.com/playwright`), CI job serving WP via WP-CLI install + PHP built-in server, `wp eval-file` seed script, `@axe-core/playwright` checks; `bin/build-zip.sh` and `bin/release-audit.sh` extended to **fail** on any Node artifact; `ReleaseArtifactGuardTest`; `.gitignore` for `node_modules`/`test-results`/`playwright-report`. |
+| F23 | Performance re-proof at 10k rows: existing shapes plus workspace load, tracking search, and the M2 event distribution; timeline pagination; migration step 6 only if measured to be needed; `docs/QUEUE_PERFORMANCE_VALIDATION.md` rewritten. |
+| F24 | Documentation reconciliation: `HOOKS.md` (REST + the three filters + `mpcf_event` — the first real public extension surface), `API.md`, `PERSISTED_DATA.md`, `TEST_STRATEGY.md`, `COMPATIBILITY.md`, `ROADMAP.md`, ADR-0005 clarification, `ARCHITECTURE_PLAN.md` §IV.7 "actual outcomes". |
+| F25 | Full IV.14 acceptance pass; version four-place bump to `0.2.0`; POT regenerated; every CI leg green; `release-audit` green → **tag `v0.2.0` on explicit PO approval.** |
+
+**Dependency notes.** F1 needs the MPDS tag/candidate, so E1–E9 complete first. F0 has no
+dependencies and must precede F22. F2–F7 are strictly ordered. F8–F11 need F5–F7. F15–F19 need F8–F10
+and F1. F22 needs F15–F19 to have something to drive. Commit boundaries may shift where dependency
+order requires it, documented as a deviation if so — the same rule M1 used.
+
+---
+
+## IV.13 Out of scope — belongs to M3+
+
+Stated explicitly so scope gravity (R12) has nothing to grab.
+
+- **M3:** pick list; batch picking list; stored document renders in the protected file store; PDF
+  renderer port; template override chain (filter → theme → bundled); store-branding settings block;
+  reprint-history screen; document-type registry beyond the one bundled entry.
+- **M4:** the real carrier registry (EU-skewed bundled set, tracking-number format hints,
+  phone-required flags, the `mpcf_carriers` filter); the notification subsystem (policy, dispatcher,
+  `EmailChannel`); shipped-email per shipment; the WC-email tracking block; bridge-mapping settings
+  UI; multi-package **line allocation** UI.
+- **M5:** all photography — capture slots, protected store, `Api\FileEndpoint`, SHA-256
+  fingerprints, EXIF-GPS stripping, the real `photo_required` guard, retention purge.
+- **M6:** scan **semantics** — decoding, pick/pack by SKU/EAN, mismatch and over-scan handling,
+  scannable-slip → workspace, SVG barcode rendering, scan-first workspace mode.
+- **M7:** batch picking, `BatchBuilder`, batch tables, print queue.
+- **M8:** all analytics, rollups, trends, operator stats.
+- **M9:** Site Health, `wp mpcf doctor`, privacy exporter/eraser, 50k-row baselines,
+  `ARCHITECTURE_FREEZE.md`, security review document.
+- **Post-1.0:** returns; the location hierarchy and location-sorted picking; `CarrierPort` label
+  purchase and live tracking sync; webhooks and automation rules; scoped API keys; the tablet PWA;
+  true split fulfillment (needs an ADR to relax `order_unique`); the admin workflow builder; the
+  `mpcf_search_index` projection; audit investigation mode.
+
+---
+
+## IV.14 Testing
+
+| Tier | Scope for M2 |
+|---|---|
+| **Unit** (`tests/unit/`) | `PackingSlipAssembler` against fixture fulfillments; every new Domain VO's validating constructor; `ShippingService`/`PackingService`/`DocumentService` against hand-written port fakes; `TransitionContextFactory` truth table; `available_transitions()` per state; the new `has_tracking` guard; `BundledCarrierRegistry`; REST error-code mapping as a pure map; `PayloadGuard` compliance for all eight new payload shapes. |
+| **Integration** (`tests/integration/`, real WP+WC+MariaDB, HPOS forced on) | Every REST route via `rest_do_request`, applying UMC's four documented Store-API test gotchas; the full capability matrix per route (operator vs lead vs shop_manager vs subscriber); nonce-failure and Application-Password paths; 409 conflict via two concurrent `version` holders; 422 guard rejection carrying the guard id; shipment/package lifecycle including delete-while-pending and refuse-delete-while-shipped; `mpcf_package_items` auto-allocation; document render writes exactly one `mpcf_documents` row and one `document.rendered` event; `Woo\EventBridge` fires `mpcf_event`; uninstall extended to all four new tables. |
+| **Browser** (`tests/browser/`, Playwright, dev/CI only) | Full keyboard-only `queued → shipped` with zero pointer events; scanner emulation (`keyboard.type` at wedge speed with an `Enter` suffix) proving focus retention across a 30-action session; 409 conflict driven from two independent browser contexts; offline/retry via `page.route()` interception; focus-restoration after every optimistic re-render; print path under `emulateMedia({ media: 'print' })` asserting slip DOM and page-break behaviour; queue-cursor navigation; the three breakpoints. |
+| **Accessibility** | `@axe-core/playwright` on the workspace at 1440/1024/800px with zero serious/critical violations; MPDS markup-contract tests for all nine new components; a manual screen-reader pass on the action bar and the checklist recorded in the acceptance script; every interactive element has a visible focus ring. |
+| **Performance** (`phpunit-performance.xml.dist`) | The M1 shapes re-run against an M2-shaped event distribution; new shapes for workspace load, tracking-number search, and shipment/package reads; assert no `EXPLAIN type = ALL` anywhere and p95 < 200ms on the reference container. |
+| **HPOS** | `HposProofTest` extended to cover the workspace's live `OrderSource` read and the document assembler's order read — both must be CRUD-only (I2). Zero skips is the proof. |
+| **Workflow** | Table-driven over every edge in `StandardWorkflow`, now with **real** item/shipment/package data instead of caller-asserted booleans — this is the test that finding B makes meaningful for the first time. |
+| **Migration** | `mpcf_db_version` 3 → 5 on a populated database; idempotent re-run; resume after simulated interruption; and the behavioural upgrade case — a fulfillment sitting in `packed` from `0.1.x` cannot ship until a shipment exists, and can once one does. |
+| **Structural guards** | All 14 existing guards stay green and mutation-verified. New: `RestBoundaryGuardTest`, `DocumentPipelineGuardTest`, `ReleaseArtifactGuardTest`. `CompositionRootTest`'s allowlist is extended deliberately, commit by commit — never in bulk. |
+| **Acceptance** | The ten falsifiable criteria in IV.15, each with named evidence, in the house `M2_RELEASE_REPORT.md` format. |
+
+---
+
+## IV.15 Validation
+
+### Acceptance criteria (falsifiable)
+
+1. A Warehouse Operator processes a fulfillment `queued → shipped` in the workspace using **only the
+   keyboard**, with no full-page reload at any point, in ≤6 interactions for a single-line order.
+2. Every workspace mutation is available as a `mpcf/v1` route with an identical result, proven by an
+   integration test that performs the same pack twice — once through the REST routes, once through
+   the same Application services — and asserts identical database and audit outcomes (I11).
+3. Two browser sessions editing the same fulfillment produce a 409 on the second write; nothing is
+   silently overwritten; the losing session recovers by reloading without losing unrelated work.
+4. Creating a shipment auto-creates package 1 and allocates every packed line to it; adding a second
+   package records its own weight, dimensions and colli number; deleting a `pending` shipment is
+   permitted and audited, deleting a `shipped` one is refused.
+5. `packed → shipped` is blocked by the engine when no shipment exists — including for a fulfillment
+   that reached `packed` under `0.1.x` — and permitted once one does. Guard rejections render the
+   guard's own message, never a generic error.
+6. Printing a packing slip produces a correctly laid-out A4 page in Chrome and Firefox, writes
+   exactly one `mpcf_documents` row and one `document.rendered` audit event with the template
+   version, and returns focus to the scan sink.
+7. Shipping the last open fulfillment for an order moves the WC order to `completed` **from the
+   workspace** (the path `v0.1.1` unblocked), with the loop guard proven by a test asserting no
+   recursive bridge write.
+8. The Playwright suite passes in CI, including the axe pass with zero serious/critical violations;
+   the built zip contains **no** `package.json`, `node_modules`, `playwright.config.js`,
+   `tests/browser/`, or any other Node artifact — asserted by `release-audit.sh`, which fails the
+   build if any is present.
+9. All 17 structural guards exist, pass, and each fails when its violation is injected (mutation
+   evidence recorded in the PR).
+10. `docs/API.md`, `HOOKS.md`, `PERSISTED_DATA.md`, `TEST_STRATEGY.md`, `PRINT_VALIDATION.md`,
+    `QUEUE_PERFORMANCE_VALIDATION.md`, `ROADMAP.md`, ADR-0006 and the ADR index are all current; CI
+    floor and current-stable legs green.
+
+### Performance criteria
+
+- Workspace initial server render p95 < 300ms at 10k fulfillments on the reference container.
+- Every REST mutation p95 < 150ms server-side.
+- No `EXPLAIN type = ALL` on any query shape the workspace, Queue or Dashboard issues.
+- Optimistic UI feedback < 50ms from keypress to visible change (measured in the browser suite).
+- A five-line pack produces **≤ 12 REST requests** and **≤ 10 audit rows** end to end — burst
+  aggregation is measured, not assumed.
+
+### Release criteria
+
+`composer phpcs` clean · unit + integration + guards green · browser suite green · performance proof
+re-run and documented · CI green on all five integration legs plus the new browser job · POT
+regenerated · four-place version bump · `release-audit` green including the Node-artifact check ·
+every document in IV.15.10 current · merged via PR · **tagged only on explicit PO approval** (I14).
+
+### Release audit additions (F22)
+
+Beyond M1's checks (version parity, six required docs, zip builds, three required files present, no
+`vendor/phpunit`, no `tests/`): fail on `package.json`, `package-lock.json`, `node_modules/`,
+`playwright.config.*`, `tests/browser/`, `.playwright/`, `playwright-report/` or `test-results/`
+anywhere in the archive; assert `docs/API.md` is present in the repo; assert
+`vendor/composer/installed.json` still reports **zero runtime packages** — the zero-dependency
+property M1 earned must survive a milestone that added a Node toolchain.
+
+---
+
+## IV.16 Risks
+
+| # | Risk | L | I | Mitigation | Verified by |
+|---|---|---|---|---|---|
+| M2-R1 | **REST surface freezes wrong.** `mpcf/v1` is additive-only from the `v0.2.0` tag (§4); a bad resource shape is permanent within 1.x. | M | H | The IV.9 table is reviewed and agreed before F8 is written; `docs/API.md` is drafted at F11 against the implemented routes and re-read as a contract, not a description; anything uncertain is simply not exposed (a route added later is free; a route reshaped later is not). | PO review of IV.9 before F8; F11 doc review |
+| M2-R2 | **Workspace complexity outgrows no-build JS** (R2 realised). Seven ES modules with an observable store, optimistic rollback and a retry queue is the largest JS this family has written. | M | M | ADR-0003's escape hatch is intact — the REST API is the contract, so a framework rewrite would touch only `assets/`. Hard budget: if `assets/admin/js/` exceeds ~1,500 lines or any single module exceeds ~400, that is a milestone-review flag, not a silent slide. Playwright coverage means a future rewrite has a safety net. | Milestone review; F25 line count recorded |
+| M2-R3 | **Pulled-forward packing slip drags M3's architecture in with it.** "Just one document" quietly becomes the template override chain, branding settings and a PDF renderer. | M | M | IV.7's in/out list is binding. `TemplateRegistry` resolves bundled templates only — the override chain is physically absent, not merely unused. `DocumentPipelineGuardTest` prevents ad-hoc rendering. | F13 guard; F24 scope review |
+| M2-R4 | **Spike S1 fails**: print-HTML cannot produce an acceptable A4 slip on both engines. | L | H | S1 runs at F14, before the workspace JS is written, so a PDF-renderer pivot costs a plan amendment rather than a rewrite. | F14 falsification test |
+| M2-R5 | **Playwright destabilises CI.** Browser tests are the classic flake source; a red CI that everyone learns to ignore is worse than no browser tests. | H | M | No arbitrary sleeps — Playwright auto-waiting and explicit response waits only. Deterministic seed data via `wp eval-file`. The browser job runs **after** the PHPUnit legs and is the only job permitted a single automatic retry. Any test that flakes twice in a week is quarantined with an issue, not left red. | CI history reviewed at F25 |
+| M2-R6 | **Node toolchain leaks into the release artifact.** | L | H | Three independent defences: `bin/build-zip.sh` allowlist, `bin/release-audit.sh` denylist, and `ReleaseArtifactGuardTest`. The PO named this explicitly; it gets belt, braces and a third belt. | Criterion 8 |
+| M2-R7 | **Optimistic UI diverges from server truth** — the operator sees 3/3 packed while the database says 2/3, and ships a short box. | M | H | Every mutation response returns the authoritative state and version; the store reconciles from the response, never from its own optimistic value. Pending-write count is always visible. The `packed` transition forces a flush before it is attempted, so no transition ever runs against unflushed local state. | Browser suite: flush-before-transition test |
+| M2-R8 | **Upgrade surprise**: `0.1.x` fulfillments in `packed` cannot ship until a shipment exists. | H | L | Correct behaviour, but it must not be a surprise. Covered by a migration test, called out in the release notes and `readme.txt` upgrade notice, and the guard's rejection message names the fix ("Add a shipment before shipping"). | F7 upgrade test |
+| M2-R9 | **Scan sink fights wp-admin for focus** (R11 arriving early). Admin notices, the WordPress heartbeat and third-party admin scripts all steal focus. | M | M | The sink re-claims focus on `focusout` only when focus lands on `body` — never when the operator deliberately focused something. A visible ready/paused indicator means the operator always knows. Manual entry always works. M6's spike S2 covers real hardware. | Browser suite: 30-action focus-retention test |
+| M2-R10 | **Shipment status becomes a shadow state machine.** A future contributor adds `shipment.status` transitions with their own guards and the plugin has two engines. | M | M | IV.6 states the boundary in the architecture document itself; `ShippingService` is the only writer; the four values and three legal moves are enumerated in code as constants with the rationale in the docblock. Escalating it is an ADR. | Code review; IV.6 in Part IV |
+| M2-R11 | **Event-table growth accelerates** past what M8's rollups assume. | M | M | Burst aggregation caps the worst case (per-tick events were the real threat and are designed out); F23 re-measures index selectivity; timeline pagination lands in M2 rather than being discovered at M8. | F23 |
+| M2-R12 | **Warehouse workflow mismatch**: the linear pick→pack model does not fit a store that picks and packs in one motion at the bench. | M | M | The `queued → packing` shortcut edge already exists in `StandardWorkflow` and the workspace renders whatever the definition offers — a bench-packing store gets a two-step workspace with no code change. Dogfooding on a real store before M3 (P8) is where this is falsified. | PO acceptance walkthrough |
+| M2-R13 | **M2 alone still does not complete the physical job** if the slip pull-forward is later reversed, or if pick lists turn out to be the artifact operators actually need. | L | M | The slip is in scope (PO decision 3). If dogfooding shows the pick list matters more, that is an M3 sequencing input, recorded — not an M2 amendment. | Dogfood feedback at F25 |
+
+---
+
+## IV.17 GO / NO-GO
+
+**GO, pending PO approval of this Part IV and the prior release of `v0.1.1`.**
+
+Every scope item traces to a specific section of Architecture Freeze v1.0. The plan was reconciled
+against the *inspected* state of both repositories, not their documentation — which is how the
+event-dispatcher defect, the caller-asserted guard flags, the vacuous display-path context and the
+Admin-instantiated `WorkflowEngine` were found. One new ADR (0006) and two roadmap-sequencing
+amendments are the only changes to the frozen document set; no invariant, D-decision, layer rule,
+data-model semantic, engine contract or public-surface rule is altered.
+
+Two real open risks are sequenced early to fail fast: spike S1 at F14 (before any workspace JS
+exists) and the Playwright harness at F22 (after the feature work it validates, so a harness problem
+never blocks feature progress).
+
+**Pre-conditions to start:** PO approves this Part IV (I14); `v0.1.1` is tagged and released; the
+IV.9 REST surface is reviewed and agreed; `mpcf-test-runner` and a Playwright container image are
+available on the dev host.
+
+**First concrete step on approval:** append this document to `docs/ARCHITECTURE_PLAN.md` as Part IV
+and record the approval in the version-history table — the same D0 ritual that opened M1 — then
+begin the `v0.1.1` patch track (P1–P3), then MPDS E1–E9.

@@ -27,10 +27,22 @@ actual state before work starts.
    no migration amendment needed — see `docs/QUEUE_PERFORMANCE_VALIDATION.md`).
    `mp-admin-design-system` gained the six Milestone 1 components and was
    released as `v0.2.0`. Milestone formally closed 2026-08-02.
-2. **M2 — Packing Workspace & REST** — not started. Planning may begin
-   per PO authorization (I14: one approved milestone at a time — a fresh
-   execution plan and explicit PO approval are still required before
-   implementation starts).
+2. **M2 — Packing Workspace & REST** — **execution plan approved, implementation
+   starting** (PO approved Part IV of `ARCHITECTURE_PLAN.md` for
+   implementation 2026-08-02, through release-candidate preparation; final
+   `v0.2.0`/MPDS `v0.3.0` tags require separate PO approval). A prerequisite
+   defect-patch release, `v0.1.1`, precedes M2 feature work — see below.
+   REST namespace `mpcf/v1`, the Packing Workspace, `Shipment`/`Package`,
+   a minimal packing slip pulled forward from M3, and MPDS `v0.3.0`
+   (toast, stepper, workspace-layout, action-bar, checklist,
+   quantity-stepper, unit-input, repeater, scan-input).
+2a. **`v0.1.1` — M1 defect patch (prerequisite for M2)** — in progress.
+    Fixes a real M1 defect found during M2 reconciliation: the admin-side
+    composition root wires a subscriber-less `EventDispatcher`, so
+    admin-initiated transitions (Queue, Fulfillment Detail) never reach
+    `Woo\StatusBridge` — only `RefundObserver`-driven transitions do. Also
+    corrects the stale `assets/mpds/SOURCE_TAG` stamp. See
+    `docs/ARCHITECTURE_PLAN.md` §IV.2.
 3. **M3 — Documents I** — not started.
 4. **M4 — Tracking & notifications** — not started.
 5. **M5 — Package photography** — not started.
