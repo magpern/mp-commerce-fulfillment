@@ -13,6 +13,7 @@ msgstr ""
 
 #. Plugin Name of the plugin
 #: mp-commerce-fulfillment.php
+#: src/Admin/ShellHeader.php:27
 msgid "Commerce Fulfillment"
 msgstr ""
 
@@ -31,12 +32,342 @@ msgstr ""
 msgid "magpern"
 msgstr ""
 
-#: mp-commerce-fulfillment.php:39
+#: mp-commerce-fulfillment.php:40
 msgid "Commerce Fulfillment requires PHP 8.1 or newer and is inactive."
 msgstr ""
 
-#: mp-commerce-fulfillment.php:87
+#: mp-commerce-fulfillment.php:88
 msgid "Commerce Fulfillment requires WooCommerce to be installed and active."
+msgstr ""
+
+#: src/Admin/DashboardPage.php:88
+msgid "Fulfillment Dashboard"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:95
+#: src/Admin/ShellNavigation.php:31
+msgid "Dashboard"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:128
+msgid "Needs attention"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:131
+msgid "No fulfillments currently need attention."
+msgstr ""
+
+#: src/Admin/DashboardPage.php:135
+msgid "Oldest open"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:138
+msgid "No open fulfillments."
+msgstr ""
+
+#: src/Admin/DashboardPage.php:142
+#: src/Admin/QueuePage.php:408
+#: src/Admin/QueuePage.php:536
+msgid "Unassigned"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:145
+msgid "Everything open is assigned."
+msgstr ""
+
+#: src/Admin/DashboardPage.php:161
+msgid "All clear"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:184
+msgid "See all in Queue"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:193
+msgid "Today"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:196
+#: src/Admin/QueuePage.php:383
+#: src/Admin/QueuePage.php:486
+msgid "Open"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:197
+msgid "In exception"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:198
+msgid "Packed today"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:199
+msgid "Shipped today"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:143
+#: src/Admin/FulfillmentDetailPage.php:150
+#: src/Admin/FulfillmentDetailPage.php:176
+#: src/Admin/FulfillmentDetailPage.php:189
+msgid "Fulfillment Detail"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:177
+msgid "No fulfillment selected"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:177
+msgid "Open a fulfillment from the Queue to see its detail."
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:190
+msgid "Not found"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:190
+msgid "This fulfillment no longer exists."
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:218
+msgid "Fulfillment for order"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:220
+msgid "Customer:"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:221
+msgid "Items:"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:224
+msgid "State:"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:229
+msgid "View order"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:243
+msgid "Transitions"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:270
+msgid "No transitions are available."
+msgstr ""
+
+#. translators: %s: target state label
+#: src/Admin/FulfillmentDetailPage.php:348
+#, php-format
+msgid "Why is this fulfillment moving to \"%s\"?"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:363
+msgid "Audit trail"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:368
+msgid "System"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:369
+msgid "ago"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:394
+msgid "Fulfillment created from order."
+msgstr ""
+
+#. translators: 1: origin state, 2: destination state, 3: optional reason
+#: src/Admin/FulfillmentDetailPage.php:402
+#, php-format
+msgid "Moved from \"%1$s\" to \"%2$s\".%3$s"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:422
+msgid "Notes"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:426
+msgid "pinned"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:430
+msgid "Unknown"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:439
+msgid "Add note"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:461
+#: src/Admin/QueuePage.php:273
+msgid "Fulfillment not found."
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:468
+#: src/Admin/QueuePage.php:280
+msgid "You are not allowed to make this change."
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:486
+msgid "You are not allowed to add notes."
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:490
+msgid "A note cannot be empty."
+msgstr ""
+
+#: src/Admin/QueuePage.php:147
+msgid "Fulfillment Queue"
+msgstr ""
+
+#: src/Admin/QueuePage.php:154
+#: src/Admin/ShellNavigation.php:37
+msgid "Queue"
+msgstr ""
+
+#: src/Admin/QueuePage.php:194
+#: src/Admin/QueuePage.php:469
+msgid "Fulfillments"
+msgstr ""
+
+#: src/Admin/QueuePage.php:245
+msgid "You are not allowed to assign fulfillments."
+msgstr ""
+
+#: src/Admin/QueuePage.php:251
+msgid "No assignee was selected."
+msgstr ""
+
+#: src/Admin/QueuePage.php:256
+msgid "Could not assign — it may have been changed by someone else."
+msgstr ""
+
+#. translators: %d: number of fulfillments updated
+#: src/Admin/QueuePage.php:333
+#, php-format
+msgid "%d fulfillment updated."
+msgid_plural "%d fulfillments updated."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: succeeded count, 2: failed count
+#: src/Admin/QueuePage.php:344
+#, php-format
+msgid "%1$d fulfillment(s) updated; %2$d could not be updated."
+msgstr ""
+
+#: src/Admin/QueuePage.php:365
+msgid "Queue filters"
+msgstr ""
+
+#: src/Admin/QueuePage.php:366
+#: src/Admin/QueuePage.php:464
+#: src/Admin/QueuePage.php:576
+msgid "State"
+msgstr ""
+
+#: src/Admin/QueuePage.php:367
+#: src/Admin/QueuePage.php:467
+msgid "Assignee"
+msgstr ""
+
+#: src/Admin/QueuePage.php:368
+#: src/Admin/QueuePage.php:465
+msgid "Age"
+msgstr ""
+
+#: src/Admin/QueuePage.php:369
+msgid "Search order #, customer, or SKU…"
+msgstr ""
+
+#: src/Admin/QueuePage.php:370
+msgid "Filter"
+msgstr ""
+
+#: src/Admin/QueuePage.php:384
+msgid "All"
+msgstr ""
+
+#: src/Admin/QueuePage.php:407
+msgid "Any"
+msgstr ""
+
+#: src/Admin/QueuePage.php:426
+msgid "Any age"
+msgstr ""
+
+#. translators: %s: age threshold, e.g. "4h"
+#: src/Admin/QueuePage.php:434
+#, php-format
+msgid "Older than %s"
+msgstr ""
+
+#: src/Admin/QueuePage.php:458
+msgid "Select all"
+msgstr ""
+
+#: src/Admin/QueuePage.php:461
+msgid "Order"
+msgstr ""
+
+#: src/Admin/QueuePage.php:462
+#: src/Admin/QueuePage.php:574
+msgid "Customer"
+msgstr ""
+
+#: src/Admin/QueuePage.php:463
+#: src/Admin/QueuePage.php:575
+msgid "Items"
+msgstr ""
+
+#: src/Admin/QueuePage.php:466
+msgid "Priority"
+msgstr ""
+
+#: src/Admin/QueuePage.php:477
+msgid "No fulfillments match these filters."
+msgstr ""
+
+#: src/Admin/QueuePage.php:485
+msgid "Navigate"
+msgstr ""
+
+#: src/Admin/QueuePage.php:487
+msgid "Search"
+msgstr ""
+
+#: src/Admin/QueuePage.php:501
+msgid "Bulk actions…"
+msgstr ""
+
+#: src/Admin/QueuePage.php:502
+msgid "Assign to…"
+msgstr ""
+
+#: src/Admin/QueuePage.php:503
+msgid "Advance to state…"
+msgstr ""
+
+#: src/Admin/QueuePage.php:522
+msgid "Apply"
+msgstr ""
+
+#: src/Admin/QueuePage.php:577
+msgid "Open Fulfillment Detail"
+msgstr ""
+
+#: src/Admin/QueuePage.php:594
+msgid "Queue pagination"
+msgstr ""
+
+#: src/Admin/ShellHeader.php:28
+msgid "Warehouse fulfillment workspace"
+msgstr ""
+
+#: src/Admin/ShellHeader.php:34
+msgid "Fulfillment sections"
 msgstr ""
 
 #: src/Capabilities.php:103
@@ -45,4 +376,8 @@ msgstr ""
 
 #: src/Capabilities.php:107
 msgid "Warehouse Lead"
+msgstr ""
+
+#: src/Plugin.php:228
+msgid "Fulfillment"
 msgstr ""
