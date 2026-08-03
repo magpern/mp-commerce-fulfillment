@@ -54,6 +54,50 @@ final class Assets {
 		wp_script_add_data( 'mpcf-mpds-data-table-keynav', 'type', 'module' );
 		wp_script_add_data( 'mpcf-mpds-drawer', 'type', 'module' );
 		wp_script_add_data( 'mpcf-mpds-modal', 'type', 'module' );
+
+		if ( self::is_workspace_screen() ) {
+			$this->enqueue_workspace_assets();
+		}
+	}
+
+	/**
+	 * Enqueues the Packing Workspace's own behavior modules — the vendored
+	 * MPDS ones its markup depends on (toast, action-bar, scan-sink) plus
+	 * this plugin's own bootstrap — and localizes the small config object
+	 * `assets/admin/js/api.js` reads its REST base URL and nonce from.
+	 */
+	private function enqueue_workspace_assets(): void {
+		wp_enqueue_script( 'mpcf-mpds-toast', MPCF_PLUGIN_URL . 'assets/mpds/js/toast.js', array(), MPCF_VERSION, true );
+		wp_enqueue_script( 'mpcf-mpds-action-bar', MPCF_PLUGIN_URL . 'assets/mpds/js/action-bar.js', array(), MPCF_VERSION, true );
+		wp_enqueue_script( 'mpcf-mpds-scan-sink', MPCF_PLUGIN_URL . 'assets/mpds/js/scan-sink.js', array(), MPCF_VERSION, true );
+		wp_enqueue_script( 'mpcf-workspace', MPCF_PLUGIN_URL . 'assets/admin/js/workspace.js', array(), MPCF_VERSION, true );
+
+		wp_script_add_data( 'mpcf-mpds-toast', 'type', 'module' );
+		wp_script_add_data( 'mpcf-mpds-action-bar', 'type', 'module' );
+		wp_script_add_data( 'mpcf-mpds-scan-sink', 'type', 'module' );
+		wp_script_add_data( 'mpcf-workspace', 'type', 'module' );
+
+		wp_add_inline_script(
+			'mpcf-workspace',
+			sprintf(
+				'window.mpcfWorkspace = { restUrl: %s, nonce: %s };',
+				wp_json_encode( rest_url( 'mpcf/v1/' ) ),
+				wp_json_encode( wp_create_nonce( 'wp_rest' ) )
+			),
+			'before'
+		);
+	}
+
+	/**
+	 * Whether the current admin request is specifically the Packing
+	 * Workspace — the only screen whose markup needs the action-bar/
+	 * scan-sink/toast behavior modules {@see enqueue_workspace_assets()}
+	 * loads.
+	 */
+	private static function is_workspace_screen(): bool {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen detection, no state change.
+
+		return 'mpcf-workspace' === $page;
 	}
 
 	/**
