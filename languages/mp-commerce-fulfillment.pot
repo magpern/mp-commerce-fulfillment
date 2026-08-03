@@ -113,6 +113,7 @@ msgid "Fulfillment Detail"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:168
+#: src/Admin/WorkspacePage.php:222
 msgid "No fulfillment selected"
 msgstr ""
 
@@ -145,6 +146,7 @@ msgid "State:"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:220
+#: src/Admin/WorkspacePage.php:349
 msgid "View order"
 msgstr ""
 
@@ -167,10 +169,12 @@ msgid "Audit trail"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:328
+#: src/Admin/WorkspacePage.php:472
 msgid "System"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:329
+#: src/Admin/WorkspacePage.php:473
 msgid "ago"
 msgstr ""
 
@@ -185,18 +189,22 @@ msgid "Moved from \"%1$s\" to \"%2$s\".%3$s"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:382
+#: src/Admin/WorkspacePage.php:583
 msgid "Notes"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:386
+#: src/Admin/WorkspacePage.php:587
 msgid "pinned"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:390
+#: src/Admin/WorkspacePage.php:591
 msgid "Unknown"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:399
+#: src/Admin/WorkspacePage.php:601
 msgid "Add note"
 msgstr ""
 
@@ -370,6 +378,101 @@ msgstr ""
 msgid "Fulfillment sections"
 msgstr ""
 
+#: src/Admin/WorkspacePage.php:183
+#: src/Admin/WorkspacePage.php:190
+msgid "Packing Workspace"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:223
+msgid "Open a fulfillment from the Queue to start packing."
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:318
+msgid "another operator"
+msgstr ""
+
+#. translators: %s: assignee display name
+#: src/Admin/WorkspacePage.php:324
+#, php-format
+msgid "Assigned to %s"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:327
+msgid "You can take over without losing any work already saved."
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:328
+msgid "Take over"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:355
+#: templates/documents/packing-slip.php:49
+msgid "Ship to"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:441
+msgid "Complete all"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:460
+msgid "Documents"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:461
+msgid "Print packing slip"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:468
+msgid "Timeline"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:488
+msgid "View full audit trail"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:499
+msgid "Shipment"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:504
+msgid "No shipment yet — enter a carrier or tracking number to create one."
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:521
+msgid "Carrier"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:535
+msgid "Tracking number"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:540
+#: templates/documents/packing-slip.php:79
+msgid "Packages"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:547
+msgid "Add package"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:562
+msgid "g"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:563
+#: src/Admin/WorkspacePage.php:564
+#: src/Admin/WorkspacePage.php:565
+msgid "mm"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:570
+msgid "Colli tracking number"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:599
+msgid "Add a note…"
+msgstr ""
+
 #: src/Capabilities.php:103
 msgid "Warehouse Operator"
 msgstr ""
@@ -378,8 +481,20 @@ msgstr ""
 msgid "Warehouse Lead"
 msgstr ""
 
-#: src/Plugin.php:359
+#: src/Plugin.php:381
 msgid "Fulfillment"
+msgstr ""
+
+#: src/Woo/WorkspaceFlags.php:97
+msgid "Customer note"
+msgstr ""
+
+#: src/Woo/WorkspaceFlags.php:104
+msgid "High value"
+msgstr ""
+
+#: src/Woo/WorkspaceFlags.php:111
+msgid "Repeat problem customer"
 msgstr ""
 
 #: templates/documents/packing-slip.php:25
@@ -393,10 +508,6 @@ msgstr ""
 msgid "Order %s"
 msgstr ""
 
-#: templates/documents/packing-slip.php:49
-msgid "Ship to"
-msgstr ""
-
 #: templates/documents/packing-slip.php:61
 msgid "SKU"
 msgstr ""
@@ -407,10 +518,6 @@ msgstr ""
 
 #: templates/documents/packing-slip.php:63
 msgid "Qty"
-msgstr ""
-
-#: templates/documents/packing-slip.php:79
-msgid "Packages"
 msgstr ""
 
 #. translators: 1: package sequence number

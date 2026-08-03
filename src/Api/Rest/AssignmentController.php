@@ -91,7 +91,7 @@ final class AssignmentController extends AbstractRestController {
 	 * @param WP_REST_Request $request The request.
 	 */
 	public function assign( WP_REST_Request $request ) {
-		$succeeded = $this->assignments->assign( (int) $request->get_param( 'id' ), (int) $request->get_param( 'user_id' ) );
+		$succeeded = $this->assignments->assign( (int) $request->get_param( 'id' ), (int) $request->get_param( 'user_id' ), self::current_actor() );
 
 		return $this->respond_to_assignment_outcome( $succeeded );
 	}
@@ -102,7 +102,7 @@ final class AssignmentController extends AbstractRestController {
 	 * @param WP_REST_Request $request The request.
 	 */
 	public function unassign( WP_REST_Request $request ) {
-		$succeeded = $this->assignments->unassign( (int) $request->get_param( 'id' ) );
+		$succeeded = $this->assignments->unassign( (int) $request->get_param( 'id' ), self::current_actor() );
 
 		return $this->respond_to_assignment_outcome( $succeeded );
 	}

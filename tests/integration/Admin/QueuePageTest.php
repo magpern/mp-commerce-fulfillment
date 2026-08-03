@@ -78,7 +78,7 @@ final class QueuePageTest extends WP_UnitTestCase {
 			new \MPCF\Vendor\Mpds\ComponentRenderer(),
 			new QueueService( $this->fulfillments, new WpdbSearchQuery() ),
 			new FulfillmentDetailService( $this->fulfillments, $items, $events, new WpdbNoteRepository() ),
-			new AssignmentService( $this->fulfillments ),
+			new AssignmentService( $this->fulfillments, $events, new EventDispatcher(), new SystemClock() ),
 			$workflow,
 			$definition
 		);

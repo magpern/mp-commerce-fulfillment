@@ -14,6 +14,7 @@ use MPCF\Admin\DashboardPage;
 use MPCF\Admin\FulfillmentDetailPage;
 use MPCF\Admin\OperatorMode;
 use MPCF\Admin\QueuePage;
+use MPCF\Admin\WorkspacePage;
 use MPCF\Api\Rest\AssignmentController;
 use MPCF\Api\Rest\CarriersController;
 use MPCF\Api\Rest\DocumentsController;
@@ -63,6 +64,7 @@ use MPCF\Woo\IntakeHooks;
 use MPCF\Woo\RefundObserver;
 use MPCF\Woo\StatusBridge;
 use MPCF\Woo\WooOrderSource;
+use MPCF\Woo\WorkspaceFlags;
 
 /**
  * Wires the object graph by hand and lets each service register its own
@@ -174,7 +176,7 @@ final class Plugin {
 		// Architecture Plan §5.4: menu/screens/assets are gated to is_admin()
 		// contexts only — a front-end or WP-CLI request never needs them.
 		if ( is_admin() ) {
-			$this->wire_admin( $fulfillments, $items, $events, $notes, $clock, $settings, $definition, $workflow_service );
+			$this->wire_admin( $fulfillments, $items, $events, $notes, $shipments, $packages, $dispatcher, $clock, $settings, $definition, $workflow_service );
 		}
 	}
 
@@ -299,7 +301,7 @@ final class Plugin {
 					$workflow_service
 				),
 				new NotesController( new NoteService( $notes_repository, $clock ) ),
-				new AssignmentController( new AssignmentService( $fulfillments ) ),
+				new AssignmentController( new AssignmentService( $fulfillments, $events, $dispatcher, $clock ) ),
 				new ShipmentsController( $shipping_service, $workflow_service, $detail_service ),
 				new PackagesController( $shipping_service, $workflow_service, $detail_service ),
 				new CarriersController( new BundledCarrierRegistry() ),
@@ -326,6 +328,9 @@ final class Plugin {
 	 * @param WpdbFulfillmentItemRepository $items            Line-item persistence, shared with {@see wire_services()}.
 	 * @param WpdbEventRepository           $events           Audit-log persistence, shared with {@see wire_services()}.
 	 * @param WpdbNoteRepository            $notes            Note persistence (admin-only in Milestone 1).
+	 * @param WpdbShipmentRepository        $shipments        Shipment persistence, shared with {@see wire_services()}.
+	 * @param WpdbPackageRepository         $packages         Package persistence, shared with {@see wire_services()}.
+	 * @param EventDispatcher               $dispatcher       In-process event dispatch, shared with {@see wire_services()}.
 	 * @param SystemClock                   $clock            Source of "now", shared with {@see wire_services()}.
 	 * @param Settings                      $settings         Plugin settings, shared with {@see wire_services()}.
 	 * @param WorkflowDefinition            $definition       The governing workflow, shared with {@see wire_services()} via `$workflow_service`.
@@ -336,6 +341,9 @@ final class Plugin {
 		WpdbFulfillmentItemRepository $items,
 		WpdbEventRepository $events,
 		WpdbNoteRepository $notes,
+		WpdbShipmentRepository $shipments,
+		WpdbPackageRepository $packages,
+		EventDispatcher $dispatcher,
 		SystemClock $clock,
 		Settings $settings,
 		WorkflowDefinition $definition,
@@ -344,15 +352,29 @@ final class Plugin {
 		$renderer = new ComponentRenderer();
 		$shell    = new AdminPageShell( new SectionNavigation() );
 
-		$queue_service  = new QueueService( $fulfillments, new WpdbSearchQuery() );
-		$detail_service = new FulfillmentDetailService( $fulfillments, $items, $events, $notes );
-		$note_service   = new NoteService( $notes, $clock );
-		$assignments    = new AssignmentService( $fulfillments );
-		$dashboard      = new DashboardService( $fulfillments, $events, $clock );
+		$queue_service    = new QueueService( $fulfillments, new WpdbSearchQuery() );
+		$detail_service   = new FulfillmentDetailService( $fulfillments, $items, $events, $notes );
+		$note_service     = new NoteService( $notes, $clock );
+		$assignments      = new AssignmentService( $fulfillments, $events, $dispatcher, $clock );
+		$dashboard        = new DashboardService( $fulfillments, $events, $clock );
+		$shipping_service = new ShippingService( $fulfillments, $items, $shipments, $packages, new WpdbPackageItemRepository(), $events, $dispatcher, $clock );
+		$carriers         = new BundledCarrierRegistry();
 
 		$dashboard_page = new DashboardPage( $shell, $renderer, $dashboard, $definition );
 		$queue_page     = new QueuePage( $shell, $renderer, $queue_service, $detail_service, $assignments, $workflow_service, $definition );
 		$detail_page    = new FulfillmentDetailPage( $shell, $renderer, $detail_service, $note_service, $workflow_service, $definition );
+		$workspace_page = new WorkspacePage(
+			$shell,
+			$renderer,
+			$detail_service,
+			$workflow_service,
+			$shipping_service,
+			$note_service,
+			$carriers,
+			$assignments,
+			new WooOrderSource(),
+			$definition
+		);
 
 		( new Menu(
 			DashboardPage::SLUG,
@@ -364,21 +386,24 @@ final class Plugin {
 
 		add_action(
 			'admin_menu',
-			static function () use ( $detail_page ) {
-				add_submenu_page(
-					DashboardPage::SLUG,
-					$detail_page->title(),
-					$detail_page->menu_title(),
-					$detail_page->capability(),
-					$detail_page->slug(),
-					array( $detail_page, 'render' )
-				);
-				remove_submenu_page( DashboardPage::SLUG, $detail_page->slug() );
+			static function () use ( $detail_page, $workspace_page ) {
+				foreach ( array( $detail_page, $workspace_page ) as $hidden_page ) {
+					add_submenu_page(
+						DashboardPage::SLUG,
+						$hidden_page->title(),
+						$hidden_page->menu_title(),
+						$hidden_page->capability(),
+						$hidden_page->slug(),
+						array( $hidden_page, 'render' )
+					);
+					remove_submenu_page( DashboardPage::SLUG, $hidden_page->slug() );
+				}
 			},
 			20
 		);
 
 		( new Assets() )->register();
 		( new OperatorMode( $settings ) )->register();
+		( new WorkspaceFlags( $fulfillments, $definition ) )->register();
 	}
 }

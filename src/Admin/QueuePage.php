@@ -251,7 +251,7 @@ final class QueuePage implements Page {
 			return __( 'No assignee was selected.', 'mp-commerce-fulfillment' );
 		}
 
-		return $this->assignments->assign( $id, $assignee_id )
+		return $this->assignments->assign( $id, $assignee_id, self::current_actor() )
 			? null
 			: __( 'Could not assign — it may have been changed by someone else.', 'mp-commerce-fulfillment' );
 	}

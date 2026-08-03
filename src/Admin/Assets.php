@@ -21,7 +21,7 @@ final class Assets {
 	/**
 	 * Every admin page slug this plugin owns.
 	 */
-	private const SCREEN_SLUGS = array( 'mpcf-dashboard', 'mpcf-queue', 'mpcf-fulfillment-detail' );
+	private const SCREEN_SLUGS = array( 'mpcf-dashboard', 'mpcf-queue', 'mpcf-fulfillment-detail', 'mpcf-workspace' );
 
 	/**
 	 * Registers hooks.
