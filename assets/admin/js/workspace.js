@@ -80,6 +80,22 @@ function createFocusManager( scanSinkSelector ) {
  */
 var EXCEPTION_TARGETS = [ 'problem', 'waiting', 'backordered', 'cancelled' ];
 
+var GUARD_MESSAGES = {
+	all_items_picked: 'Pick all ordered items before marking this fulfillment as picked.',
+	all_items_packed: 'Pack all picked items before marking this fulfillment as packed.',
+	has_shipment: 'Add a shipment before shipping this fulfillment.',
+	has_tracking: 'Enter a tracking number before shipping.'
+};
+
+var SHIPMENT_OPEN_STATES = {
+	picked: true,
+	packing: true,
+	packed: true,
+	shipped: true,
+	delivered: true,
+	completed: true
+};
+
 function pickPrimary( transitions ) {
 	for ( var i = 0; i < transitions.length; i++ ) {
 		if ( -1 === EXCEPTION_TARGETS.indexOf( transitions[ i ].target ) ) {
@@ -88,6 +104,104 @@ function pickPrimary( transitions ) {
 	}
 
 	return null;
+}
+
+function operatorGuardMessage( candidate ) {
+	if ( ! candidate ) {
+		return '';
+	}
+
+	if ( candidate.rejection_code && GUARD_MESSAGES[ candidate.rejection_code ] ) {
+		return GUARD_MESSAGES[ candidate.rejection_code ];
+	}
+
+	return candidate.rejection_message || 'This action is not available yet.';
+}
+
+function stageGuidanceMap() {
+	var node = document.getElementById( 'mpcf-stage-guidance-data' );
+
+	if ( ! node ) {
+		return {};
+	}
+
+	try {
+		return JSON.parse( node.textContent || '{}' );
+	} catch ( error ) {
+		return {};
+	}
+}
+
+function refreshStageBanner( state, transitions ) {
+	var map = stageGuidanceMap();
+	var guidance = map[ state ] || {
+		state_label: state || '',
+		title: state || '',
+		instruction: 'Review this fulfillment and use the primary action when ready.',
+		next_action_label: 'Continue',
+		shipment_emphasis: 'secondary'
+	};
+	var primary = pickPrimary( transitions || [] );
+
+	var stateValue = document.querySelector( '[data-mpcf-stage-state-value]' );
+	var title = document.querySelector( '[data-mpcf-stage-title]' );
+	var instruction = document.querySelector( '[data-mpcf-stage-instruction]' );
+	var nextAction = document.querySelector( '[data-mpcf-stage-next-action]' );
+
+	if ( stateValue ) {
+		stateValue.textContent = guidance.state_label || state || '';
+	}
+
+	if ( title ) {
+		title.textContent = guidance.title || guidance.state_label || state || '';
+	}
+
+	if ( instruction ) {
+		instruction.textContent = guidance.instruction || '';
+	}
+
+	if ( nextAction ) {
+		nextAction.textContent = primary ? primary.label : ( guidance.next_action_label || '' );
+	}
+}
+
+function refreshStageChrome( state, transitions ) {
+	var root = document.querySelector( '[data-mpcf-workspace]' );
+
+	if ( root && state ) {
+		root.setAttribute( 'data-mpcf-stage', state );
+	}
+
+	refreshStageBanner( state, transitions );
+
+	var disclosure = document.querySelector( '[data-mpcf-shipment-disclosure]' );
+
+	if ( disclosure && state ) {
+		disclosure.open = !! SHIPMENT_OPEN_STATES[ state ];
+		disclosure.classList.remove(
+			'mpcf-workspace__shipment-disclosure--muted',
+			'mpcf-workspace__shipment-disclosure--secondary',
+			'mpcf-workspace__shipment-disclosure--primary'
+		);
+
+		var emphasis = ( stageGuidanceMap()[ state ] || {} ).shipment_emphasis || 'secondary';
+		disclosure.classList.add( 'mpcf-workspace__shipment-disclosure--' + emphasis );
+	}
+
+	var success = document.querySelector( '[data-mpcf-shipped-success]' );
+
+	if ( success ) {
+		var show = -1 !== [ 'shipped', 'delivered', 'completed' ].indexOf( state );
+		success.hidden = ! show;
+
+		if ( show ) {
+			var next = success.querySelector( '[data-mpcf-shipped-next-order]' );
+
+			if ( next ) {
+				next.focus();
+			}
+		}
+	}
 }
 
 /**
@@ -111,7 +225,7 @@ function renderActionBar( actionsRegion, transitions ) {
 
 		var button = document.createElement( 'button' );
 		button.type = 'button';
-		button.className = 'button';
+		button.className = 'button mpcf-workspace__secondary-action';
 		button.setAttribute( 'data-mpcf-secondary-action', '' );
 		button.setAttribute( 'data-mpcf-target', candidate.target );
 
@@ -151,11 +265,11 @@ function renderActionBar( actionsRegion, transitions ) {
 
 	actionsRegion.appendChild( primaryButton );
 
-	if ( ! primary.approved && primary.rejection_message ) {
+	if ( ! primary.approved ) {
 		var message = document.createElement( 'span' );
-		message.className = 'description';
+		message.className = 'description mpcf-workspace__guard-message';
 		message.setAttribute( 'data-mpcf-guard-message', '' );
-		message.textContent = primary.rejection_message;
+		message.textContent = operatorGuardMessage( primary );
 		actionsRegion.appendChild( message );
 	}
 }
@@ -193,6 +307,10 @@ function initWorkspace() {
 			renderActionBar( actionsRegion, payload.transitions );
 			focus.restore();
 		}
+
+		if ( payload && payload.fulfillment && payload.fulfillment.state ) {
+			refreshStageChrome( payload.fulfillment.state, payload.transitions || [] );
+		}
 	} );
 
 	/**
@@ -227,14 +345,26 @@ function initWorkspace() {
 	}
 
 	function offerNextOrder() {
-		var nextLink = document.querySelector( '[data-mpcf-queue-next]' );
+		var nextLink = document.querySelector( '[data-mpcf-shipped-next-order]' ) ||
+			document.querySelector( '[data-mpcf-queue-next]' );
+		var success = document.querySelector( '[data-mpcf-shipped-success]' );
+
+		if ( success ) {
+			success.hidden = false;
+
+			var focusTarget = success.querySelector( '[data-mpcf-shipped-next-order]' );
+
+			if ( focusTarget ) {
+				focusTarget.focus();
+			}
+		}
 
 		document.dispatchEvent(
 			new CustomEvent( 'data-mpcf-toast', {
 				detail: {
-					message: 'Shipped.',
+					message: 'Shipped. No further warehouse action is required on this order.',
 					variant: 'success',
-					actionLabel: nextLink ? 'Next order →' : undefined,
+					actionLabel: nextLink ? ( nextLink.textContent || 'Next order →' ).trim() : undefined,
 					actionHref: nextLink ? nextLink.getAttribute( 'href' ) : undefined
 				}
 			} )
@@ -350,6 +480,7 @@ function initWorkspace() {
 				var state = result.fulfillment ? result.fulfillment.state : null;
 
 				refreshWorkflowStepper( state );
+				refreshStageChrome( state, result.transitions || [] );
 
 				return refreshChecklistForState( state ).then( function () {
 					if ( result.fulfillment && 'shipped' === result.fulfillment.state ) {

@@ -20,6 +20,7 @@ use MPCF\Capabilities;
 use MPCF\Domain\CarrierRegistry;
 use MPCF\Domain\Event\Actor;
 use MPCF\Domain\Fulfillment;
+use MPCF\Domain\OrderSnapshot;
 use MPCF\Domain\OrderSource;
 use MPCF\Domain\Shipping\Package;
 use MPCF\Domain\Shipping\Shipment;
@@ -299,21 +300,36 @@ final class WorkspacePage implements Page {
 	 * @param FulfillmentDetailView $view Assembled detail view.
 	 */
 	private function render_workspace( FulfillmentDetailView $view ): void {
-		$fulfillment = $view->fulfillment();
-		$candidates  = $this->workflow->available_transitions( (int) $fulfillment->id(), 'current_user_can' );
+		$fulfillment   = $view->fulfillment();
+		$candidates    = $this->workflow->available_transitions( (int) $fulfillment->id(), 'current_user_can' );
+		$primary       = $this->choose_primary_candidate( $candidates );
+		$guidance      = WorkspaceStageGuidance::for_state( $fulfillment->state(), $primary, $this->definition );
+		$customer_note = '';
+		$order         = $this->orders->find( $fulfillment->order_id() );
 
-		printf( '<form method="post" class="mpcf-workspace" data-mpcf-workspace data-mpcf-fulfillment-id="%d" data-mpcf-version="%d">', (int) $fulfillment->id(), $fulfillment->version() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Both values are ints from typed method returns; %d already constrains the output.
+		if ( null !== $order ) {
+			$customer_note = $order->customer_note();
+		}
+
+		printf(
+			'<form method="post" class="mpcf-workspace" data-mpcf-workspace data-mpcf-fulfillment-id="%d" data-mpcf-version="%d" data-mpcf-stage="%s">',
+			(int) $fulfillment->id(),
+			(int) $fulfillment->version(),
+			esc_attr( $fulfillment->state() )
+		);
 
 		$this->render_assignment_banner( $fulfillment );
+		$this->render_stage_banner( $guidance, $primary );
+		$this->render_shipped_success_panel( $fulfillment );
 
 		echo $this->renderer->workspace_layout_open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		echo $this->renderer->workspace_layout_region_open( 'context' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		$this->render_context_region( $view );
+		$this->render_context_region( $view, $order );
 		echo $this->renderer->workspace_layout_region_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		echo $this->renderer->workspace_layout_region_open( 'work' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		$this->render_work_region( $fulfillment, $view );
+		$this->render_work_region( $fulfillment, $view, $customer_note );
 		echo $this->renderer->workspace_layout_region_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		echo $this->renderer->workspace_layout_region_open( 'outcome' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -322,14 +338,127 @@ final class WorkspacePage implements Page {
 
 		echo $this->renderer->workspace_layout_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
-		$this->render_action_bar( $fulfillment, $candidates );
+		$this->render_action_bar( $fulfillment, $candidates, $primary );
 		$this->render_reason_modal();
+		$this->render_stage_guidance_data();
 
 		echo '</form>';
 
 		echo $this->renderer->toast_region(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		$this->render_shortcut_sheet();
+	}
+
+	/**
+	 * Prominent stage banner: where am I, what should I do next.
+	 *
+	 * @param array{state_key: string, state_label: string, title: string, instruction: string, next_action_label: string, shipment_emphasis: string} $guidance Stage copy.
+	 * @param AvailableTransition|null                                                                                                                $primary  Primary forward candidate.
+	 */
+	private function render_stage_banner( array $guidance, ?AvailableTransition $primary ): void {
+		echo '<section class="mpcf-workspace__stage-banner" data-mpcf-stage-banner aria-live="polite">';
+		printf(
+			'<p class="mpcf-workspace__stage-state"><span class="mpcf-workspace__stage-state-label">%s</span> <span data-mpcf-stage-state-value>%s</span></p>',
+			esc_html__( 'State', 'mp-commerce-fulfillment' ),
+			esc_html( $guidance['state_label'] )
+		);
+		printf( '<h2 class="mpcf-workspace__stage-title" data-mpcf-stage-title>%s</h2>', esc_html( $guidance['title'] ) );
+		printf( '<p class="mpcf-workspace__stage-instruction" data-mpcf-stage-instruction>%s</p>', esc_html( $guidance['instruction'] ) );
+
+		if ( null !== $primary ) {
+			printf(
+				'<p class="mpcf-workspace__stage-next"><span class="mpcf-workspace__stage-next-label">%s</span> <strong data-mpcf-stage-next-action>%s</strong></p>',
+				esc_html__( 'Next action', 'mp-commerce-fulfillment' ),
+				esc_html( $primary->label() )
+			);
+		} elseif ( '' !== (string) $guidance['next_action_label'] ) {
+			printf(
+				'<p class="mpcf-workspace__stage-next"><span class="mpcf-workspace__stage-next-label">%s</span> <strong data-mpcf-stage-next-action>%s</strong></p>',
+				esc_html__( 'Next action', 'mp-commerce-fulfillment' ),
+				esc_html( (string) $guidance['next_action_label'] )
+			);
+		}
+
+		echo '</section>';
+	}
+
+	/**
+	 * Success panel after shipment — not an active unresolved work surface.
+	 *
+	 * @param Fulfillment $fulfillment Fulfillment being packed.
+	 */
+	private function render_shipped_success_panel( Fulfillment $fulfillment ): void {
+		$is_shipped = in_array( $fulfillment->state(), array( 'shipped', 'delivered', 'completed' ), true );
+
+		printf(
+			'<div class="mpcf-workspace__shipped-success"%s data-mpcf-shipped-success>',
+			$is_shipped ? '' : ' hidden'
+		);
+
+		$tracking = '';
+		foreach ( $this->shipping->list_for_fulfillment( (int) $fulfillment->id() ) as $row ) {
+			$number = (string) $row['shipment']->tracking()->number();
+			if ( '' !== $number ) {
+				$tracking = $number;
+				break;
+			}
+		}
+
+		$message = __( 'This fulfillment has been shipped. No further warehouse action is required on this order.', 'mp-commerce-fulfillment' );
+		if ( '' !== $tracking ) {
+			$message = sprintf(
+				/* translators: %s: tracking number */
+				__( 'This fulfillment has been shipped. Tracking: %s', 'mp-commerce-fulfillment' ),
+				$tracking
+			);
+		}
+
+		$next_html = '';
+		$cursor    = isset( $_GET['cursor'] ) ? sanitize_text_field( wp_unslash( $_GET['cursor'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation cursor.
+		if ( '' !== $cursor ) {
+			$ids      = array_values( array_filter( array_map( 'absint', explode( ',', $cursor ) ) ) );
+			$position = array_search( (int) $fulfillment->id(), $ids, true );
+			if ( false !== $position && isset( $ids[ $position + 1 ] ) ) {
+				$next_url  = admin_url( 'admin.php?page=' . self::SLUG . '&fulfillment_id=' . (int) $ids[ $position + 1 ] . '&cursor=' . rawurlencode( $cursor ) );
+				$next_html = sprintf(
+					'<a class="button button-primary" href="%s" data-mpcf-shipped-next-order>%s</a>',
+					esc_url( $next_url ),
+					esc_html__( 'Next order', 'mp-commerce-fulfillment' )
+				);
+			}
+		}
+
+		if ( '' === $next_html ) {
+			$next_html = sprintf(
+				'<a class="button button-primary" href="%s" data-mpcf-shipped-next-order>%s</a>',
+				esc_url( admin_url( 'admin.php?page=' . QueuePage::SLUG ) ),
+				esc_html__( 'Back to Queue', 'mp-commerce-fulfillment' )
+			);
+		}
+
+		echo $this->renderer->success_panel( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- success_panel() escapes title/message; action HTML is built with esc_url/esc_html above.
+			__( 'Shipped', 'mp-commerce-fulfillment' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Passed as method argument; success_panel escapes.
+			$message, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Passed as method argument; success_panel escapes.
+			$next_html // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built with esc_url/esc_html above.
+		);
+
+		echo '</div>';
+	}
+
+	/**
+	 * JSON map of stage guidance for client-side banner refresh after transitions.
+	 */
+	private function render_stage_guidance_data(): void {
+		$payload = array();
+
+		foreach ( $this->definition->states() as $state ) {
+			$payload[ $state->key() ] = WorkspaceStageGuidance::for_state( $state->key(), null, $this->definition );
+		}
+
+		printf(
+			'<script type="application/json" id="mpcf-stage-guidance-data">%s</script>',
+			wp_json_encode( $payload ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON in application/json script; not HTML-context.
+		);
 	}
 
 	/**
@@ -409,11 +538,13 @@ final class WorkspacePage implements Page {
 
 	/**
 	 * Renders the context (left) region: order identity, ship-to address,
-	 * flags, and pinned notes.
+	 * flags, and pinned notes. Customer instructions live in the work
+	 * region so they sit with the checklist.
 	 *
-	 * @param FulfillmentDetailView $view Assembled detail view.
+	 * @param FulfillmentDetailView $view  Assembled detail view.
+	 * @param OrderSnapshot|null    $order Owning order snapshot, if found.
 	 */
-	private function render_context_region( FulfillmentDetailView $view ): void {
+	private function render_context_region( FulfillmentDetailView $view, ?OrderSnapshot $order ): void {
 		$fulfillment = $view->fulfillment();
 
 		printf( '<h2 class="mpcf-workspace__order-number">%s</h2>', esc_html( $fulfillment->order_number_snapshot() ) );
@@ -428,18 +559,12 @@ final class WorkspacePage implements Page {
 			);
 		}
 
-		$order = $this->orders->find( $fulfillment->order_id() );
-
 		echo '<h3>' . esc_html__( 'Ship to', 'mp-commerce-fulfillment' ) . '</h3>';
 		echo '<address class="mpcf-workspace__ship-to">';
 		foreach ( null !== $order ? $order->ship_to_lines() : array() as $line ) {
 			echo esc_html( $line ) . '<br>';
 		}
 		echo '</address>';
-
-		if ( null !== $order ) {
-			$this->render_customer_instructions( $order->customer_note() );
-		}
 
 		/**
 		 * Filters the context-column flags shown for one fulfillment in the
@@ -480,8 +605,8 @@ final class WorkspacePage implements Page {
 	}
 
 	/**
-	 * Renders the WooCommerce customer note when one is present — the
-	 * full checkout instructions, not just the presence flag.
+	 * Renders the WooCommerce customer note when one is present — full
+	 * checkout instructions in a warning callout beside the checklist.
 	 *
 	 * @param string $customer_note Raw note from the owning order.
 	 */
@@ -492,26 +617,35 @@ final class WorkspacePage implements Page {
 			return;
 		}
 
-		echo '<div class="mpcf-workspace__customer-instructions">';
-		echo '<h3>' . esc_html__( 'Customer instructions', 'mp-commerce-fulfillment' ) . '</h3>';
+		echo '<aside class="mpcf-ui-panel mpcf-ui-panel--warning mpcf-workspace__customer-instructions" role="note" data-mpcf-customer-instructions>';
+		echo '<h3 class="mpcf-ui-panel__title">' . esc_html__( 'Customer instructions', 'mp-commerce-fulfillment' ) . '</h3>';
 		printf(
-			'<p class="mpcf-workspace__customer-note"><span class="mpcf-workspace__customer-note-icon" aria-hidden="true">⚠</span> %s</p>',
+			'<p class="mpcf-ui-panel__message mpcf-workspace__customer-note"><span class="mpcf-workspace__customer-note-icon" aria-hidden="true">⚠</span> %s</p>',
 			wp_kses( nl2br( esc_html( $customer_note ), false ), array( 'br' => array() ) )
 		);
-		echo '</div>';
+		echo '</aside>';
 	}
 
 	/**
-	 * Renders the work (centre) region: the stepper, the item checklist,
-	 * and the scan sink.
+	 * Renders the work (centre) region: the stepper, customer instructions,
+	 * the item checklist, and the scan sink.
 	 *
-	 * @param Fulfillment           $fulfillment Fulfillment being packed.
-	 * @param FulfillmentDetailView $view        Assembled detail view.
+	 * @param Fulfillment           $fulfillment   Fulfillment being packed.
+	 * @param FulfillmentDetailView $view          Assembled detail view.
+	 * @param string                $customer_note Checkout note (may be empty).
 	 */
-	private function render_work_region( Fulfillment $fulfillment, FulfillmentDetailView $view ): void {
+	private function render_work_region( Fulfillment $fulfillment, FulfillmentDetailView $view, string $customer_note = '' ): void {
 		echo $this->renderer->stepper( $this->build_stepper_steps( $fulfillment->state() ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
+		$this->render_customer_instructions( $customer_note );
+
 		$active_field = $this->active_quantity_field( $fulfillment->state() );
+
+		if ( 'queued' === $fulfillment->state() ) {
+			echo '<p class="mpcf-workspace__quantity-hint description" data-mpcf-quantity-hint>';
+			echo esc_html__( 'Start picking to enable quantity recording. Ordered amounts are shown below for reference.', 'mp-commerce-fulfillment' );
+			echo '</p>';
+		}
 
 		echo $this->renderer->checklist_open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
@@ -520,15 +654,17 @@ final class WorkspacePage implements Page {
 			$qty_current = null === $active_field ? 0 : ( 'qty_picked' === $active_field ? $item->qty_picked() : $item->qty_packed() );
 
 			if ( null !== $active_field ) {
-				$control = '<div class="mpcf-workspace__item-quantities">';
-				$control .= '<div class="mpcf-workspace__quantity-label">';
-				$control .= sprintf( esc_html__( 'Ordered: %d', 'mp-commerce-fulfillment' ), $qty_ordered );
-				$control .= '</div>';
-				$control .= '<div class="mpcf-workspace__quantity-stepper">';
-				/* translators: %1$s: active field label (Picked or Packed), %2$d: current value, %3$d: ordered value */
+				$remaining   = max( 0, $qty_ordered - $qty_current );
 				$field_label = 'qty_picked' === $active_field ? esc_html__( 'Picked', 'mp-commerce-fulfillment' ) : esc_html__( 'Packed', 'mp-commerce-fulfillment' );
-				$control .= sprintf( '<div class="mpcf-workspace__quantity-display">%s: %d / %d</div>', $field_label, $qty_current, $qty_ordered );
-				$control .= $this->renderer->quantity_stepper(
+				$control     = '<div class="mpcf-workspace__item-quantities">';
+				$control    .= '<div class="mpcf-workspace__quantity-summary" data-mpcf-quantity-summary>';
+				$control    .= sprintf( '<span class="mpcf-workspace__quantity-ordered">%s</span>', esc_html( sprintf( /* translators: %d: ordered qty */ __( 'Ordered: %d', 'mp-commerce-fulfillment' ), $qty_ordered ) ) );
+				$control    .= sprintf( '<span class="mpcf-workspace__quantity-processed">%s</span>', esc_html( sprintf( /* translators: 1: Picked or Packed label, 2: current qty */ __( '%1$s: %2$d', 'mp-commerce-fulfillment' ), $field_label, $qty_current ) ) );
+				$control    .= sprintf( '<span class="mpcf-workspace__quantity-remaining">%s</span>', esc_html( sprintf( /* translators: %d: remaining qty */ __( 'Remaining: %d', 'mp-commerce-fulfillment' ), $remaining ) ) );
+				$control    .= '</div>';
+				$control    .= '<div class="mpcf-workspace__quantity-stepper">';
+				$control    .= sprintf( '<div class="mpcf-workspace__quantity-display" hidden>%s: %d / %d</div>', $field_label, $qty_current, $qty_ordered );
+				$control    .= $this->renderer->quantity_stepper(
 					"items[{$item->id()}][{$active_field}]",
 					$qty_current,
 					0,
@@ -539,19 +675,34 @@ final class WorkspacePage implements Page {
 						'aria-label'        => sprintf( __( 'Quantity for %s', 'mp-commerce-fulfillment' ), $item->name_snapshot() ),
 					)
 				); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- renderer-escaped.
-				$control .= '</div>';
-				$control .= '</div>';
+				$control    .= '</div>';
+				$control    .= '</div>';
+			} elseif ( 'queued' === $fulfillment->state() ) {
+				$control = sprintf(
+					'<div class="mpcf-workspace__item-quantities mpcf-workspace__item-quantities--inactive" data-mpcf-quantity-summary><span class="mpcf-workspace__quantity-ordered">%s</span><span class="mpcf-workspace__quantity-processed">%s</span><span class="mpcf-workspace__quantity-remaining">%s</span></div>',
+					esc_html( sprintf( /* translators: %d: ordered qty */ __( 'Ordered: %d', 'mp-commerce-fulfillment' ), $qty_ordered ) ),
+					esc_html( sprintf( /* translators: %d: picked qty */ __( 'Picked: %d', 'mp-commerce-fulfillment' ), $item->qty_picked() ) ),
+					esc_html( sprintf( /* translators: %d: remaining */ __( 'Remaining: %d', 'mp-commerce-fulfillment' ), $qty_ordered ) )
+				);
 			} else {
-				$control = sprintf( '%d / %d', $item->qty_picked(), $item->qty_ordered() ) . ' &middot; ' . sprintf( '%d / %d', $item->qty_packed(), $item->qty_ordered() );
+				$control = sprintf(
+					'<div class="mpcf-workspace__item-quantities mpcf-workspace__item-quantities--readonly" data-mpcf-quantity-summary><span>%s</span><span>%s</span></div>',
+					esc_html( sprintf( /* translators: 1: picked 2: ordered */ __( 'Picked: %1$d / %2$d', 'mp-commerce-fulfillment' ), $item->qty_picked(), $qty_ordered ) ),
+					esc_html( sprintf( /* translators: 1: packed 2: ordered */ __( 'Packed: %1$d / %2$d', 'mp-commerce-fulfillment' ), $item->qty_packed(), $qty_ordered ) )
+				);
 			}
+
+			$is_complete = null !== $active_field
+				? $qty_current >= $qty_ordered
+				: ( $item->is_fully_picked() && $item->is_fully_packed() );
 
 			echo $this->renderer->checklist_row( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				'',
 				esc_html( $item->name_snapshot() ),
 				sprintf( '<code>%s</code>', esc_html( $item->sku_snapshot() ) ),
 				$control, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built above from escaped/renderer-escaped pieces only.
-				null !== $active_field ? $qty_current >= $qty_ordered : ( $item->is_fully_picked() && $item->is_fully_packed() ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- A bool, not markup; checklist_row()'s $complete parameter.
-				array( 'data-mpcf-row-id' => (string) $item->id() ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- An int cast to string for an HTML attribute value; checklist_row() escapes every attribute internally.
+				$is_complete, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Bool for checklist_row $complete, not markup.
+				array( 'data-mpcf-row-id' => (string) $item->id() ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- checklist_row escapes attributes.
 			);
 		}
 
@@ -634,18 +785,33 @@ final class WorkspacePage implements Page {
 	 * @param Fulfillment $fulfillment Fulfillment being packed.
 	 */
 	private function render_shipment_panel( Fulfillment $fulfillment ): void {
-		echo '<h3>' . esc_html__( 'Shipment', 'mp-commerce-fulfillment' ) . '</h3>';
+		$emphasis = WorkspaceStageGuidance::shipment_emphasis( $fulfillment->state() );
+		$open     = WorkspaceStageGuidance::shipment_section_open( $fulfillment->state() );
+
+		printf(
+			'<details class="mpcf-workspace__shipment-disclosure mpcf-workspace__shipment-disclosure--%s" data-mpcf-shipment-disclosure%s>',
+			esc_attr( $emphasis ),
+			$open ? ' open' : ''
+		);
+		echo '<summary class="mpcf-workspace__shipment-summary">';
+		echo esc_html__( 'Shipment and packages', 'mp-commerce-fulfillment' );
+		if ( 'muted' === $emphasis ) {
+			echo ' <span class="description">' . esc_html__( '(later stage)', 'mp-commerce-fulfillment' ) . '</span>';
+		}
+		echo '</summary>';
+		echo '<div class="mpcf-workspace__shipment-body">';
 
 		$rows = $this->shipping->list_for_fulfillment( (int) $fulfillment->id() );
 
 		if ( array() === $rows ) {
 			$this->render_new_shipment_card();
-			return;
+		} else {
+			foreach ( $rows as $row ) {
+				$this->render_shipment_card( $row['shipment'], $row['packages'] );
+			}
 		}
 
-		foreach ( $rows as $row ) {
-			$this->render_shipment_card( $row['shipment'], $row['packages'] );
-		}
+		echo '</div></details>';
 	}
 
 	/**
@@ -833,8 +999,9 @@ final class WorkspacePage implements Page {
 	 *
 	 * @param Fulfillment                     $fulfillment Fulfillment being packed.
 	 * @param array<int, AvailableTransition> $candidates  Every candidate transition, already evaluated.
+	 * @param AvailableTransition|null        $primary     Pre-chosen primary candidate.
 	 */
-	private function render_action_bar( Fulfillment $fulfillment, array $candidates ): void {
+	private function render_action_bar( Fulfillment $fulfillment, array $candidates, ?AvailableTransition $primary = null ): void {
 		$state    = $this->definition->has_state( $fulfillment->state() ) ? $this->definition->state( $fulfillment->state() ) : null;
 		$identity = esc_html( $fulfillment->order_number_snapshot() );
 
@@ -855,7 +1022,10 @@ final class WorkspacePage implements Page {
 
 		echo $this->renderer->action_bar_actions_open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
-		$primary     = $this->choose_primary_candidate( $candidates );
+		if ( null === $primary ) {
+			$primary = $this->choose_primary_candidate( $candidates );
+		}
+
 		$secondaries = array_filter( $candidates, static fn( $candidate ) => $candidate !== $primary );
 
 		foreach ( $secondaries as $candidate ) {
@@ -864,7 +1034,7 @@ final class WorkspacePage implements Page {
 			}
 
 			printf(
-				'<button type="button" class="button" data-mpcf-secondary-action data-mpcf-target="%s"%s>%s</button>',
+				'<button type="button" class="button mpcf-workspace__secondary-action" data-mpcf-secondary-action data-mpcf-target="%s"%s>%s</button>',
 				esc_attr( $candidate->target() ),
 				$candidate->requires_reason() ? ' data-mpcf-requires-reason' : '', // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- A fixed literal attribute string, not user input.
 				esc_html( $candidate->label() )
@@ -898,7 +1068,10 @@ final class WorkspacePage implements Page {
 			} else {
 				$attrs['disabled'] = 'disabled';
 				echo $this->renderer->action_bar_primary( $primary->label(), $attrs ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				printf( '<span class="description" data-mpcf-guard-message>%s</span>', esc_html( (string) $primary->rejection_message() ) );
+				printf(
+					'<span class="description mpcf-workspace__guard-message" data-mpcf-guard-message>%s</span>',
+					esc_html( WorkspaceStageGuidance::operator_guard_message( $primary->rejection_code(), $primary->rejection_message() ) )
+				);
 			}
 		}
 
