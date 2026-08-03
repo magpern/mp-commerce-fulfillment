@@ -27,15 +27,16 @@ actual state before work starts.
    no migration amendment needed — see `docs/QUEUE_PERFORMANCE_VALIDATION.md`).
    `mp-admin-design-system` gained the six Milestone 1 components and was
    released as `v0.2.0`. Milestone formally closed 2026-08-02.
-2. **M2 — Packing Workspace & REST** — **execution plan approved, implementation
-   starting** (PO approved Part IV of `ARCHITECTURE_PLAN.md` for
-   implementation 2026-08-02, through release-candidate preparation; final
-   `v0.2.0`/MPDS `v0.3.0` tags require separate PO approval). A prerequisite
-   defect-patch release, `v0.1.1`, precedes M2 feature work — see below.
-   REST namespace `mpcf/v1`, the Packing Workspace, `Shipment`/`Package`,
-   a minimal packing slip pulled forward from M3, and MPDS `v0.3.0`
-   (toast, stepper, workspace-layout, action-bar, checklist,
-   quantity-stepper, unit-input, repeater, scan-input).
+2. **M2 — Packing Workspace & REST** — **shipped as `v0.2.0`** (PO approved
+   Part IV 2026-08-02, implementation complete and merged 2026-08-03; MPDS
+   `v0.3.0` shipped alongside). A prerequisite defect-patch release,
+   `v0.1.1`, was shipped 2026-08-02 — see below. REST namespace `mpcf/v1`,
+   the Packing Workspace, `Shipment`/`Package`, a minimal packing slip
+   pulled forward from M3, timeline pagination, and MPDS `v0.3.0` (toast,
+   stepper, workspace-layout, action-bar, checklist, quantity-stepper,
+   unit-input, repeater, scan-input). Performance re-proof at 10k rows with
+   M2's 14-event distribution complete (F23). Full evidence in
+   `docs/M2_RELEASE_REPORT.md` (pending, scheduled with F25 acceptance).
 2a. **`v0.1.1` — M1 defect patch (prerequisite for M2)** — **released**
     2026-08-02 (tag pushed, Release workflow green, published artifact
     independently re-verified: 132 entries, zero dev files, zero runtime

@@ -3,7 +3,8 @@
 Every hook this plugin registers, and everything it deliberately does not
 hook. No automated sync test exists for this file (there is no
 `HooksDocumentationSyncTest`) — it is kept current by hand at each
-milestone's documentation-reconciliation step (D20 for Milestone 1).
+milestone's documentation-reconciliation step (D20 for Milestone 1, F24 for
+Milestone 2).
 
 ## Registered by this plugin
 
@@ -15,7 +16,7 @@ milestone's documentation-reconciliation step (D20 for Milestone 1).
 | `admin_init` | action | `MPCF\Plugin::init()` | default | Runs `Migrator::maybe_migrate()` — the drift check for bind-mount deployments that never fire the activation hook (§7). |
 | `admin_menu` | action | `MPCF\Plugin::wire_admin()` | priority `20` | Registers `Fulfillment Detail` as a real submenu page (so its capability/URL resolve), then immediately calls `remove_submenu_page()` — reachable only from Queue/Dashboard, never a standalone nav item. |
 | `admin_menu` | action | `Vendor\Mpds\PageShell\Menu::register()` | default | Registers the top-level "Fulfillment" menu (Dashboard + Queue), invoked via `Plugin::wire_admin()`. |
-| `admin_enqueue_scripts` | action | `Admin\Assets::maybe_enqueue()` | default | Enqueues MPDS + plugin admin CSS/JS, gated to this plugin's own screens (`mpcf-dashboard`, `mpcf-queue`, `mpcf-fulfillment-detail`). |
+| `admin_enqueue_scripts` | action | `Admin\Assets::maybe_enqueue()` | default | Enqueues MPDS + plugin admin CSS/JS, gated to this plugin's own screens (`mpcf-dashboard`, `mpcf-queue`, `mpcf-fulfillment-detail`, `mpcf-workspace`). Script Modules API (`wp_enqueue_script_module`, WP 6.5+) enqueues five workspace ES modules from `assets/admin/js/`. |
 | `admin_body_class` | filter | `Admin\Assets::maybe_add_body_class()` | default | Appends `mpcf-ui-scope mpcf-admin` on this plugin's own screens. |
 | `admin_body_class` | filter | `Admin\OperatorMode::maybe_add_body_class()` | default | Appends `mpcf-operator-mode` for operator-tier users when the `operator_mode_enabled` setting is on and the user is not an admin/lead — CSS then hides the rest of wp-admin's nav. |
 | `woocommerce_payment_complete` | action | `Woo\IntakeHooks::handle_order_paid()` | default | Synchronous order-to-fulfillment intake on payment completion (classic and Blocks checkout). |
@@ -32,24 +33,45 @@ capabilities/roles). No deactivation hook is registered (invariant I12).
 Uninstall runs via the standard `uninstall.php` file convention, not
 `register_uninstall_hook()`.
 
+## REST — Milestone 2
+
+| Route | Method | Capability | Purpose |
+|---|---|---|---|
+| `/mpcf/v1/fulfillments` | GET | `mpcf_view_queue` | Queue list. |
+| `/mpcf/v1/fulfillments/{id}` | GET | `mpcf_view_queue` | Fulfillment detail. |
+| `/mpcf/v1/fulfillments/{id}/transitions` | GET | `mpcf_view_queue` | Available transitions, returned in every mutation response. |
+| `/mpcf/v1/fulfillments/{id}/transitions` | POST | per-edge, from workflow definition | Apply a transition. |
+| `/mpcf/v1/fulfillments/{id}/items` | PUT | `mpcf_process_fulfillments` | Batch absolute quantities (picked/packed). |
+| `/mpcf/v1/fulfillments/{id}/notes` | GET/POST | `mpcf_view_queue` / `mpcf_add_notes` | Fetch/add notes. |
+| `/mpcf/v1/fulfillments/{id}/assignment` | PUT/DELETE | `mpcf_process_fulfillments` | Assign/unassign. |
+| `/mpcf/v1/fulfillments/{id}/shipments` | GET/POST | `mpcf_view_queue` / `mpcf_manage_shipments` | Fetch/create shipments. |
+| `/mpcf/v1/shipments/{id}` | PATCH/DELETE | `mpcf_manage_shipments` | Update/delete shipment. |
+| `/mpcf/v1/shipments/{id}/ship` | POST | `mpcf_manage_shipments` | Ship (sets status to shipped, stamps shipped_at). |
+| `/mpcf/v1/shipments/{id}/packages` | POST | `mpcf_manage_shipments` | Add package. |
+| `/mpcf/v1/packages/{id}` | PATCH/DELETE | `mpcf_manage_shipments` | Update/delete package. |
+| `/mpcf/v1/fulfillments/{id}/documents/render` | POST | `mpcf_render_documents` | Render and print a packing slip. |
+| `/mpcf/v1/carriers` | GET | `mpcf_view_queue` | Bundled carrier registry. |
+
+Full endpoint documentation: `docs/API.md`.
+
 ## Deliberately NOT hooked (Milestone 1)
 
-- No REST route (`mpcf/v1` is M2, per §16.2 — the workspace is what needs it).
-- No `do_action()`/`apply_filters()` anywhere in `src/` — this plugin fires
-  no custom action or filter yet. The `fulfillment.state_changed` event
-  `Woo\StatusBridge` subscribes to travels through the plugin's own
-  in-process `Application\EventDispatcher`, not a WordPress hook, and is not
-  third-party-extensible today.
 - No product, cart, or checkout filter beyond the two HPOS/Blocks
   compatibility declarations above — this plugin never modifies an order's
   line items, prices, totals, customer data or products (I1).
 
-## Public extension points
+## Public extension points added in M2
 
-None yet. `docs/ARCHITECTURE_PLAN.md` §16.2 names the eventual v1.0
-extension surface (`mpcf_workflows`, `mpcf_carriers`, `mpcf_document_types`,
-`mpcf_event` + per-type actions, `mpcf_workspace_flags`,
-`mpcf_intake_should_create`, template overrides) — none of these exist in
-the code today; they are a roadmap reference, not a hook available to
-integrate against. M2's REST layer is the next place a public extension
-surface is actually planned.
+| Hook | Type | File | Purpose |
+|---|---|---|---|
+| `mpcf_workspace_flags` | filter | `src/Admin/WorkspacePage.php:453` | Returns a list of flag descriptors to render in the workspace's context column. Bundled: customer note present, high value, repeat problem customer. Integrators can add custom flags via this filter. |
+
+All other v1.0 extension surfaces (`mpcf_workflows`, `mpcf_carriers`,
+`mpcf_document_types`, `mpcf_event` + per-type actions,
+`mpcf_intake_should_create`, template overrides) are documented in
+`docs/ARCHITECTURE_PLAN.md` §16.2 as future milestones. `mpcf_event` and
+`mpcf_document_types` were originally planned for M2 but are deferred to M3,
+as noted in §IV.9 and §IV.7 respectively — they are design-time
+dependencies for the real registries (`mpcf_carriers` in M4, the template
+override chain in M3) and adding them in M2 with only one bundled entry each
+would constrain those later designs unnecessarily.

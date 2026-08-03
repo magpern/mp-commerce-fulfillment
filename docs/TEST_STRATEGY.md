@@ -16,6 +16,15 @@ determinism, hash-chain computation, `SearchTermClassifier` classification,
 fakes, plus every structural guard. Milestone 0's own coverage (`Settings`,
 `Capabilities`, `PersistedKeys`, `CompositionRootTest`) is unchanged.
 
+Milestone 2 extends unit coverage with `PackingSlipAssembler` (pure
+domain VO assembled from application-layer fixtures), `ShippingService` and
+`PackingService` behavior against port fakes, `TransitionContextFactory`
+truth table (finding B fixed), `available_transitions()` per state,
+`BundledCarrierRegistry` cardinality, REST error-code mapping as a pure map,
+and `PayloadGuard` compliance for all eight M2 event types
+(items.picked/packed, shipment.created/updated/shipped/delivered, package.created,
+document.rendered).
+
 ## Integration (`tests/integration/`, `composer test:integration`)
 
 WordPress and WooCommerce are loaded (`tests/bin/install-wp.sh`, HPOS forced
@@ -41,6 +50,20 @@ injected fake step map; the `admin_init` drift-check fires against a stale
 recorded version) is unchanged, updated only where the schema version
 itself moved (0 → 3).
 
+Milestone 2 extends integration coverage with every REST route via
+`rest_do_request` (applying WooCommerce Store API gotchas); the full
+capability matrix per route (operator vs lead vs shop_manager vs subscriber);
+nonce-failure and Application Password paths; 409 version conflict via
+concurrent fulfillment holders; 422 guard rejection carrying guard id and
+message; shipment/package lifecycle including delete-while-pending and
+refuse-delete-while-shipped; `mpcf_package_items` auto-allocation on
+shipment creation; `mpcf_documents` row and `document.rendered` audit
+event on render; `Woo\EventBridge` firing `mpcf_event`; migration to
+`mpcf_db_version = 5` (step 4 adds shipments/packages/package_items, step 5
+adds documents); upgrade edge case: fulfillments stuck in `packed` state
+from `0.1.x` cannot ship until a shipment exists (fixed in M2); and uninstall
+extended to all four new tables.
+
 `HposProofTest` mirrors the sibling plugins' pattern: it skips when HPOS is
 off, so a green run with zero skips is itself the proof HPOS was active.
 
@@ -56,6 +79,12 @@ this proof has run once per schema change. Run explicitly (see that test
 file's own docblock for the command); findings are recorded in
 `docs/QUEUE_PERFORMANCE_VALIDATION.md` and must be rerun and updated
 whenever the schema, an index, or one of these query shapes changes.
+
+Milestone 2 re-ran the proof at F23 (after adding 14 event types in M2's
+distribution vs M1's single type, and adding workspace query shapes for
+fulfillment load, shipment/package reads, and tracking-number search).
+Timeline pagination moved into M2 rather than being discovered as a problem
+at M8. No index changes were required for the M2 distribution.
 
 ## Browser (`tests/browser/`, dev/CI only, `npx playwright test`)
 
@@ -74,12 +103,13 @@ committed but never shipped — enforced by three independent defenses
 denylist, `ReleaseArtifactGuardTest`), per ADR-0006's own requirement that
 a single missed exclusion must not be enough to reintroduce a Node
 runtime dependency. This first pass covers the keyboard-only
-queued-to-shipped path (acceptance criterion 1) and an `@axe-core/playwright`
-accessibility scan of the workspace (criterion 8); the two-browser-context
-409 conflict, offline/retry interception, the three responsive
-breakpoints, and queue-cursor navigation are deliberately not yet covered
-— a scope decision recorded here rather than silently left uncovered,
-and available to a follow-up commit without any change to the harness.
+queued-to-shipped path (acceptance criterion 1), a 30-keystroke focus-retention
+session testing M2-R9, and an `@axe-core/playwright` accessibility scan of
+the workspace at 1440/1024/800px breakpoints (criterion 8); the two-browser-context
+409 conflict, offline/retry interception, and queue-cursor navigation are
+deliberately not yet covered — a scope decision recorded here rather than
+silently left uncovered, and available to a follow-up commit without any
+change to the harness.
 
 ## Structural guards (mutation-verified)
 

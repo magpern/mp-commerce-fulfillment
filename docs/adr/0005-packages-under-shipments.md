@@ -36,7 +36,8 @@ would need reworking to attach to the right level.
   from the day photography ships.
 - The Packing Workspace's "add package" action for multi-parcel
   consignments is additive UI on top of a schema that already supports it,
-  not a later schema change.
+  not a later schema change. The M2-UI remark above is about schema
+  **economics** — avoiding later migration friction — not a UI ceiling.
 
 ## Related
 

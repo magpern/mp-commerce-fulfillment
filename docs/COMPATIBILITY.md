@@ -10,7 +10,9 @@
 
 These are minimums, not the primary development target (PO decision,
 2026-07-31 — see `docs/ARCHITECTURE_PLAN.md` D18). CI's `floor` integration
-leg pins exactly these coordinates.
+leg pins exactly these coordinates. WordPress 6.5 is now also load-bearing for
+Milestone 2's Script Modules API (`wp_enqueue_script_module`, `print_enqueued_script_modules`) —
+the floor is both a PO decision and a technical requirement, not either alone.
 
 ## Tested up to (current stable)
 

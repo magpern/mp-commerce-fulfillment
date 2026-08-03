@@ -1507,6 +1507,29 @@ no clipped content from both Chrome and Firefox print dialogs. Falsification: if
 cannot produce an acceptable slip from print-HTML, the PDF renderer moves into M2 and the milestone
 grows — which is exactly what a spike is for. Evidence recorded in `docs/PRINT_VALIDATION.md`.
 
+### IV.7 Actual outcomes (M2 shipped)
+
+**Deviations from the plan's forward-looking text:**
+
+1. **`mpcf_document_types` filter does not exist.** Line 1470 says it ships; it does not. The
+   `DocumentType` registry exists as a design artifact (`src/Domain/Document/DocumentType.php`), but
+   the filterable mechanism itself (the call site applying the filter, the bundled entry, and the
+   override chain) is deferred to Milestone 3. `src/Documents/TemplateRegistry.php:12-16` explicitly
+   states this: *"the filter → theme-directory → bundled override chain a real registry needs is
+   Milestone 3's job."* The impact on integrators is zero — the feature does not exist in v0.2.0 to
+   extend. This is not a mid-milestone scope cut; it was a forward-looking design comment (§IV.7
+   was written as part of the architecture spec before implementation) that did not materialize
+   during the M2 implementation because the one bundled template (packing slip) requires no override
+   mechanism yet.
+
+2. **`POST /mpcf/v1/fulfillments/{id}/documents/render` returns HTML, not a URL.** Line 1487 says
+   it returns "the print URL"; the actual implementation returns inline HTML (print-rendered
+   content). The rendering is to browser (`window.print()` in an iframe), not to a file. This is
+   correct per the spike's purpose (print-HTML fidelity) and aligns with "rendered-to-print, not
+   stored" (line 1485). No URL exists because there is no stored file — exactly the deferred-to-M3
+   case. The API documentation (`docs/API.md:300-314`) is correct; the plan's forward-looking
+   language in §IV.7 was aspirational.
+
 ---
 
 ## IV.8 Printing
