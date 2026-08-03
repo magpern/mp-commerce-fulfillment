@@ -146,6 +146,16 @@ function applyItemResult( item ) {
 				var fieldLabel = 'qty_picked' === parsed.field ? 'Picked' : 'Packed';
 				display.textContent = fieldLabel + ': ' + String( authoritative ) + ' / ' + String( item.qty_ordered );
 			}
+
+			var summary = row.querySelector( '[data-mpcf-quantity-summary]' );
+			if ( summary && parsed && undefined !== item.qty_ordered ) {
+				var remaining = Math.max( 0, item.qty_ordered - authoritative );
+				var processedLabel = 'qty_picked' === parsed.field ? 'Picked' : 'Packed';
+				summary.innerHTML = '';
+				appendQuantitySpan( summary, 'mpcf-workspace__quantity-ordered', 'Ordered: ' + String( item.qty_ordered ) );
+				appendQuantitySpan( summary, 'mpcf-workspace__quantity-processed', processedLabel + ': ' + String( authoritative ) );
+				appendQuantitySpan( summary, 'mpcf-workspace__quantity-remaining', 'Remaining: ' + String( remaining ) );
+			}
 		}
 	}
 
@@ -248,10 +258,23 @@ function setRowValue( row, nextValue ) {
 
 	var display = row.querySelector( '.mpcf-workspace__quantity-display' );
 	if ( display ) {
-		var parsed = parseName( input.name );
-		if ( parsed ) {
-			var fieldLabel = 'qty_picked' === parsed.field ? 'Picked' : 'Packed';
+		var parsedForDisplay = parseName( input.name );
+		if ( parsedForDisplay ) {
+			var fieldLabel = 'qty_picked' === parsedForDisplay.field ? 'Picked' : 'Packed';
 			display.textContent = fieldLabel + ': ' + String( clamped ) + ' / ' + String( max );
+		}
+	}
+
+	var summary = row.querySelector( '[data-mpcf-quantity-summary]' );
+	if ( summary ) {
+		var parsedForSummary = parseName( input.name );
+		if ( parsedForSummary ) {
+			var processedLabel = 'qty_picked' === parsedForSummary.field ? 'Picked' : 'Packed';
+			var remaining = Math.max( 0, max - clamped );
+			summary.innerHTML = '';
+			appendQuantitySpan( summary, 'mpcf-workspace__quantity-ordered', 'Ordered: ' + String( max ) );
+			appendQuantitySpan( summary, 'mpcf-workspace__quantity-processed', processedLabel + ': ' + String( clamped ) );
+			appendQuantitySpan( summary, 'mpcf-workspace__quantity-remaining', 'Remaining: ' + String( remaining ) );
 		}
 	}
 
@@ -351,21 +374,33 @@ function applyCollapseState() {
 	}
 }
 
+function appendQuantitySpan( parent, className, text ) {
+	var span = document.createElement( 'span' );
+	span.className = className;
+	span.textContent = text;
+	parent.appendChild( span );
+}
+
 function buildStepper( name, value, max, activeField ) {
 	var container = document.createElement( 'div' );
 	container.className = 'mpcf-workspace__item-quantities';
 
-	var label = document.createElement( 'div' );
-	label.className = 'mpcf-workspace__quantity-label';
-	label.textContent = 'Ordered: ' + String( max );
-	container.appendChild( label );
+	var summary = document.createElement( 'div' );
+	summary.className = 'mpcf-workspace__quantity-summary';
+	summary.setAttribute( 'data-mpcf-quantity-summary', '' );
+	var fieldLabel = 'qty_picked' === activeField ? 'Picked' : 'Packed';
+	var remaining = Math.max( 0, max - value );
+	appendQuantitySpan( summary, 'mpcf-workspace__quantity-ordered', 'Ordered: ' + String( max ) );
+	appendQuantitySpan( summary, 'mpcf-workspace__quantity-processed', fieldLabel + ': ' + String( value ) );
+	appendQuantitySpan( summary, 'mpcf-workspace__quantity-remaining', 'Remaining: ' + String( remaining ) );
+	container.appendChild( summary );
 
 	var stepperContainer = document.createElement( 'div' );
 	stepperContainer.className = 'mpcf-workspace__quantity-stepper';
 
 	var display = document.createElement( 'div' );
 	display.className = 'mpcf-workspace__quantity-display';
-	var fieldLabel = 'qty_picked' === activeField ? 'Picked' : 'Packed';
+	display.hidden = true;
 	display.textContent = fieldLabel + ': ' + String( value ) + ' / ' + String( max );
 	stepperContainer.appendChild( display );
 
@@ -433,7 +468,13 @@ export function refreshChecklist( items, activeField ) {
 		}
 
 		if ( null === activeField ) {
-			control.textContent = item.qty_picked + ' / ' + item.qty_ordered + ' · ' + item.qty_packed + ' / ' + item.qty_ordered;
+			control.textContent = '';
+			var readonly = document.createElement( 'div' );
+			readonly.className = 'mpcf-workspace__item-quantities mpcf-workspace__item-quantities--readonly';
+			readonly.setAttribute( 'data-mpcf-quantity-summary', '' );
+			appendQuantitySpan( readonly, '', 'Picked: ' + item.qty_picked + ' / ' + item.qty_ordered );
+			appendQuantitySpan( readonly, '', 'Packed: ' + item.qty_packed + ' / ' + item.qty_ordered );
+			control.appendChild( readonly );
 			row.classList.toggle( COMPLETE_CLASS, item.qty_picked >= item.qty_ordered && item.qty_packed >= item.qty_ordered );
 			return;
 		}
