@@ -1054,6 +1054,7 @@ final class WorkspacePage implements Page {
 			}
 
 			$steps[] = array(
+				'key'   => $key,
 				'label' => $this->definition->state( $key )->label(),
 				'state' => $step_state,
 			);

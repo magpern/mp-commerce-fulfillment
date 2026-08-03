@@ -955,8 +955,11 @@ final class ComponentRenderer {
 	 * caller derives each step's state from its own workflow definition,
 	 * this method never encodes workflow knowledge itself.
 	 *
-	 * @param array<int,array<string,string>> $steps Ordered steps: `label`
-	 *                                               and `state`
+	 * @param array<int,array<string,string>> $steps Ordered steps: `key`
+	 *                                               (optional workflow state
+	 *                                               key for client-side
+	 *                                               refresh), `label`, and
+	 *                                               `state`
 	 *                                               (`complete`|`current`|`upcoming`,
 	 *                                               falls back to `upcoming`
 	 *                                               for anything else).
@@ -967,14 +970,18 @@ final class ComponentRenderer {
 		foreach ( $steps as $step ) {
 			$label = (string) ( $step['label'] ?? '' );
 			$state = (string) ( $step['state'] ?? 'upcoming' );
+			$key   = (string) ( $step['key'] ?? '' );
 
 			if ( ! in_array( $state, self::STEPPER_STATES, true ) ) {
 				$state = 'upcoming';
 			}
 
+			$key_attr = '' !== $key ? sprintf( ' data-mpcf-step-key="%s"', esc_attr( $key ) ) : '';
+
 			$items .= sprintf(
-				'<li class="mpcf-ui-stepper__step mpcf-ui-stepper__step--%1$s"%2$s><span class="mpcf-ui-stepper__marker" aria-hidden="true"></span><span class="mpcf-ui-stepper__label">%3$s</span></li>',
+				'<li class="mpcf-ui-stepper__step mpcf-ui-stepper__step--%1$s"%2$s%3$s><span class="mpcf-ui-stepper__marker" aria-hidden="true"></span><span class="mpcf-ui-stepper__label">%4$s</span></li>',
 				esc_attr( $state ),
+				$key_attr,
 				'current' === $state ? ' aria-current="step"' : '',
 				esc_html( $label )
 			);

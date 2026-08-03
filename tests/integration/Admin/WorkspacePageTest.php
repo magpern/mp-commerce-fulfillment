@@ -196,6 +196,21 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 		self::assertStringContainsString( 'data-mpcf-toggle-collapse-completed', $html );
 	}
 
+	public function test_render_stepper_includes_state_keys_for_client_side_refresh(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$id          = $this->seed();
+		$fulfillment = $this->fulfillments->find( $id );
+		$fulfillment->apply_transition( 'picking', null, new DateTimeImmutable() );
+		$this->fulfillments->save( $fulfillment );
+
+		$html = $this->render_for( $id );
+
+		self::assertStringContainsString( 'data-mpcf-step-key="queued"', $html );
+		self::assertStringContainsString( 'data-mpcf-step-key="picking"', $html );
+		self::assertStringContainsString( 'mpcf-ui-stepper__step--current', $html );
+	}
+
 	public function test_render_includes_the_shortcut_sheet_modal_and_its_trigger(): void {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
 

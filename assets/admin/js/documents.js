@@ -43,13 +43,21 @@ function printHtml( html ) {
 	iframe.style.height = '0';
 	iframe.style.border = '0';
 
-	iframe.addEventListener( 'load', function () {
-		iframe.contentWindow.focus();
-		iframe.contentWindow.print();
-	} );
+	// Set srcdoc and the load handler before inserting into the DOM.
+	// Appending an empty iframe fires `load` for about:blank; assigning
+	// srcdoc afterward fires a second `load` — which opened an empty print
+	// dialog before the packing slip was ready.
+	iframe.srcdoc = html;
+	iframe.addEventListener(
+		'load',
+		function () {
+			iframe.contentWindow.focus();
+			iframe.contentWindow.print();
+		},
+		{ once: true }
+	);
 
 	document.body.appendChild( iframe );
-	iframe.srcdoc = html;
 
 	window.setTimeout( function () {
 		if ( iframe.parentNode ) {

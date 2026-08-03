@@ -252,6 +252,65 @@ function initWorkspace() {
 	}
 
 	/**
+	 * Reconciles the workflow-position stepper after a transition — the same
+	 * complete/current/upcoming rules {@see WorkspacePage::build_stepper_steps()}
+	 * uses server-side, driven by each step's `data-mpcf-step-key`.
+	 *
+	 * @param {string|null} state Fulfillment's state after the transition.
+	 */
+	function refreshWorkflowStepper( state ) {
+		var stepper = document.querySelector( '.mpcf-ui-stepper' );
+
+		if ( ! stepper ) {
+			return;
+		}
+
+		var steps = stepper.querySelectorAll( '.mpcf-ui-stepper__step' );
+		var keys = [];
+
+		steps.forEach( function ( step ) {
+			var key = step.getAttribute( 'data-mpcf-step-key' );
+
+			if ( key ) {
+				keys.push( key );
+			}
+		} );
+
+		var currentIndex = state ? keys.indexOf( state ) : -1;
+
+		if ( -1 === currentIndex ) {
+			currentIndex = false;
+		}
+
+		steps.forEach( function ( step, index ) {
+			var stepState;
+
+			if ( false === currentIndex ) {
+				stepState = 'upcoming';
+			} else if ( index < currentIndex ) {
+				stepState = 'complete';
+			} else if ( index === currentIndex ) {
+				stepState = 'current';
+			} else {
+				stepState = 'upcoming';
+			}
+
+			step.classList.remove(
+				'mpcf-ui-stepper__step--complete',
+				'mpcf-ui-stepper__step--current',
+				'mpcf-ui-stepper__step--upcoming'
+			);
+			step.classList.add( 'mpcf-ui-stepper__step--' + stepState );
+
+			if ( 'current' === stepState ) {
+				step.setAttribute( 'aria-current', 'step' );
+			} else {
+				step.removeAttribute( 'aria-current' );
+			}
+		} );
+	}
+
+	/**
 	 * A transition response carries no item data, only `fulfillment` and
 	 * `transitions` — but the checklist's controls (a live stepper while
 	 * picking/packing, read-only otherwise) must become correct for the
@@ -288,7 +347,11 @@ function initWorkspace() {
 				} );
 			} )
 			.then( function ( result ) {
-				return refreshChecklistForState( result.fulfillment ? result.fulfillment.state : null ).then( function () {
+				var state = result.fulfillment ? result.fulfillment.state : null;
+
+				refreshWorkflowStepper( state );
+
+				return refreshChecklistForState( state ).then( function () {
 					if ( result.fulfillment && 'shipped' === result.fulfillment.state ) {
 						offerNextOrder();
 					}
