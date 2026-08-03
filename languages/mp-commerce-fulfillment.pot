@@ -146,7 +146,7 @@ msgid "State:"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:220
-#: src/Admin/WorkspacePage.php:349
+#: src/Admin/WorkspacePage.php:397
 msgid "View order"
 msgstr ""
 
@@ -169,12 +169,12 @@ msgid "Audit trail"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:328
-#: src/Admin/WorkspacePage.php:472
+#: src/Admin/WorkspacePage.php:521
 msgid "System"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:329
-#: src/Admin/WorkspacePage.php:473
+#: src/Admin/WorkspacePage.php:522
 msgid "ago"
 msgstr ""
 
@@ -189,22 +189,22 @@ msgid "Moved from \"%1$s\" to \"%2$s\".%3$s"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:382
-#: src/Admin/WorkspacePage.php:583
+#: src/Admin/WorkspacePage.php:632
 msgid "Notes"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:386
-#: src/Admin/WorkspacePage.php:587
+#: src/Admin/WorkspacePage.php:636
 msgid "pinned"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:390
-#: src/Admin/WorkspacePage.php:591
+#: src/Admin/WorkspacePage.php:640
 msgid "Unknown"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:399
-#: src/Admin/WorkspacePage.php:601
+#: src/Admin/WorkspacePage.php:650
 msgid "Add note"
 msgstr ""
 
@@ -387,90 +387,164 @@ msgstr ""
 msgid "Open a fulfillment from the Queue to start packing."
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:318
+#: src/Admin/WorkspacePage.php:312
+#: src/Admin/WorkspacePage.php:674
+msgid "Keyboard shortcuts"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:332
+msgid "Primary action"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:333
+msgid "Move item focus down / up"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:334
+msgid "Increment focused line"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:335
+msgid "Decrement focused line"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:336
+msgid "Complete focused line"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:337
+msgid "Complete all lines"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:338
+msgid "Toggle collapse-completed"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:339
+msgid "Focus the scan sink"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:340
+msgid "Focus tracking number"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:341
+msgid "Focus package 1 weight"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:342
+msgid "Focus new-note field"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:343
+msgid "Open the Problem dialog"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:344
+#: src/Admin/WorkspacePage.php:510
+msgid "Print packing slip"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:345
+msgid "Previous / next fulfillment in the queue"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:346
+msgid "This shortcut sheet"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:347
+msgid "Close dialog, or return to scan sink"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:366
 msgid "another operator"
 msgstr ""
 
 #. translators: %s: assignee display name
-#: src/Admin/WorkspacePage.php:324
+#: src/Admin/WorkspacePage.php:372
 #, php-format
 msgid "Assigned to %s"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:327
+#: src/Admin/WorkspacePage.php:375
 msgid "You can take over without losing any work already saved."
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:328
+#: src/Admin/WorkspacePage.php:376
 msgid "Take over"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:355
+#: src/Admin/WorkspacePage.php:403
 #: templates/documents/packing-slip.php:49
 msgid "Ship to"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:441
+#: src/Admin/WorkspacePage.php:489
 msgid "Complete all"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:460
+#: src/Admin/WorkspacePage.php:490
+msgid "Collapse completed"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:509
 msgid "Documents"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:461
-msgid "Print packing slip"
-msgstr ""
-
-#: src/Admin/WorkspacePage.php:468
+#: src/Admin/WorkspacePage.php:517
 msgid "Timeline"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:488
+#: src/Admin/WorkspacePage.php:537
 msgid "View full audit trail"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:499
+#: src/Admin/WorkspacePage.php:548
 msgid "Shipment"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:504
+#: src/Admin/WorkspacePage.php:553
 msgid "No shipment yet — enter a carrier or tracking number to create one."
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:521
+#: src/Admin/WorkspacePage.php:570
 msgid "Carrier"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:535
+#: src/Admin/WorkspacePage.php:584
 msgid "Tracking number"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:540
+#: src/Admin/WorkspacePage.php:589
 #: templates/documents/packing-slip.php:79
 msgid "Packages"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:547
+#: src/Admin/WorkspacePage.php:596
 msgid "Add package"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:562
+#: src/Admin/WorkspacePage.php:611
 msgid "g"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:563
-#: src/Admin/WorkspacePage.php:564
-#: src/Admin/WorkspacePage.php:565
+#: src/Admin/WorkspacePage.php:612
+#: src/Admin/WorkspacePage.php:613
+#: src/Admin/WorkspacePage.php:614
 msgid "mm"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:570
+#: src/Admin/WorkspacePage.php:619
 msgid "Colli tracking number"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:599
+#: src/Admin/WorkspacePage.php:648
 msgid "Add a note…"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:675
+msgid "? Shortcuts"
 msgstr ""
 
 #: src/Capabilities.php:103

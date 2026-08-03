@@ -154,6 +154,29 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 		self::assertStringContainsString( 'data-mpcf-primary-action', $html );
 	}
 
+	public function test_render_shows_the_collapse_completed_toggle_while_a_quantity_field_is_active(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$id          = $this->seed();
+		$fulfillment = $this->fulfillments->find( $id );
+		$fulfillment->apply_transition( 'picking', null, new DateTimeImmutable() );
+		$this->fulfillments->save( $fulfillment );
+
+		$html = $this->render_for( $id );
+
+		self::assertStringContainsString( 'data-mpcf-toggle-collapse-completed', $html );
+	}
+
+	public function test_render_includes_the_shortcut_sheet_modal_and_its_trigger(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$html = $this->render_for( $this->seed() );
+
+		self::assertStringContainsString( 'data-mpcf-modal-open="mpcf-shortcut-sheet"', $html );
+		self::assertStringContainsString( 'id="mpcf-shortcut-sheet"', $html );
+		self::assertStringContainsString( 'mpcf-ui-kbd-hints', $html );
+	}
+
 	public function test_render_shows_the_empty_state_without_a_fulfillment_id(): void {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
 

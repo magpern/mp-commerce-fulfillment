@@ -63,19 +63,27 @@ final class Assets {
 	/**
 	 * Enqueues the Packing Workspace's own behavior modules — the vendored
 	 * MPDS ones its markup depends on (toast, action-bar, scan-sink) plus
-	 * this plugin's own bootstrap — and localizes the small config object
-	 * `assets/admin/js/api.js` reads its REST base URL and nonce from.
+	 * this plugin's own bootstrap, checklist and keyboard-shortcut modules
+	 * — and localizes the small config object `assets/admin/js/api.js`
+	 * reads its REST base URL and nonce from. `packing.js`/`shortcuts.js`
+	 * load after `workspace.js` since both read `window.MpcfWorkspace`,
+	 * which `workspace.js` sets on its own `DOMContentLoaded` listener —
+	 * ES modules are deferred and execute in this enqueue order.
 	 */
 	private function enqueue_workspace_assets(): void {
 		wp_enqueue_script( 'mpcf-mpds-toast', MPCF_PLUGIN_URL . 'assets/mpds/js/toast.js', array(), MPCF_VERSION, true );
 		wp_enqueue_script( 'mpcf-mpds-action-bar', MPCF_PLUGIN_URL . 'assets/mpds/js/action-bar.js', array(), MPCF_VERSION, true );
 		wp_enqueue_script( 'mpcf-mpds-scan-sink', MPCF_PLUGIN_URL . 'assets/mpds/js/scan-sink.js', array(), MPCF_VERSION, true );
 		wp_enqueue_script( 'mpcf-workspace', MPCF_PLUGIN_URL . 'assets/admin/js/workspace.js', array(), MPCF_VERSION, true );
+		wp_enqueue_script( 'mpcf-packing', MPCF_PLUGIN_URL . 'assets/admin/js/packing.js', array(), MPCF_VERSION, true );
+		wp_enqueue_script( 'mpcf-shortcuts', MPCF_PLUGIN_URL . 'assets/admin/js/shortcuts.js', array(), MPCF_VERSION, true );
 
 		wp_script_add_data( 'mpcf-mpds-toast', 'type', 'module' );
 		wp_script_add_data( 'mpcf-mpds-action-bar', 'type', 'module' );
 		wp_script_add_data( 'mpcf-mpds-scan-sink', 'type', 'module' );
 		wp_script_add_data( 'mpcf-workspace', 'type', 'module' );
+		wp_script_add_data( 'mpcf-packing', 'type', 'module' );
+		wp_script_add_data( 'mpcf-shortcuts', 'type', 'module' );
 
 		wp_add_inline_script(
 			'mpcf-workspace',

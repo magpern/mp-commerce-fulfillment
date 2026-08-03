@@ -298,6 +298,54 @@ final class WorkspacePage implements Page {
 		echo '</form>';
 
 		echo $this->renderer->toast_region(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+		$this->render_shortcut_sheet();
+	}
+
+	/**
+	 * Renders the `?` shortcut sheet — a modal listing the full keyboard
+	 * map (Architecture Plan §IV.5.3), composed from the existing MPDS
+	 * `modal` + `kbd-hints` components, no new component needed. Static
+	 * content, independent of the fulfillment being viewed.
+	 */
+	private function render_shortcut_sheet(): void {
+		echo $this->renderer->modal_open( 'mpcf-shortcut-sheet', __( 'Keyboard shortcuts', 'mp-commerce-fulfillment' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $this->renderer->kbd_hints_open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+		foreach ( $this->shortcut_map() as $entry ) {
+			echo $this->renderer->kbd_hint( $entry[0], $entry[1] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		}
+
+		echo $this->renderer->kbd_hints_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $this->renderer->modal_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	/**
+	 * The full keyboard map (Architecture Plan §IV.5.3) — the single
+	 * source both this shortcut sheet and `assets/admin/js/shortcuts.js`'s
+	 * key bindings are written against.
+	 *
+	 * @return array<int, array{0: string, 1: string}>
+	 */
+	private function shortcut_map(): array {
+		return array(
+			array( 'Ctrl/Cmd + Enter', __( 'Primary action', 'mp-commerce-fulfillment' ) ),
+			array( 'j / k', __( 'Move item focus down / up', 'mp-commerce-fulfillment' ) ),
+			array( 'Space / Enter', __( 'Increment focused line', 'mp-commerce-fulfillment' ) ),
+			array( 'Shift + Space', __( 'Decrement focused line', 'mp-commerce-fulfillment' ) ),
+			array( 'a', __( 'Complete focused line', 'mp-commerce-fulfillment' ) ),
+			array( 'Shift + A', __( 'Complete all lines', 'mp-commerce-fulfillment' ) ),
+			array( 'c', __( 'Toggle collapse-completed', 'mp-commerce-fulfillment' ) ),
+			array( '/', __( 'Focus the scan sink', 'mp-commerce-fulfillment' ) ),
+			array( 't', __( 'Focus tracking number', 'mp-commerce-fulfillment' ) ),
+			array( 'w', __( 'Focus package 1 weight', 'mp-commerce-fulfillment' ) ),
+			array( 'n', __( 'Focus new-note field', 'mp-commerce-fulfillment' ) ),
+			array( 'p', __( 'Open the Problem dialog', 'mp-commerce-fulfillment' ) ),
+			array( 'Shift + P', __( 'Print packing slip', 'mp-commerce-fulfillment' ) ),
+			array( '[ / ]', __( 'Previous / next fulfillment in the queue', 'mp-commerce-fulfillment' ) ),
+			array( '?', __( 'This shortcut sheet', 'mp-commerce-fulfillment' ) ),
+			array( 'Esc', __( 'Close dialog, or return to scan sink', 'mp-commerce-fulfillment' ) ),
+		);
 	}
 
 	/**
@@ -439,6 +487,7 @@ final class WorkspacePage implements Page {
 
 		if ( null !== $active_field ) {
 			printf( '<button type="button" class="button" data-mpcf-complete-all data-mpcf-field="%s">%s</button>', esc_attr( $active_field ), esc_html__( 'Complete all', 'mp-commerce-fulfillment' ) );
+			printf( '<button type="button" class="button" data-mpcf-toggle-collapse-completed aria-pressed="false">%s</button>', esc_html__( 'Collapse completed', 'mp-commerce-fulfillment' ) );
 		}
 
 		echo $this->renderer->scan_input( 'scan' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -619,6 +668,12 @@ final class WorkspacePage implements Page {
 
 		echo $this->renderer->action_bar_open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->renderer->action_bar_identity( $identity ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+		printf(
+			'<button type="button" class="button-link" data-mpcf-modal-open="mpcf-shortcut-sheet" aria-label="%s">%s</button>',
+			esc_attr__( 'Keyboard shortcuts', 'mp-commerce-fulfillment' ),
+			esc_html__( '? Shortcuts', 'mp-commerce-fulfillment' )
+		);
 
 		echo $this->renderer->action_bar_actions_open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
