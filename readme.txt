@@ -4,7 +4,7 @@ Tags: woocommerce, fulfillment, warehouse, shipping, picking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,14 @@ Performance Order Storage (HPOS).
 3. WooCommerce 8.2+ must be installed and active.
 
 == Changelog ==
+
+= 0.2.1 =
+* Fix: WorkspaceFlags fatal when opening a fulfillment for a customer order
+  (not a guest checkout). The repeat-customer detection called a nonexistent
+  WooCommerce helper function `wc_get_customer_order_ids()`. Replaced with the
+  correct HPOS-compatible `wc_get_orders()` API. Regression tests added to
+  prevent similar issues; detection fails gracefully when a lookup is
+  unavailable.
 
 = 0.1.1 =
 * Fix: an admin-initiated transition (Fulfillment Queue or Fulfillment

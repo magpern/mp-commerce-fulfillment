@@ -83,4 +83,40 @@ trait OrderFactoryTrait {
 
 		return $order;
 	}
+
+	/**
+	 * Creates a paid order attached to a real WordPress user (customer).
+	 * Use this when tests need to exercise cross-order or customer-related
+	 * logic that requires a nonzero customer_id.
+	 *
+	 * @param int $quantity Line item quantity.
+	 * @return WC_Order
+	 */
+	private function create_paid_order_for_customer( int $quantity = 1 ): WC_Order {
+		$user_id = wp_create_user( 'testcustomer' . uniqid(), 'password', array( 'user_email' => 'test' . uniqid() . '@example.com' ) );
+
+		if ( is_wp_error( $user_id ) ) {
+			// User already exists, find it.
+			$user = get_user_by( 'login', 'testcustomer' );
+			if ( ! $user ) {
+				$user_id = wp_create_user( 'testcustomer' . uniqid(), 'password', array( 'user_email' => 'test' . uniqid() . '@example.com' ) );
+			} else {
+				$user_id = $user->ID;
+			}
+		}
+
+		$product = $this->create_product();
+
+		$order = new WC_Order();
+		$order->set_customer_id( $user_id );
+		$order->add_product( $product, $quantity );
+		$order->set_billing_first_name( 'Jane' );
+		$order->set_billing_last_name( 'Doe' );
+		$order->set_status( 'pending' );
+		$order->calculate_totals();
+		$order->save();
+		$order->payment_complete();
+
+		return $order;
+	}
 }

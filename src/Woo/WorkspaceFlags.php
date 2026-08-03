@@ -134,12 +134,24 @@ final class WorkspaceFlags {
 			return false;
 		}
 
-		foreach ( wc_get_customer_order_ids( $customer_id ) as $sibling_order_id ) {
+		$order_ids = wc_get_orders(
+			array(
+				'customer' => $customer_id,
+				'limit'    => -1,
+				'return'   => 'ids',
+			)
+		);
+
+		if ( ! is_array( $order_ids ) || empty( $order_ids ) ) {
+			return false;
+		}
+
+		foreach ( $order_ids as $sibling_order_id ) {
 			if ( $sibling_order_id === $order->get_id() ) {
 				continue;
 			}
 
-			$sibling = $this->fulfillments->find_by_order_id( $sibling_order_id );
+			$sibling = $this->fulfillments->find_by_order_id( (int) $sibling_order_id );
 
 			if ( null !== $sibling && $this->definition->has_state( $sibling->state() ) && $this->definition->state( $sibling->state() )->is_exception() ) {
 				return true;
