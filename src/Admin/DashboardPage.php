@@ -167,12 +167,15 @@ final class DashboardPage implements Page {
 		echo '<ul class="mpcf-dashboard-list">';
 
 		foreach ( $fulfillments as $fulfillment ) {
-			$detail_url = admin_url( 'admin.php?page=' . FulfillmentDetailPage::SLUG . '&fulfillment_id=' . $fulfillment->id() );
-			$age        = human_time_diff( $fulfillment->state_entered_at()->getTimestamp() );
+			// Straight to the Packing Workspace (§IV.5.1's third named
+			// entry point) — a Dashboard row is already "this needs doing
+			// now", so the link goes where doing happens.
+			$workspace_url = admin_url( 'admin.php?page=' . WorkspacePage::SLUG . '&fulfillment_id=' . $fulfillment->id() );
+			$age           = human_time_diff( $fulfillment->state_entered_at()->getTimestamp() );
 
 			printf(
 				'<li><a href="%s">%s</a> — %s (%s)</li>',
-				esc_url( $detail_url ),
+				esc_url( $workspace_url ),
 				esc_html( $fulfillment->order_number_snapshot() ),
 				esc_html( $fulfillment->customer_name_snapshot() ),
 				esc_html( $age )

@@ -469,8 +469,15 @@ final class QueuePage implements Page {
 			array( 'aria-label' => esc_attr__( 'Fulfillments', 'mp-commerce-fulfillment' ) )
 		);
 
+		// The opaque queue cursor (§IV.5.3) `WorkspacePage` reads back to
+		// render its Previous/Next links and to know what "Next order"
+		// means after a ship — this page's own current-page slice, since
+		// that is what `j`/`k` already lets an operator browse without a
+		// second query for the full filtered set across every page.
+		$cursor = implode( ',', array_map( static fn( Fulfillment $fulfillment ): string => (string) $fulfillment->id(), $fulfillments ) );
+
 		foreach ( $fulfillments as $fulfillment ) {
-			$this->render_row( $fulfillment );
+			$this->render_row( $fulfillment, $cursor );
 		}
 
 		if ( array() === $fulfillments ) {
@@ -483,13 +490,25 @@ final class QueuePage implements Page {
 
 		echo $this->renderer->kbd_hints_open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->renderer->kbd_hint( 'j/k', __( 'Navigate', 'mp-commerce-fulfillment' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		echo $this->renderer->kbd_hint( 'Enter', __( 'Open', 'mp-commerce-fulfillment' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $this->renderer->kbd_hint( 'Enter', __( 'Open in Workspace', 'mp-commerce-fulfillment' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->renderer->kbd_hint( '/', __( 'Search', 'mp-commerce-fulfillment' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->renderer->kbd_hints_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		foreach ( $fulfillments as $fulfillment ) {
-			$this->render_drawer( $fulfillment );
+			$this->render_drawer( $fulfillment, $cursor );
 		}
+	}
+
+	/**
+	 * The Packing Workspace URL for one fulfillment, carrying the current
+	 * queue slice forward as the opaque cursor `WorkspacePage` reads back
+	 * (Architecture Plan §IV.5.1/§IV.5.3).
+	 *
+	 * @param int    $fulfillment_id Target fulfillment.
+	 * @param string $cursor         Comma-separated id list for the current queue slice.
+	 */
+	private function workspace_url( int $fulfillment_id, string $cursor ): string {
+		return admin_url( 'admin.php?page=' . WorkspacePage::SLUG . '&fulfillment_id=' . $fulfillment_id . '&cursor=' . rawurlencode( $cursor ) );
 	}
 
 	/**
@@ -524,11 +543,21 @@ final class QueuePage implements Page {
 	}
 
 	/**
-	 * Renders one Queue row.
+	 * Renders one Queue row. The order-number cell is a real anchor
+	 * straight to the Packing Workspace — `data-table-keynav.js`'s `Enter`
+	 * clicks whatever `[data-mpcf-row-open]` marks, and a real `<a href>`
+	 * is what makes that click (and a plain mouse click) navigate directly
+	 * rather than needing a JS-only intermediate step, and what makes
+	 * middle-click/`Ctrl`+click open a second monitor's worth of workspace
+	 * (§IV.5.1/§IV.5.6). The separate preview button next to it still
+	 * opens the row's drawer for a non-committal look without navigating
+	 * away — the drawer is not removed, only no longer the thing `Enter`
+	 * reaches.
 	 *
 	 * @param Fulfillment $fulfillment Row to render.
+	 * @param string      $cursor      The current queue slice, for the workspace link.
 	 */
-	private function render_row( Fulfillment $fulfillment ): void {
+	private function render_row( Fulfillment $fulfillment, string $cursor ): void {
 		$state     = $this->definition->has_state( $fulfillment->state() ) ? $this->definition->state( $fulfillment->state() ) : null;
 		$badge     = null !== $state
 			? $this->renderer->status_badge( $state->label(), $state->badge_variant() )
@@ -537,13 +566,22 @@ final class QueuePage implements Page {
 		$drawer_id = 'mpcf-drawer-' . $fulfillment->id();
 		$age       = human_time_diff( $fulfillment->state_entered_at()->getTimestamp() );
 
+		$identity_cell = sprintf(
+			'<a href="%s" data-mpcf-row-open>%s</a> <button type="button" class="button-link" data-mpcf-drawer-open="%s" aria-label="%s">%s</button>',
+			esc_url( $this->workspace_url( (int) $fulfillment->id(), $cursor ) ),
+			esc_html( $fulfillment->order_number_snapshot() ),
+			esc_attr( $drawer_id ),
+			esc_attr__( 'Preview', 'mp-commerce-fulfillment' ),
+			esc_html__( 'Preview', 'mp-commerce-fulfillment' )
+		);
+
 		echo $this->renderer->data_table_row( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			array(
 				array(
 					'html'     => '<input type="checkbox" name="ids[]" value="' . esc_attr( (string) $fulfillment->id() ) . '">',
 					'checkbox' => true,
 				),
-				array( 'html' => '<button type="button" class="button-link" data-mpcf-drawer-open="' . esc_attr( $drawer_id ) . '" data-mpcf-row-open>' . esc_html( $fulfillment->order_number_snapshot() ) . '</button>' ),
+				array( 'html' => $identity_cell ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built above from esc_url()/esc_html()/esc_attr()-escaped pieces only.
 				array( 'html' => esc_html( $fulfillment->customer_name_snapshot() ) ),
 				array(
 					'html'    => esc_html( (string) $fulfillment->item_count() ),
@@ -562,19 +600,26 @@ final class QueuePage implements Page {
 	}
 
 	/**
-	 * Renders one row's preview drawer.
+	 * Renders one row's preview drawer. Its primary action is the Packing
+	 * Workspace (§IV.5.1's second named entry point) — Fulfillment Detail
+	 * stays reachable as a secondary link for the full audit trail.
 	 *
 	 * @param Fulfillment $fulfillment Fulfillment the drawer previews.
+	 * @param string      $cursor      The current queue slice, for the workspace link.
 	 */
-	private function render_drawer( Fulfillment $fulfillment ): void {
-		$drawer_id  = 'mpcf-drawer-' . $fulfillment->id();
-		$detail_url = admin_url( 'admin.php?page=' . FulfillmentDetailPage::SLUG . '&fulfillment_id=' . $fulfillment->id() );
+	private function render_drawer( Fulfillment $fulfillment, string $cursor ): void {
+		$drawer_id     = 'mpcf-drawer-' . $fulfillment->id();
+		$workspace_url = $this->workspace_url( (int) $fulfillment->id(), $cursor );
+		$detail_url    = admin_url( 'admin.php?page=' . FulfillmentDetailPage::SLUG . '&fulfillment_id=' . $fulfillment->id() );
 
 		echo $this->renderer->drawer_open( $drawer_id, $fulfillment->order_number_snapshot() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		printf( '<p>%s: %s</p>', esc_html__( 'Customer', 'mp-commerce-fulfillment' ), esc_html( $fulfillment->customer_name_snapshot() ) );
 		printf( '<p>%s: %s</p>', esc_html__( 'Items', 'mp-commerce-fulfillment' ), esc_html( (string) $fulfillment->item_count() ) );
 		printf( '<p>%s: %s</p>', esc_html__( 'State', 'mp-commerce-fulfillment' ), esc_html( $fulfillment->state() ) );
-		echo $this->renderer->drawer_footer( '<a class="button button-primary" href="' . esc_url( $detail_url ) . '">' . esc_html__( 'Open Fulfillment Detail', 'mp-commerce-fulfillment' ) . '</a>' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $this->renderer->drawer_footer( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			'<a class="button button-primary" href="' . esc_url( $workspace_url ) . '">' . esc_html__( 'Open in Workspace', 'mp-commerce-fulfillment' ) . '</a>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built entirely from esc_url()/esc_html__() output.
+			. ' <a class="button" href="' . esc_url( $detail_url ) . '">' . esc_html__( 'Fulfillment Detail', 'mp-commerce-fulfillment' ) . '</a>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built entirely from esc_url()/esc_html__() output.
+		);
 	}
 
 	/**

@@ -67,7 +67,7 @@ msgstr ""
 
 #: src/Admin/DashboardPage.php:142
 #: src/Admin/QueuePage.php:408
-#: src/Admin/QueuePage.php:536
+#: src/Admin/QueuePage.php:565
 msgid "Unassigned"
 msgstr ""
 
@@ -79,29 +79,28 @@ msgstr ""
 msgid "All clear"
 msgstr ""
 
-#: src/Admin/DashboardPage.php:184
+#: src/Admin/DashboardPage.php:187
 msgid "See all in Queue"
 msgstr ""
 
-#: src/Admin/DashboardPage.php:193
+#: src/Admin/DashboardPage.php:196
 msgid "Today"
 msgstr ""
 
-#: src/Admin/DashboardPage.php:196
+#: src/Admin/DashboardPage.php:199
 #: src/Admin/QueuePage.php:383
-#: src/Admin/QueuePage.php:486
 msgid "Open"
 msgstr ""
 
-#: src/Admin/DashboardPage.php:197
+#: src/Admin/DashboardPage.php:200
 msgid "In exception"
 msgstr ""
 
-#: src/Admin/DashboardPage.php:198
+#: src/Admin/DashboardPage.php:201
 msgid "Packed today"
 msgstr ""
 
-#: src/Admin/DashboardPage.php:199
+#: src/Admin/DashboardPage.php:202
 msgid "Shipped today"
 msgstr ""
 
@@ -109,6 +108,7 @@ msgstr ""
 #: src/Admin/FulfillmentDetailPage.php:141
 #: src/Admin/FulfillmentDetailPage.php:167
 #: src/Admin/FulfillmentDetailPage.php:180
+#: src/Admin/QueuePage.php:621
 msgid "Fulfillment Detail"
 msgstr ""
 
@@ -272,7 +272,7 @@ msgstr ""
 
 #: src/Admin/QueuePage.php:366
 #: src/Admin/QueuePage.php:464
-#: src/Admin/QueuePage.php:576
+#: src/Admin/QueuePage.php:618
 msgid "State"
 msgstr ""
 
@@ -321,12 +321,12 @@ msgid "Order"
 msgstr ""
 
 #: src/Admin/QueuePage.php:462
-#: src/Admin/QueuePage.php:574
+#: src/Admin/QueuePage.php:616
 msgid "Customer"
 msgstr ""
 
 #: src/Admin/QueuePage.php:463
-#: src/Admin/QueuePage.php:575
+#: src/Admin/QueuePage.php:617
 msgid "Items"
 msgstr ""
 
@@ -334,39 +334,45 @@ msgstr ""
 msgid "Priority"
 msgstr ""
 
-#: src/Admin/QueuePage.php:477
+#: src/Admin/QueuePage.php:484
 msgid "No fulfillments match these filters."
 msgstr ""
 
-#: src/Admin/QueuePage.php:485
+#: src/Admin/QueuePage.php:492
 msgid "Navigate"
 msgstr ""
 
-#: src/Admin/QueuePage.php:487
+#: src/Admin/QueuePage.php:493
+#: src/Admin/QueuePage.php:620
+msgid "Open in Workspace"
+msgstr ""
+
+#: src/Admin/QueuePage.php:494
 msgid "Search"
 msgstr ""
 
-#: src/Admin/QueuePage.php:501
+#: src/Admin/QueuePage.php:520
 msgid "Bulk actions…"
 msgstr ""
 
-#: src/Admin/QueuePage.php:502
+#: src/Admin/QueuePage.php:521
 msgid "Assign to…"
 msgstr ""
 
-#: src/Admin/QueuePage.php:503
+#: src/Admin/QueuePage.php:522
 msgid "Advance to state…"
 msgstr ""
 
-#: src/Admin/QueuePage.php:522
+#: src/Admin/QueuePage.php:541
 msgid "Apply"
 msgstr ""
 
-#: src/Admin/QueuePage.php:577
-msgid "Open Fulfillment Detail"
+#: src/Admin/QueuePage.php:574
+#: src/Admin/QueuePage.php:575
+msgid "Preview"
 msgstr ""
 
-#: src/Admin/QueuePage.php:594
+#: src/Admin/QueuePage.php:639
 msgid "Queue pagination"
 msgstr ""
 

@@ -98,6 +98,36 @@ final class QueuePageTest extends WP_UnitTestCase {
 		return $id;
 	}
 
+	public function test_render_links_each_row_directly_to_the_workspace_carrying_the_queue_cursor(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$id = $this->seed( 1001 );
+
+		ob_start();
+		$this->page->render();
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'data-mpcf-row-open', $html );
+		self::assertStringContainsString( 'page=mpcf-workspace', $html );
+		self::assertStringContainsString( 'fulfillment_id=' . $id, $html );
+		self::assertStringContainsString( 'cursor=' . $id, $html );
+		self::assertStringContainsString( 'data-mpcf-drawer-open', $html );
+	}
+
+	public function test_render_drawer_offers_the_workspace_as_primary_and_detail_as_secondary(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$this->seed( 1002 );
+
+		ob_start();
+		$this->page->render();
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Open in Workspace', $html );
+		self::assertStringContainsString( 'Fulfillment Detail', $html );
+		self::assertStringContainsString( 'page=mpcf-fulfillment-detail', $html );
+	}
+
 	public function test_bulk_assign_succeeds_for_valid_rows(): void {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
 
