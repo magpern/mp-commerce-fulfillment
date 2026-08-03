@@ -87,7 +87,7 @@ final class RefundObserverTest extends WP_UnitTestCase {
 			new EventDispatcher(),
 			new SystemClock(),
 			array( StandardWorkflow::NAME => StandardWorkflow::definition() ),
-			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository() )
+			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository(), new Settings( array() ) )
 		);
 
 		( new RefundObserver( $this->fulfillments, $this->items, new WooOrderSource(), $service, $settings ) )->register();
@@ -106,7 +106,7 @@ final class RefundObserverTest extends WP_UnitTestCase {
 			new EventDispatcher(),
 			new SystemClock(),
 			array( StandardWorkflow::NAME => StandardWorkflow::definition() ),
-			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository() )
+			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository(), new Settings( array() ) )
 		);
 
 		$service->transition( $fulfillment_id, 'picking', Actor::system() );

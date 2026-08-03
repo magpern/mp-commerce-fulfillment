@@ -22,6 +22,7 @@ use MPCF\Domain\Shipping\PackageSpec;
 use MPCF\Domain\Shipping\Shipment;
 use MPCF\Domain\Workflow\StandardWorkflow;
 use MPCF\Engine\GuardRegistry;
+use MPCF\Settings;
 use MPCF\Engine\WorkflowEngine;
 use MPCF\Tests\Unit\Application\Doubles\FixedClock;
 use MPCF\Tests\Unit\Application\Doubles\InMemoryEventRepository;
@@ -93,7 +94,7 @@ final class WorkflowServiceTest extends TestCase {
 			$this->dispatcher,
 			$this->clock,
 			array( StandardWorkflow::NAME => StandardWorkflow::definition() ),
-			new TransitionContextFactory( $this->items, $this->shipments, $this->packages )
+			new TransitionContextFactory( $this->items, $this->shipments, $this->packages, new Settings( array() ) )
 		);
 	}
 
@@ -197,7 +198,7 @@ final class WorkflowServiceTest extends TestCase {
 			$this->dispatcher,
 			$this->clock,
 			array(), // No workflows registered.
-			new TransitionContextFactory( $this->items, $this->shipments, $this->packages )
+			new TransitionContextFactory( $this->items, $this->shipments, $this->packages, new Settings( array() ) )
 		);
 
 		$id      = $this->seed_fulfillment();
@@ -313,7 +314,7 @@ final class WorkflowServiceTest extends TestCase {
 			$this->dispatcher,
 			$this->clock,
 			array( StandardWorkflow::NAME => StandardWorkflow::definition() ),
-			new TransitionContextFactory( $this->items, $this->shipments, $this->packages )
+			new TransitionContextFactory( $this->items, $this->shipments, $this->packages, new Settings( array() ) )
 		);
 
 		$outcome = $service->transition( $id, 'picking', Actor::system() );

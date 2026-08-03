@@ -84,7 +84,7 @@ final class StatusBridgeTest extends WP_UnitTestCase {
 			$dispatcher,
 			new SystemClock(),
 			array( StandardWorkflow::NAME => StandardWorkflow::definition() ),
-			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository() )
+			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository(), new Settings( array() ) )
 		);
 	}
 

@@ -29,13 +29,16 @@ final class Settings {
 	 * Shape version of the settings array (not the database schema version —
 	 * that is `Infrastructure\Database\Migrator::TARGET`, deliberately in its
 	 * own option so a settings reset can never be mistaken for a schema
-	 * reset). Milestone 1 raises this to 3: 2 added the bridge-behavior
-	 * keys, 3 adds `operator_mode_enabled` (D18). Each bump is purely
-	 * informational (`sanitize()` always rebuilds the canonical shape from
-	 * `defaults()`, so there is no destructive migration step to write for
-	 * a purely additive change like either one).
+	 * reset). Milestone 1 raised this to 3: 2 added the bridge-behavior
+	 * keys, 3 added `operator_mode_enabled` (D18). Milestone 2 raises it to
+	 * 4: `auto_advance_after_ship`, `default_carrier_id` and
+	 * `require_tracking_before_ship` (Architecture Plan §IV.5.3/§IV.6/F21).
+	 * Each bump is purely informational (`sanitize()` always rebuilds the
+	 * canonical shape from `defaults()`, so there is no destructive
+	 * migration step to write for a purely additive change like any of
+	 * these).
 	 */
-	public const SCHEMA_VERSION = 3;
+	public const SCHEMA_VERSION = 4;
 
 	/**
 	 * Inbound cancel/refund behavior: move the fulfillment straight to
@@ -78,14 +81,14 @@ final class Settings {
 	 */
 	public static function defaults(): array {
 		return array(
-			'schema_version'           => self::SCHEMA_VERSION,
+			'schema_version'               => self::SCHEMA_VERSION,
 
 			/*
 			 * Data retention on uninstall. Default off: fulfillment history
 			 * is warehouse evidence, deleting it must be a deliberate act
 			 * (invariant I12).
 			 */
-			'remove_data_on_uninstall' => false,
+			'remove_data_on_uninstall'     => false,
 
 			/*
 			 * Outbound bridge (Architecture Plan §6.6, open decision P2):
@@ -93,7 +96,7 @@ final class Settings {
 			 * `completed`. Default on, prominently configurable, off means
 			 * the bridge never touches WC order status.
 			 */
-			'outbound_bridge_enabled'  => true,
+			'outbound_bridge_enabled'      => true,
 
 			/*
 			 * Inbound bridge, per §6.6: default automatic for cancellation
@@ -103,8 +106,8 @@ final class Settings {
 			 * is the case that most often needs a human look, cancelling
 			 * before it has isn't.
 			 */
-			'inbound_cancel_behavior'  => self::BRIDGE_BEHAVIOR_CANCEL,
-			'inbound_refund_behavior'  => self::BRIDGE_BEHAVIOR_FLAG,
+			'inbound_cancel_behavior'      => self::BRIDGE_BEHAVIOR_CANCEL,
+			'inbound_refund_behavior'      => self::BRIDGE_BEHAVIOR_FLAG,
 
 			/*
 			 * Operator Mode (D18, Architecture Plan Sec9.1): default off.
@@ -112,7 +115,34 @@ final class Settings {
 			 * (Admin\OperatorMode) — administrators always keep full chrome
 			 * regardless of this setting.
 			 */
-			'operator_mode_enabled'    => false,
+			'operator_mode_enabled'        => false,
+
+			/*
+			 * Packing Workspace, Architecture Plan §IV.5.3/F21. Default off:
+			 * auto-advancing to the next queued fulfillment after a ship is
+			 * a surprise the operator did not ask for (P0 principle 6 — "no
+			 * surprise" is the default, reserved for the exception band).
+			 */
+			'auto_advance_after_ship'      => false,
+
+			/*
+			 * Pre-selects a carrier in the workspace's shipment panel
+			 * (§IV.6) so a single-carrier merchant never has to pick one
+			 * per pack. `''` means no default — any string is otherwise a
+			 * valid carrier id (`Domain\CarrierRegistry`'s own contract),
+			 * so this is not validated against the bundled set.
+			 */
+			'default_carrier_id'           => '',
+
+			/*
+			 * Blocks `packed -> shipped` when no tracking number has been
+			 * recorded (`Engine\Guard\HasTrackingGuard`, wired ahead of
+			 * this setting since Phase C). Default off: not every merchant
+			 * tracks every shipment, and the guard should not reject a
+			 * legitimate `packed -> shipped` for a store that never asked
+			 * for tracking numbers in the first place.
+			 */
+			'require_tracking_before_ship' => false,
 		);
 	}
 
@@ -127,11 +157,14 @@ final class Settings {
 		$raw = is_array( $raw ) ? $raw : array();
 		$out = self::defaults();
 
-		$out['remove_data_on_uninstall'] = ! empty( $raw['remove_data_on_uninstall'] );
-		$out['outbound_bridge_enabled']  = ! isset( $raw['outbound_bridge_enabled'] ) || ! empty( $raw['outbound_bridge_enabled'] );
-		$out['inbound_cancel_behavior']  = self::sanitize_behavior( $raw['inbound_cancel_behavior'] ?? null, self::BRIDGE_BEHAVIOR_CANCEL );
-		$out['inbound_refund_behavior']  = self::sanitize_behavior( $raw['inbound_refund_behavior'] ?? null, self::BRIDGE_BEHAVIOR_FLAG );
-		$out['operator_mode_enabled']    = ! empty( $raw['operator_mode_enabled'] );
+		$out['remove_data_on_uninstall']     = ! empty( $raw['remove_data_on_uninstall'] );
+		$out['outbound_bridge_enabled']      = ! isset( $raw['outbound_bridge_enabled'] ) || ! empty( $raw['outbound_bridge_enabled'] );
+		$out['inbound_cancel_behavior']      = self::sanitize_behavior( $raw['inbound_cancel_behavior'] ?? null, self::BRIDGE_BEHAVIOR_CANCEL );
+		$out['inbound_refund_behavior']      = self::sanitize_behavior( $raw['inbound_refund_behavior'] ?? null, self::BRIDGE_BEHAVIOR_FLAG );
+		$out['operator_mode_enabled']        = ! empty( $raw['operator_mode_enabled'] );
+		$out['auto_advance_after_ship']      = ! empty( $raw['auto_advance_after_ship'] );
+		$out['default_carrier_id']           = isset( $raw['default_carrier_id'] ) ? (string) $raw['default_carrier_id'] : '';
+		$out['require_tracking_before_ship'] = ! empty( $raw['require_tracking_before_ship'] );
 
 		return $out;
 	}
@@ -201,6 +234,31 @@ final class Settings {
 	 */
 	public function operator_mode_enabled(): bool {
 		return (bool) $this->get()['operator_mode_enabled'];
+	}
+
+	/**
+	 * Whether the workspace should offer to auto-advance to the next
+	 * fulfillment in the queue slice after a successful ship, rather than
+	 * only offering it via the "Next order" toast action.
+	 */
+	public function auto_advance_after_ship(): bool {
+		return (bool) $this->get()['auto_advance_after_ship'];
+	}
+
+	/**
+	 * The carrier id pre-selected in the workspace's shipment panel, or
+	 * `''` for no default.
+	 */
+	public function default_carrier_id(): string {
+		return (string) $this->get()['default_carrier_id'];
+	}
+
+	/**
+	 * Whether `Engine\Guard\HasTrackingGuard` blocks `packed -> shipped`
+	 * for a fulfillment with no recorded tracking number.
+	 */
+	public function require_tracking_before_ship(): bool {
+		return (bool) $this->get()['require_tracking_before_ship'];
 	}
 
 	/**

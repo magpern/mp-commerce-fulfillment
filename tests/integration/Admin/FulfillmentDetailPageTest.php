@@ -31,6 +31,7 @@ use MPCF\Infrastructure\Database\WpdbNoteRepository;
 use MPCF\Infrastructure\Database\WpdbPackageRepository;
 use MPCF\Infrastructure\Database\WpdbShipmentRepository;
 use MPCF\Infrastructure\SystemClock;
+use MPCF\Settings;
 use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
 use MPCF\Vendor\Mpds\ComponentRenderer;
 use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
@@ -83,7 +84,7 @@ final class FulfillmentDetailPageTest extends WP_UnitTestCase {
 			new EventDispatcher(),
 			new SystemClock(),
 			array( StandardWorkflow::NAME => $definition ),
-			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository() )
+			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository(), new Settings( array() ) )
 		);
 
 		return new FulfillmentDetailPage(

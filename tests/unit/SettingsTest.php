@@ -113,6 +113,67 @@ final class SettingsTest extends TestCase {
 		self::assertTrue( $settings->operator_mode_enabled() );
 	}
 
+	public function test_defaults_keep_the_workspace_keys_off(): void {
+		$defaults = Settings::defaults();
+
+		self::assertFalse( $defaults['auto_advance_after_ship'] );
+		self::assertSame( '', $defaults['default_carrier_id'] );
+		self::assertFalse( $defaults['require_tracking_before_ship'] );
+		self::assertSame( 4, Settings::SCHEMA_VERSION );
+	}
+
+	public function test_sanitize_coerces_auto_advance_after_ship_truthy_and_falsy_values(): void {
+		self::assertTrue( Settings::sanitize( array( 'auto_advance_after_ship' => '1' ) )['auto_advance_after_ship'] );
+		self::assertTrue( Settings::sanitize( array( 'auto_advance_after_ship' => true ) )['auto_advance_after_ship'] );
+		self::assertFalse( Settings::sanitize( array( 'auto_advance_after_ship' => 0 ) )['auto_advance_after_ship'] );
+		self::assertFalse( Settings::sanitize( array() )['auto_advance_after_ship'] );
+	}
+
+	public function test_sanitize_coerces_require_tracking_before_ship_truthy_and_falsy_values(): void {
+		self::assertTrue( Settings::sanitize( array( 'require_tracking_before_ship' => '1' ) )['require_tracking_before_ship'] );
+		self::assertTrue( Settings::sanitize( array( 'require_tracking_before_ship' => true ) )['require_tracking_before_ship'] );
+		self::assertFalse( Settings::sanitize( array( 'require_tracking_before_ship' => 0 ) )['require_tracking_before_ship'] );
+		self::assertFalse( Settings::sanitize( array() )['require_tracking_before_ship'] );
+	}
+
+	public function test_sanitize_coerces_default_carrier_id_to_a_string_with_no_whitelist(): void {
+		// Any string is a valid carrier id (Domain\CarrierRegistry's own
+		// contract) — Settings has no dependency on CarrierRegistry and
+		// must not validate against it (purity, see class docblock).
+		self::assertSame( 'dhl', Settings::sanitize( array( 'default_carrier_id' => 'dhl' ) )['default_carrier_id'] );
+		self::assertSame( 'not-a-bundled-carrier', Settings::sanitize( array( 'default_carrier_id' => 'not-a-bundled-carrier' ) )['default_carrier_id'] );
+		self::assertSame( '', Settings::sanitize( array() )['default_carrier_id'] );
+	}
+
+	public function test_accessors_read_the_workspace_settings(): void {
+		$settings = new Settings(
+			array(
+				'auto_advance_after_ship'      => true,
+				'default_carrier_id'           => 'postnord',
+				'require_tracking_before_ship' => true,
+			)
+		);
+
+		self::assertTrue( $settings->auto_advance_after_ship() );
+		self::assertSame( 'postnord', $settings->default_carrier_id() );
+		self::assertTrue( $settings->require_tracking_before_ship() );
+	}
+
+	public function test_sanitize_upgrades_a_pre_workspace_settings_array_while_preserving_its_own_values(): void {
+		$legacy = array(
+			'schema_version'        => 3,
+			'operator_mode_enabled' => true,
+		);
+
+		$sanitized = Settings::sanitize( $legacy );
+
+		self::assertSame( Settings::SCHEMA_VERSION, $sanitized['schema_version'] );
+		self::assertTrue( $sanitized['operator_mode_enabled'], 'A pre-existing explicit choice must survive the upgrade.' );
+		self::assertFalse( $sanitized['auto_advance_after_ship'] );
+		self::assertSame( '', $sanitized['default_carrier_id'] );
+		self::assertFalse( $sanitized['require_tracking_before_ship'] );
+	}
+
 	public function test_sanitize_coerces_invalid_input_instead_of_throwing(): void {
 		$sanitized = Settings::sanitize( 'not an array' );
 

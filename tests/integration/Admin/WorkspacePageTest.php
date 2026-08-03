@@ -38,6 +38,7 @@ use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
 use MPCF\Tests\Integration\Woo\OrderFactoryTrait;
 use MPCF\Vendor\Mpds\ComponentRenderer;
 use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
+use MPCF\Settings;
 use MPCF\Vendor\Mpds\PageShell\SectionNavigation;
 use MPCF\Woo\StoreUnits;
 use MPCF\Woo\WooOrderSource;
@@ -96,7 +97,7 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 			$dispatcher,
 			$clock,
 			array( StandardWorkflow::NAME => $definition ),
-			new TransitionContextFactory( $this->items, $shipments, $packages )
+			new TransitionContextFactory( $this->items, $shipments, $packages, new Settings( array() ) )
 		);
 
 		$shipping = new ShippingService(

@@ -14,6 +14,7 @@ use MPCF\Domain\Repository\PackageRepository;
 use MPCF\Domain\Repository\ShipmentRepository;
 use MPCF\Domain\Shipping\Shipment;
 use MPCF\Engine\TransitionContext;
+use MPCF\Settings;
 
 /**
  * Architecture Plan §IV.3.B, resolving findings B/C/D: `package_spec_present`
@@ -25,14 +26,15 @@ use MPCF\Engine\TransitionContext;
  * nowhere else builds a {@see TransitionContext} from real data.
  *
  * `photo_requirement_satisfied` stays hardcoded `true`: no photo capture
- * model exists until Milestone 5. `tracking_requirement_satisfied` stays
- * hardcoded `true` too, for the same reason `photo_requirement_satisfied`
- * did through Milestone 1-4 — the `require_tracking_before_ship` setting
- * this flag will reflect does not exist until this milestone's Phase F
- * (F21); until then {@see \MPCF\Engine\Guard\HasTrackingGuard} is a
- * standing no-op, wired in ahead of the setting it depends on rather than
- * added alongside it, on the same precedent {@see \MPCF\Engine\Guard\PhotoRequiredGuard}
- * already set.
+ * model exists until Milestone 5. `tracking_requirement_satisfied` now
+ * reflects the `require_tracking_before_ship` setting (F21) — satisfied
+ * whenever that setting is off, or whenever any of the fulfillment's
+ * shipments has a recorded tracking number when it is on. Injecting
+ * {@see Settings} here does not reintroduce a platform-integration
+ * dependency into this layer (invariant I6): `Settings` alone owns the
+ * underlying options read/write, and this file never touches that
+ * directly — it only reads one already-sanitized boolean off it, the
+ * same way it reads booleans off repository results.
  */
 final class TransitionContextFactory {
 
@@ -58,16 +60,25 @@ final class TransitionContextFactory {
 	private PackageRepository $packages;
 
 	/**
+	 * Plugin settings, for `require_tracking_before_ship`.
+	 *
+	 * @var Settings
+	 */
+	private Settings $settings;
+
+	/**
 	 * Builds the factory.
 	 *
 	 * @param FulfillmentItemRepository $items     Line item persistence.
 	 * @param ShipmentRepository        $shipments Shipment persistence.
 	 * @param PackageRepository         $packages  Package persistence.
+	 * @param Settings                  $settings  Plugin settings, for `require_tracking_before_ship`.
 	 */
-	public function __construct( FulfillmentItemRepository $items, ShipmentRepository $shipments, PackageRepository $packages ) {
+	public function __construct( FulfillmentItemRepository $items, ShipmentRepository $shipments, PackageRepository $packages, Settings $settings ) {
 		$this->items     = $items;
 		$this->shipments = $shipments;
 		$this->packages  = $packages;
+		$this->settings  = $settings;
 	}
 
 	/**
@@ -83,7 +94,7 @@ final class TransitionContextFactory {
 			$this->any_package_has_a_spec( $shipments ),
 			array() !== $shipments,
 			true,
-			true
+			! $this->settings->require_tracking_before_ship() || array() === $shipments || $this->any_shipment_has_tracking( $shipments )
 		);
 	}
 
@@ -101,6 +112,23 @@ final class TransitionContextFactory {
 				if ( $package->spec()->is_present() ) {
 					return true;
 				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Whether any of a fulfillment's shipments has a recorded tracking
+	 * number — the real data source for `tracking_requirement_satisfied`
+	 * when `require_tracking_before_ship` is on.
+	 *
+	 * @param array<int, Shipment> $shipments Shipments to check.
+	 */
+	private function any_shipment_has_tracking( array $shipments ): bool {
+		foreach ( $shipments as $shipment ) {
+			if ( $shipment->has_tracking() ) {
+				return true;
 			}
 		}
 

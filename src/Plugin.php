@@ -169,7 +169,7 @@ final class Plugin {
 			$dispatcher,
 			$clock,
 			array( StandardWorkflow::NAME => $definition ),
-			new TransitionContextFactory( $items, $shipments, $packages )
+			new TransitionContextFactory( $items, $shipments, $packages, $settings )
 		);
 
 		$this->wire_services( $fulfillments, $items, $events, $shipments, $packages, $dispatcher, $clock, $settings, $definition, $workflow_service );

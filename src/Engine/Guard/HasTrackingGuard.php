@@ -15,12 +15,13 @@ use MPCF\Engine\TransitionGuard;
 
 /**
  * Blocks `packed -> shipped` when the `require_tracking_before_ship`
- * setting is on and no tracking number has been recorded. That setting
- * ships in Milestone 2's Phase F (Architecture Plan §IV.15/F21); until
- * then this guard's condition is pre-resolved by the caller into
- * `TransitionContext::tracking_requirement_satisfied()` as always
- * satisfied — the same standing-no-op shape {@see PhotoRequiredGuard} had
- * through Milestone 1, before the setting it depends on existed.
+ * setting (Architecture Plan §IV.15/F21) is on and no tracking number has
+ * been recorded. This guard never reads the setting itself — Engine stays
+ * WordPress-free (I6) — its condition is pre-resolved by
+ * {@see \MPCF\Application\TransitionContextFactory} into
+ * `TransitionContext::tracking_requirement_satisfied()`, satisfied
+ * whenever the setting is off or any shipment already has a tracking
+ * number.
  */
 final class HasTrackingGuard implements TransitionGuard {
 

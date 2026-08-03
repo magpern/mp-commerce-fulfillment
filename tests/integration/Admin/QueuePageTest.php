@@ -31,6 +31,7 @@ use MPCF\Infrastructure\Database\WpdbPackageRepository;
 use MPCF\Infrastructure\Database\WpdbSearchQuery;
 use MPCF\Infrastructure\Database\WpdbShipmentRepository;
 use MPCF\Infrastructure\SystemClock;
+use MPCF\Settings;
 use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
 use WP_UnitTestCase;
 
@@ -70,7 +71,7 @@ final class QueuePageTest extends WP_UnitTestCase {
 			new EventDispatcher(),
 			new SystemClock(),
 			array( StandardWorkflow::NAME => $definition ),
-			new TransitionContextFactory( $items, new WpdbShipmentRepository(), new WpdbPackageRepository() )
+			new TransitionContextFactory( $items, new WpdbShipmentRepository(), new WpdbPackageRepository(), new Settings( array() ) )
 		);
 
 		$this->page = new QueuePage(

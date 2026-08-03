@@ -25,6 +25,7 @@ use MPCF\Infrastructure\Database\WpdbPackageRepository;
 use MPCF\Infrastructure\Database\WpdbShipmentRepository;
 use MPCF\Infrastructure\SystemClock;
 use MPCF\Plugin;
+use MPCF\Settings;
 use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
 use MPCF\Tests\Integration\Woo\OrderFactoryTrait;
 use ReflectionClass;
@@ -285,7 +286,7 @@ final class FulfillmentsControllerTest extends WP_UnitTestCase {
 			new EventDispatcher(),
 			new SystemClock(),
 			array( StandardWorkflow::NAME => StandardWorkflow::definition() ),
-			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository() )
+			new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository(), new Settings( array() ) )
 		);
 		$workflow_service->transition( $direct_id, 'picking', Actor::user( get_current_user_id(), 'Operator' ) );
 
