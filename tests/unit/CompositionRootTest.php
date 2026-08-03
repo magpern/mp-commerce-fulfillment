@@ -149,6 +149,7 @@ final class CompositionRootTest extends TestCase {
 			'Assets',
 			'OperatorMode',
 			'WorkspaceFlags',
+			'StoreUnits',
 		);
 		$disallowed = array_values( array_diff( $matches[1], $allowed ) );
 

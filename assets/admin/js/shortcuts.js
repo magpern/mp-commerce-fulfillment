@@ -206,7 +206,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 
 			case 'w':
 				event.preventDefault();
-				focusField( '[data-mpcf-package-id]' );
+				focusField( '[data-mpcf-package-field="weight_grams"]' );
 				break;
 
 			case 'n':

@@ -76,6 +76,7 @@ final class Assets {
 		wp_enqueue_script( 'mpcf-mpds-scan-sink', MPCF_PLUGIN_URL . 'assets/mpds/js/scan-sink.js', array(), MPCF_VERSION, true );
 		wp_enqueue_script( 'mpcf-workspace', MPCF_PLUGIN_URL . 'assets/admin/js/workspace.js', array(), MPCF_VERSION, true );
 		wp_enqueue_script( 'mpcf-packing', MPCF_PLUGIN_URL . 'assets/admin/js/packing.js', array(), MPCF_VERSION, true );
+		wp_enqueue_script( 'mpcf-shipment', MPCF_PLUGIN_URL . 'assets/admin/js/shipment.js', array(), MPCF_VERSION, true );
 		wp_enqueue_script( 'mpcf-shortcuts', MPCF_PLUGIN_URL . 'assets/admin/js/shortcuts.js', array(), MPCF_VERSION, true );
 
 		wp_script_add_data( 'mpcf-mpds-toast', 'type', 'module' );
@@ -83,6 +84,7 @@ final class Assets {
 		wp_script_add_data( 'mpcf-mpds-scan-sink', 'type', 'module' );
 		wp_script_add_data( 'mpcf-workspace', 'type', 'module' );
 		wp_script_add_data( 'mpcf-packing', 'type', 'module' );
+		wp_script_add_data( 'mpcf-shipment', 'type', 'module' );
 		wp_script_add_data( 'mpcf-shortcuts', 'type', 'module' );
 
 		wp_add_inline_script(

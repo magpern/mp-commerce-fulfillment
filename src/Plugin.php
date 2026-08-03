@@ -63,6 +63,7 @@ use MPCF\Vendor\Mpds\PageShell\SectionNavigation;
 use MPCF\Woo\IntakeHooks;
 use MPCF\Woo\RefundObserver;
 use MPCF\Woo\StatusBridge;
+use MPCF\Woo\StoreUnits;
 use MPCF\Woo\WooOrderSource;
 use MPCF\Woo\WorkspaceFlags;
 
@@ -373,7 +374,8 @@ final class Plugin {
 			$carriers,
 			$assignments,
 			new WooOrderSource(),
-			$definition
+			$definition,
+			new StoreUnits()
 		);
 
 		( new Menu(

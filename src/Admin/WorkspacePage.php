@@ -28,6 +28,7 @@ use MPCF\Domain\Workflow\WorkflowDefinition;
 use MPCF\Vendor\Mpds\ComponentRenderer;
 use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
 use MPCF\Vendor\Mpds\PageShell\Page;
+use MPCF\Woo\StoreUnits;
 use WP_User;
 
 /**
@@ -132,6 +133,13 @@ final class WorkspacePage implements Page {
 	private WorkflowDefinition $definition;
 
 	/**
+	 * The store's configured weight/dimension display units (§IV.6).
+	 *
+	 * @var StoreUnits
+	 */
+	private StoreUnits $units;
+
+	/**
 	 * Builds the page.
 	 *
 	 * @param AdminPageShell           $shell       Page-shell chrome renderer.
@@ -144,6 +152,7 @@ final class WorkspacePage implements Page {
 	 * @param AssignmentService        $assignments The soft-claim mechanism.
 	 * @param OrderSource              $orders      A live read of the owning order, for its ship-to address.
 	 * @param WorkflowDefinition       $definition  The governing workflow.
+	 * @param StoreUnits               $units       The store's configured weight/dimension display units.
 	 */
 	public function __construct(
 		AdminPageShell $shell,
@@ -155,7 +164,8 @@ final class WorkspacePage implements Page {
 		CarrierRegistry $carriers,
 		AssignmentService $assignments,
 		OrderSource $orders,
-		WorkflowDefinition $definition
+		WorkflowDefinition $definition,
+		StoreUnits $units
 	) {
 		$this->shell       = $shell;
 		$this->renderer    = $renderer;
@@ -167,6 +177,7 @@ final class WorkspacePage implements Page {
 		$this->assignments = $assignments;
 		$this->orders      = $orders;
 		$this->definition  = $definition;
+		$this->units       = $units;
 	}
 
 	/**
@@ -550,7 +561,8 @@ final class WorkspacePage implements Page {
 		$rows = $this->shipping->list_for_fulfillment( (int) $fulfillment->id() );
 
 		if ( array() === $rows ) {
-			echo '<p class="description">' . esc_html__( 'No shipment yet — enter a carrier or tracking number to create one.', 'mp-commerce-fulfillment' ) . '</p>';
+			$this->render_new_shipment_card();
+			return;
 		}
 
 		foreach ( $rows as $row ) {
@@ -559,16 +571,68 @@ final class WorkspacePage implements Page {
 	}
 
 	/**
-	 * Renders one shipment card.
+	 * Renders the "no shipment yet" card: bare carrier-select and
+	 * tracking-number fields with no shipment id behind them yet. Per
+	 * Architecture Plan §IV.5.8 step 6, the operator's first edit to
+	 * either field is what creates the shipment (and its package 1) —
+	 * `shipment.js` does that, then swaps `data-mpcf-shipment-id="0"` for
+	 * the real id so every later edit on this card goes straight to
+	 * `PATCH /shipments/{id}`.
+	 */
+	private function render_new_shipment_card(): void {
+		echo '<div class="mpcf-workspace__shipment" data-mpcf-shipment-id="0">';
+		echo '<p class="description">' . esc_html__( 'Enter a carrier or tracking number to create a shipment.', 'mp-commerce-fulfillment' ) . '</p>';
+
+		echo '<label>' . esc_html__( 'Carrier', 'mp-commerce-fulfillment' ) . '</label>';
+		echo '<select data-mpcf-carrier-select>';
+		printf( '<option value="">%s</option>', esc_html__( '— Select —', 'mp-commerce-fulfillment' ) );
+		foreach ( $this->carriers->all() as $carrier ) {
+			printf( '<option value="%s">%s</option>', esc_attr( $carrier['id'] ), esc_html( $carrier['label'] ) );
+		}
+		echo '</select>';
+
+		printf(
+			'<label>%s</label><input type="text" placeholder="%s" data-mpcf-tracking-number>',
+			esc_html__( 'Tracking number', 'mp-commerce-fulfillment' ),
+			esc_attr__( 'Tracking number', 'mp-commerce-fulfillment' )
+		);
+
+		echo '<h4>' . esc_html__( 'Packages', 'mp-commerce-fulfillment' ) . '</h4>';
+		printf(
+			'<div data-mpcf-package-repeater data-mpcf-shipment-id="0" data-mpcf-grams-per-unit="%s" data-mpcf-mm-per-unit="%s" data-mpcf-weight-unit-label="%s" data-mpcf-dimension-unit-label="%s">',
+			esc_attr( (string) $this->units->grams_per_display_unit() ),
+			esc_attr( (string) $this->units->mm_per_display_unit() ),
+			esc_attr( $this->units->weight_unit_label() ),
+			esc_attr( $this->units->dimension_unit_label() )
+		);
+		echo $this->renderer->repeater_open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $this->renderer->repeater_add_button( __( 'Add package', 'mp-commerce-fulfillment' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $this->renderer->repeater_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '</div>';
+
+		echo '</div>';
+	}
+
+	/**
+	 * Renders one shipment card. `data-mpcf-shipment-service` round-trips
+	 * the shipment's `service` value — there is no visible field for it in
+	 * M2, but `PATCH /shipments/{id}` has no partial-update semantics for
+	 * `carrier_id`/`service` (an omitted field is submitted as `''` by the
+	 * route's own arg defaults), so `shipment.js` must resend the current
+	 * value on every edit or silently blank it.
 	 *
 	 * @param Shipment            $shipment Shipment to render.
 	 * @param array<int, Package> $packages Its packages.
 	 */
 	private function render_shipment_card( Shipment $shipment, array $packages ): void {
-		printf( '<div class="mpcf-workspace__shipment" data-mpcf-shipment-id="%d">', (int) $shipment->id() );
+		printf(
+			'<div class="mpcf-workspace__shipment" data-mpcf-shipment-id="%d" data-mpcf-shipment-service="%s">',
+			(int) $shipment->id(),
+			esc_attr( $shipment->service() )
+		);
 
 		echo '<label>' . esc_html__( 'Carrier', 'mp-commerce-fulfillment' ) . '</label>';
-		echo '<select name="shipment[' . (int) $shipment->id() . '][carrier_id]" data-mpcf-carrier-select>';
+		echo '<select data-mpcf-carrier-select>';
 		foreach ( $this->carriers->all() as $carrier ) {
 			printf(
 				'<option value="%s"%s>%s</option>',
@@ -580,13 +644,20 @@ final class WorkspacePage implements Page {
 		echo '</select>';
 
 		printf(
-			'<label>%s</label><input type="text" name="shipment[%d][tracking_number]" value="%s" data-mpcf-tracking-number>',
+			'<label>%s</label><input type="text" value="%s" data-mpcf-tracking-number>',
 			esc_html__( 'Tracking number', 'mp-commerce-fulfillment' ),
-			(int) $shipment->id(),
 			esc_attr( (string) $shipment->tracking()->number() )
 		);
 
 		echo '<h4>' . esc_html__( 'Packages', 'mp-commerce-fulfillment' ) . '</h4>';
+		printf(
+			'<div data-mpcf-package-repeater data-mpcf-shipment-id="%d" data-mpcf-grams-per-unit="%s" data-mpcf-mm-per-unit="%s" data-mpcf-weight-unit-label="%s" data-mpcf-dimension-unit-label="%s">',
+			(int) $shipment->id(),
+			esc_attr( (string) $this->units->grams_per_display_unit() ),
+			esc_attr( (string) $this->units->mm_per_display_unit() ),
+			esc_attr( $this->units->weight_unit_label() ),
+			esc_attr( $this->units->dimension_unit_label() )
+		);
 		echo $this->renderer->repeater_open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		foreach ( $packages as $package ) {
@@ -595,12 +666,18 @@ final class WorkspacePage implements Page {
 
 		echo $this->renderer->repeater_add_button( __( 'Add package', 'mp-commerce-fulfillment' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->renderer->repeater_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '</div>';
 
 		echo '</div>';
 	}
 
 	/**
-	 * Renders one package's fields inside the repeater.
+	 * Renders one package's fields inside the repeater. Displayed values
+	 * are converted to the store's configured weight/dimension units
+	 * ({@see StoreUnits}) even though each field's `name` still names the
+	 * canonical grams/millimetres it maps to — `shipment.js` converts back
+	 * before sending `PATCH /packages/{id}`, using the repeater wrapper's
+	 * `data-mpcf-grams-per-unit`/`data-mpcf-mm-per-unit` factors.
 	 *
 	 * @param Package $package Package to render.
 	 */
@@ -608,12 +685,12 @@ final class WorkspacePage implements Page {
 		$spec = $package->spec();
 		$id   = (int) $package->id();
 
-		$body = $this->renderer->unit_input( "packages[{$id}][weight_grams]", null !== $spec->weight_grams() ? (string) $spec->weight_grams() : '', __( 'g', 'mp-commerce-fulfillment' ), array( 'data-mpcf-package-id' => (string) $id ) )
-			. $this->renderer->unit_input( "packages[{$id}][length_mm]", null !== $spec->length_mm() ? (string) $spec->length_mm() : '', __( 'mm', 'mp-commerce-fulfillment' ) )
-			. $this->renderer->unit_input( "packages[{$id}][width_mm]", null !== $spec->width_mm() ? (string) $spec->width_mm() : '', __( 'mm', 'mp-commerce-fulfillment' ) )
-			. $this->renderer->unit_input( "packages[{$id}][height_mm]", null !== $spec->height_mm() ? (string) $spec->height_mm() : '', __( 'mm', 'mp-commerce-fulfillment' ) )
+		$body = $this->renderer->unit_input( "packages[{$id}][weight_grams]", $this->units->grams_to_display( $spec->weight_grams() ), $this->units->weight_unit_label(), array( 'data-mpcf-package-field' => 'weight_grams' ) )
+			. $this->renderer->unit_input( "packages[{$id}][length_mm]", $this->units->mm_to_display( $spec->length_mm() ), $this->units->dimension_unit_label(), array( 'data-mpcf-package-field' => 'length_mm' ) )
+			. $this->renderer->unit_input( "packages[{$id}][width_mm]", $this->units->mm_to_display( $spec->width_mm() ), $this->units->dimension_unit_label(), array( 'data-mpcf-package-field' => 'width_mm' ) )
+			. $this->renderer->unit_input( "packages[{$id}][height_mm]", $this->units->mm_to_display( $spec->height_mm() ), $this->units->dimension_unit_label(), array( 'data-mpcf-package-field' => 'height_mm' ) )
 			. sprintf(
-				'<input type="text" name="packages[%d][tracking_number]" value="%s" placeholder="%s">',
+				'<input type="text" name="packages[%d][tracking_number]" value="%s" placeholder="%s" data-mpcf-package-field="tracking_number">',
 				$id,
 				esc_attr( (string) $package->tracking_number() ),
 				esc_attr__( 'Colli tracking number', 'mp-commerce-fulfillment' )

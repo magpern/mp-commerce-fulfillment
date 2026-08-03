@@ -39,6 +39,7 @@ use MPCF\Tests\Integration\Woo\OrderFactoryTrait;
 use MPCF\Vendor\Mpds\ComponentRenderer;
 use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
 use MPCF\Vendor\Mpds\PageShell\SectionNavigation;
+use MPCF\Woo\StoreUnits;
 use MPCF\Woo\WooOrderSource;
 use WP_UnitTestCase;
 
@@ -121,7 +122,8 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 			new BundledCarrierRegistry(),
 			new AssignmentService( $this->fulfillments, $this->events, $dispatcher, $clock ),
 			new WooOrderSource(),
-			$definition
+			$definition,
+			new StoreUnits()
 		);
 	}
 
@@ -175,6 +177,35 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 		self::assertStringContainsString( 'data-mpcf-modal-open="mpcf-shortcut-sheet"', $html );
 		self::assertStringContainsString( 'id="mpcf-shortcut-sheet"', $html );
 		self::assertStringContainsString( 'mpcf-ui-kbd-hints', $html );
+	}
+
+	public function test_render_shows_the_new_shipment_card_when_none_exists_yet(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$html = $this->render_for( $this->seed() );
+
+		self::assertStringContainsString( 'data-mpcf-shipment-id="0"', $html );
+		self::assertStringContainsString( 'data-mpcf-carrier-select', $html );
+		self::assertStringContainsString( 'data-mpcf-package-repeater', $html );
+	}
+
+	public function test_render_shows_the_package_repeater_with_the_stores_unit_labels(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+		update_option( 'woocommerce_weight_unit', 'kg' );
+		update_option( 'woocommerce_dimension_unit', 'cm' );
+
+		$id      = $this->seed();
+		$outcome = ( new ShippingService( $this->fulfillments, $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository(), new WpdbPackageItemRepository(), $this->events, new EventDispatcher(), new SystemClock() ) )
+			->create_shipment( $id, \MPCF\Domain\Event\Actor::system() );
+
+		self::assertTrue( $outcome->is_success() );
+
+		$html = $this->render_for( $id );
+
+		self::assertStringContainsString( 'data-mpcf-grams-per-unit="1000"', $html );
+		self::assertStringContainsString( 'data-mpcf-mm-per-unit="10"', $html );
+		self::assertStringContainsString( 'data-mpcf-weight-unit-label="kg"', $html );
+		self::assertStringContainsString( 'data-mpcf-dimension-unit-label="cm"', $html );
 	}
 
 	public function test_render_shows_the_empty_state_without_a_fulfillment_id(): void {
