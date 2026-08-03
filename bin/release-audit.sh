@@ -38,13 +38,31 @@ fi
 
 section "Required documentation present"
 
-for doc in docs/ARCHITECTURE_PLAN.md docs/ROADMAP.md docs/COMPATIBILITY.md docs/PERSISTED_DATA.md docs/HOOKS.md docs/TEST_STRATEGY.md; do
+for doc in docs/ARCHITECTURE_PLAN.md docs/ROADMAP.md docs/COMPATIBILITY.md docs/PERSISTED_DATA.md docs/HOOKS.md docs/TEST_STRATEGY.md docs/API.md; do
 	if [ -f "$doc" ]; then
 		pass "$doc exists"
 	else
 		fail "$doc is missing"
 	fi
 done
+
+section "Zero-dependency property (ADR-0006)"
+
+# composer.json's own require section is the source of truth for the
+# zero-runtime-dependency property — after `composer install --no-dev`,
+# vendor/composer/installed.json's package list is exactly this section's
+# contents, so checking the static file is equivalent and does not
+# require this script's caller to have already run that install.
+REQUIRE_KEYS="$(php -r '
+	$data = json_decode( file_get_contents( "composer.json" ), true );
+	echo implode( ",", array_keys( $data["require"] ?? array() ) );
+')"
+
+if [ "$REQUIRE_KEYS" = "php" ]; then
+	pass "composer.json require section names only php — no runtime package dependency"
+else
+	fail "composer.json require section names a runtime package ($REQUIRE_KEYS) — the zero-dependency property no longer holds"
+fi
 
 section "Zip build and content"
 
@@ -68,6 +86,19 @@ else
 			fail "zip contains dev-only files (phpunit/tests) — build with --no-dev"
 		else
 			pass "zip contains no dev-only files"
+		fi
+
+		# ADR-0006: Playwright/npm are dev-and-CI-only and must never reach
+		# the release artifact, on top of bin/build-zip.sh's own belt-and-
+		# suspenders check — a third, independent defense on the same
+		# property. Deliberately unanchored to any particular path depth
+		# (unlike the dev-only-files check above, whose two paths only
+		# ever appear at the plugin root) — a Node artifact could in
+		# principle end up nested inside assets/ or anywhere else.
+		if unzip -l "$ZIP_PATH" | grep -qEi "(^|/)(package(-lock)?\.json|node_modules/|playwright\.config\.|tests/browser/|\.playwright/|playwright-report/|test-results/)"; then
+			fail "zip contains a Node/Playwright artifact — see ADR-0006"
+		else
+			pass "zip contains no Node/Playwright artifact"
 		fi
 	else
 		fail "bin/build-zip.sh did not produce $ZIP_PATH"

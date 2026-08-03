@@ -31,6 +31,8 @@ export function createStore( root ) {
 	var fulfillmentId = parseInt( root.getAttribute( 'data-mpcf-fulfillment-id' ) || '0', 10 );
 	var pendingCount = 0;
 	var listeners = [];
+	var inFlight = [];
+	var queue = Promise.resolve();
 
 	function getFulfillmentId() {
 		return fulfillmentId;
@@ -104,11 +106,49 @@ export function createStore( root ) {
 	}
 
 	/**
+	 * Registers `promise` in `inFlight` under a never-rejecting wrapper (so
+	 * a `settle()` caller's own `Promise.all()` cannot be short-circuited
+	 * by an unrelated mutation's real failure) and removes it once settled.
+	 * Returns `promise` itself, unchanged, for the original caller.
+	 *
+	 * @param {Promise} promise
+	 * @return {Promise}
+	 */
+	function track( promise ) {
+		var safe = promise.catch( function () {
+			return null;
+		} );
+
+		inFlight.push( safe );
+
+		safe.then( function () {
+			var index = inFlight.indexOf( safe );
+
+			if ( -1 !== index ) {
+				inFlight.splice( index, 1 );
+			}
+		} );
+
+		return promise;
+	}
+
+	/**
 	 * Performs one mutating REST call, tracking it as a pending write and
 	 * reconciling the store's `version` from its response on success.
 	 * Retries up to 3 times, with backoff, on a network failure only — a
 	 * real error response (409/422/…) rejects immediately, unchanged, for
 	 * the caller to handle.
+	 *
+	 * Every call is run through `queue` — a strict FIFO, one request in
+	 * flight at a time — rather than started immediately. Two feature
+	 * modules can call `mutate()` within the same tick (a checklist's own
+	 * debounce timer firing while a shipment card's edit is still being
+	 * created, say); each caller's `attemptFn` reads `getVersion()` itself
+	 * (never a value captured by `mutate()`'s caller ahead of time), so
+	 * queuing means the second call's request is only ever built once the
+	 * first one's response has already reconciled `version` — the only way
+	 * two independent, same-tick mutations can both succeed instead of one
+	 * of them 409ing against a version the other has since advanced past.
 	 *
 	 * @param {Function} attemptFn Zero-arg function returning the API-call Promise.
 	 * @return {Promise}
@@ -116,18 +156,49 @@ export function createStore( root ) {
 	function mutate( attemptFn ) {
 		setPending( 1 );
 
-		return attempt( attemptFn, 0 ).then(
-			function ( result ) {
-				setPending( -1 );
-				reconcile( result );
+		var scheduled = queue.then( function () {
+			return attempt( attemptFn, 0 );
+		} );
 
-				return result;
-			},
-			function ( error ) {
-				setPending( -1 );
-				throw error;
-			}
+		// The queue itself must keep moving even when this entry fails —
+		// only the caller's own returned promise (below) rejects for it.
+		queue = scheduled.then(
+			function () {},
+			function () {}
 		);
+
+		return track(
+			scheduled.then(
+				function ( result ) {
+					setPending( -1 );
+					reconcile( result );
+
+					return result;
+				},
+				function ( error ) {
+					setPending( -1 );
+					throw error;
+				}
+			)
+		);
+	}
+
+	/**
+	 * Resolves once every `mutate()` call currently in flight has settled —
+	 * including one that started before `settle()` was ever called (a
+	 * blur-triggered package-field PATCH, say). This is what makes "no
+	 * transition ever runs against unflushed local state" (Architecture
+	 * Plan §IV.10, risk M2-R7) true for writes that are already in flight
+	 * by the time a transition is attempted, as opposed to writes still
+	 * waiting on a debounce timer — those need their own feature module to
+	 * force-flush first (see `packing.js`'s `flush()`/`shipment.js`'s
+	 * `flushPendingPackages()`), since `settle()` has nothing to await
+	 * until the request actually exists.
+	 *
+	 * @return {Promise}
+	 */
+	function settle() {
+		return Promise.all( inFlight.slice() );
 	}
 
 	return {
@@ -136,6 +207,7 @@ export function createStore( root ) {
 		setVersion: setVersion,
 		onUpdate: onUpdate,
 		reconcile: reconcile,
-		mutate: mutate
+		mutate: mutate,
+		settle: settle
 	};
 }

@@ -4,5 +4,12 @@
 /dist/
 .phpunit.result.cache
 
+# Playwright (ADR-0006, dev/CI only — see bin/build-zip.sh,
+# bin/release-audit.sh, tests/unit/ReleaseArtifactGuardTest.php).
+/test-results/
+/playwright-report/
+/tests/browser/.auth/
+/tests/bin/.wp-cli.phar
+
 # Machine-specific notes (Docker commands, local paths); never committed.
 /CLAUDE.local.md

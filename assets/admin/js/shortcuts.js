@@ -8,19 +8,44 @@
  * never on the quantity input inside it, so resting focus only ever
  * leaves the scan sink for a deliberate interaction (§IV.5.4, rule 1) and
  * every single-letter/space/enter binding is suppressed the same way,
- * uniformly, whenever `document.activeElement` is a real form field.
+ * uniformly, whenever `document.activeElement` is a real form field the
+ * operator is deliberately typing prose/data into.
+ *
+ * The scan sink is deliberately excluded from that check even though it
+ * is itself an `<input>` — it holds *resting* focus by design (§IV.5.4
+ * rule 1), which is the default, most common state on this screen, not a
+ * deliberate-typing state; treating it as an ordinary form field would
+ * suppress every single-letter shortcut under the single most common
+ * condition they need to work in. Found the hard way: no PHPUnit test
+ * ever presses a real key while a real scan-sink input holds real focus,
+ * so this was silently broken from F17 until the Playwright suite's
+ * first real keyboard-only run caught it (F22).
  *
  * `t`/`w`/`n`/`P`/`[`/`]`/`p` target selectors that F18-F20 have not all
  * built yet (`data-mpcf-queue-prev/next`, `data-mpcf-open-problem-modal`)
  * — each is a documented no-op today and activates automatically once
  * that commit lands, the same seaming pattern the scan sink itself uses
  * for M6 (§IV.5.5).
+ *
+ * Known, deliberately deferred tension for M6: a real barcode whose
+ * payload contains one of these letters would have each such keystroke
+ * intercepted (`preventDefault()`ed) here before `scan-sink.js`'s own
+ * 50ms-quiet-period buffering ever sees it, corrupting the captured
+ * string. M2 ships no scan decoding at all (§IV.5.5 — "captures and
+ * displays... does not decode"), so there is no real scanning workflow
+ * to protect yet; M6, which adds real decoding and is explicitly tasked
+ * with "scan mismatch groundwork", is the milestone with real hardware
+ * to validate a disambiguation strategy against, not this one.
  */
 
 import { incrementRow, decrementRow, completeRow, completeAllRows, toggleCollapseCompleted } from './packing.js';
 
 function isFormField( element ) {
-	return !! element && -1 !== [ 'INPUT', 'TEXTAREA', 'SELECT' ].indexOf( element.tagName );
+	if ( ! element || -1 === [ 'INPUT', 'TEXTAREA', 'SELECT' ].indexOf( element.tagName ) ) {
+		return false;
+	}
+
+	return ! element.hasAttribute( 'data-mpcf-scan-sink' );
 }
 
 function modalIsOpen() {

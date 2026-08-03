@@ -157,6 +157,20 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 		self::assertStringContainsString( 'data-mpcf-primary-action', $html );
 	}
 
+	public function test_the_primary_button_disables_native_form_validation(): void {
+		// The reason modal's hidden `required` textarea lives in this same
+		// form; without `formnovalidate` the browser silently blocks every
+		// submit on the form, including transitions that need no reason
+		// at all — found by the Playwright suite's first real click on
+		// this button, no PHPUnit test render ever submits a real form
+		// (F22).
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$html = $this->render_for( $this->seed() );
+
+		self::assertMatchesRegularExpression( '/data-mpcf-primary-action[^>]*formnovalidate/', $html );
+	}
+
 	public function test_render_shows_the_collapse_completed_toggle_while_a_quantity_field_is_active(): void {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
 
@@ -235,6 +249,25 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 		$timeline = $this->events->timeline_for_fulfillment( $id );
 		$types    = array_column( $timeline, 'event_type' );
 		self::assertContains( 'fulfillment.assigned', $types );
+	}
+
+	public function test_the_rendered_version_is_not_stale_after_a_self_claim(): void {
+		// The self-claim's own save() advances the fulfillment's version
+		// (WpdbFulfillmentRepository::save() always does, deliberately —
+		// see its own docblock). render() must re-fetch its view after
+		// that happens, or the client's very first mutation attempt
+		// would always 409 against a version the database has already
+		// moved past — found via the Playwright suite's first real
+		// transition attempt, not by any prior version of this test (F22).
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$id = $this->seed();
+
+		$html = $this->render_for( $id );
+
+		$real_version = $this->fulfillments->find( $id )->version();
+
+		self::assertStringContainsString( 'data-mpcf-version="' . $real_version . '"', $html );
 	}
 
 	public function test_opening_a_fulfillment_already_assigned_to_someone_else_does_not_reassign_it(): void {

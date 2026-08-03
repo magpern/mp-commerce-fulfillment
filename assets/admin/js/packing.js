@@ -163,6 +163,56 @@ function notifyError( error ) {
 	);
 }
 
+/**
+ * Optimistically un-disables the primary action button the instant every
+ * checklist row is complete, without waiting for the debounced flush's
+ * round trip to confirm it server-side. Without this, a fast keyboard
+ * operator's `Shift+A` immediately followed by `Ctrl+Enter` — exactly the
+ * §IV.5.6 "minimal clicks" workflow this screen is built around — presses
+ * `Ctrl+Enter` while `action-bar.js` still sees the button `disabled`
+ * (unchanged since page load, since nothing before this re-evaluated it)
+ * and silently drops the keystroke: `action-bar.js` itself checks
+ * `button.disabled` before it will even click the button, so there is no
+ * later point this module could otherwise intervene. Found the same way
+ * as every other fix in this commit — a real, fast, automated keyboard
+ * sequence in the Playwright suite, which a human's slower reaction time
+ * had been masking (F22).
+ *
+ * Deliberately unconditional on which target the button currently shows
+ * ('picked' or 'packed' are the only two AllItems*Guard gates, but this
+ * does not re-derive that from the DOM): the guard rejection path
+ * (`workspace.js`'s 422 handling) already reconciles from server truth if
+ * this optimistic guess is ever wrong, the same "reconcile from the
+ * response, never assume" rule every other optimistic update here follows.
+ */
+function maybeEnablePrimaryActionOptimistically() {
+	var rows = document.querySelectorAll( '.mpcf-ui-checklist__row' );
+
+	if ( ! rows.length ) {
+		return;
+	}
+
+	var allComplete = Array.prototype.every.call( rows, function ( row ) {
+		return row.classList.contains( COMPLETE_CLASS );
+	} );
+
+	if ( ! allComplete ) {
+		return;
+	}
+
+	var primary = document.querySelector( '[data-mpcf-primary-action]' );
+
+	if ( primary ) {
+		primary.disabled = false;
+	}
+
+	var guardMessage = document.querySelector( '[data-mpcf-guard-message]' );
+
+	if ( guardMessage ) {
+		guardMessage.remove();
+	}
+}
+
 function setRowValue( row, nextValue ) {
 	var input = stepperInput( row );
 
@@ -185,6 +235,7 @@ function setRowValue( row, nextValue ) {
 	}
 
 	applyCollapseState();
+	maybeEnablePrimaryActionOptimistically();
 }
 
 /**
@@ -249,6 +300,94 @@ function applyCollapseState() {
 	if ( toggle ) {
 		toggle.setAttribute( 'aria-pressed', collapseCompleted ? 'true' : 'false' );
 	}
+}
+
+function buildStepper( name, value, max ) {
+	var wrap = document.createElement( 'div' );
+	wrap.className = 'mpcf-ui-quantity-stepper';
+	wrap.setAttribute( 'role', 'group' );
+
+	var decrement = document.createElement( 'button' );
+	decrement.type = 'button';
+	decrement.className = 'mpcf-ui-quantity-stepper__decrement';
+	decrement.setAttribute( 'data-mpcf-quantity-decrement', '' );
+	decrement.setAttribute( 'aria-label', 'Decrease' );
+	decrement.textContent = '−';
+
+	var input = document.createElement( 'input' );
+	input.type = 'number';
+	input.className = 'mpcf-ui-quantity-stepper__value';
+	input.name = name;
+	input.value = String( value );
+	input.min = '0';
+	input.max = String( max );
+	input.setAttribute( 'aria-valuenow', String( value ) );
+	input.setAttribute( 'aria-valuemin', '0' );
+	input.setAttribute( 'aria-valuemax', String( max ) );
+
+	var increment = document.createElement( 'button' );
+	increment.type = 'button';
+	increment.className = 'mpcf-ui-quantity-stepper__increment';
+	increment.setAttribute( 'data-mpcf-quantity-increment', '' );
+	increment.setAttribute( 'aria-label', 'Increase' );
+	increment.textContent = '+';
+
+	wrap.appendChild( decrement );
+	wrap.appendChild( input );
+	wrap.appendChild( increment );
+
+	return wrap;
+}
+
+/**
+ * Rebuilds every checklist row's control (a live stepper, or read-only
+ * text) after a transition changes the fulfillment's state — the one
+ * client-side re-render `workspace.js`'s `submitTransition()` triggers
+ * with a fresh `GET /fulfillments/{id}` read, because nothing else
+ * refreshes the checklist and a transition response itself carries no
+ * item data (Architecture Plan §IV.5.8 step 2: "the checklist becomes
+ * live", not "the page reloads"). Mirrors
+ * `WorkspacePage::render_work_region()`'s control markup — the same
+ * necessary duplication `shipment.js`'s `buildPackageItem()` already
+ * documents, there being no shared templating layer (ADR-0003).
+ *
+ * @param {Array}       items       Fresh item resources from `GET /fulfillments/{id}`.
+ * @param {string|null} activeField `qty_picked`, `qty_packed`, or null for read-only.
+ */
+export function refreshChecklist( items, activeField ) {
+	items.forEach( function ( item ) {
+		var row = document.querySelector( '[data-mpcf-row-id="' + item.id + '"]' );
+		var control = row ? row.querySelector( '.mpcf-ui-checklist__control' ) : null;
+
+		if ( ! row || ! control ) {
+			return;
+		}
+
+		if ( null === activeField ) {
+			control.textContent = item.qty_picked + ' / ' + item.qty_ordered + ' · ' + item.qty_packed + ' / ' + item.qty_ordered;
+			row.classList.toggle( COMPLETE_CLASS, item.qty_picked >= item.qty_ordered && item.qty_packed >= item.qty_ordered );
+			return;
+		}
+
+		var current = 'qty_picked' === activeField ? item.qty_picked : item.qty_packed;
+
+		control.textContent = '';
+		control.appendChild( buildStepper( 'items[' + item.id + '][' + activeField + ']', current, item.qty_ordered ) );
+		row.classList.toggle( COMPLETE_CLASS, current >= item.qty_ordered );
+	} );
+
+	var completeAllButton = document.querySelector( '[data-mpcf-complete-all]' );
+	var collapseButton = document.querySelector( '[data-mpcf-toggle-collapse-completed]' );
+
+	if ( completeAllButton ) {
+		completeAllButton.hidden = null === activeField;
+	}
+
+	if ( collapseButton ) {
+		collapseButton.hidden = null === activeField;
+	}
+
+	applyCollapseState();
 }
 
 document.addEventListener( 'DOMContentLoaded', function () {
@@ -320,5 +459,6 @@ document.addEventListener( 'DOMContentLoaded', function () {
 
 	if ( window.MpcfWorkspace ) {
 		window.MpcfWorkspace.flushPendingItems = flush;
+		window.MpcfWorkspace.refreshChecklist = refreshChecklist;
 	}
 } );

@@ -386,10 +386,12 @@ final class Plugin {
 			array( $dashboard_page, $queue_page )
 		) )->register();
 
+		$hidden_pages = array( $detail_page, $workspace_page );
+
 		add_action(
 			'admin_menu',
-			static function () use ( $detail_page, $workspace_page ) {
-				foreach ( array( $detail_page, $workspace_page ) as $hidden_page ) {
+			static function () use ( $hidden_pages ) {
+				foreach ( $hidden_pages as $hidden_page ) {
 					add_submenu_page(
 						DashboardPage::SLUG,
 						$hidden_page->title(),
@@ -398,10 +400,35 @@ final class Plugin {
 						$hidden_page->slug(),
 						array( $hidden_page, 'render' )
 					);
-					remove_submenu_page( DashboardPage::SLUG, $hidden_page->slug() );
 				}
 			},
 			20
+		);
+
+		// Hides these pages from the visible nav via CSS only — never
+		// `remove_submenu_page()`. That function deletes the entry from
+		// the `$submenu` global, which is also the ONLY place
+		// `get_admin_page_parent()` can resolve this page's parent from;
+		// once it can't, `user_can_access_admin_page()` computes the
+		// wrong lookup key and denies every user, including
+		// administrators, a 403 on direct URL access — breaking
+		// "reachable by URL and capability-checked, never a visible nav
+		// item" (§9.3/§IV.5.1) entirely, not just the "hidden" half of
+		// it. A real regression from Milestone 1 onward, caught by the
+		// Playwright suite's first real HTTP request against this page,
+		// not by any PHPUnit test — those all render these pages via a
+		// direct method call, never through wp-admin's own routing (F22).
+		add_action(
+			'admin_head',
+			static function () use ( $hidden_pages ) {
+				echo '<style>';
+
+				foreach ( $hidden_pages as $hidden_page ) {
+					printf( '.wp-submenu a[href*="page=%s"]{display:none}', esc_attr( $hidden_page->slug() ) );
+				}
+
+				echo '</style>';
+			}
 		);
 
 		( new Assets() )->register();

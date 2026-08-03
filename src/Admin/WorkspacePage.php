@@ -234,7 +234,22 @@ final class WorkspacePage implements Page {
 				__( 'Open a fulfillment from the Queue to start packing.', 'mp-commerce-fulfillment' ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- empty_state() escapes every arg internally.
 			);
 		} else {
-			$this->maybe_self_claim( $view->fulfillment() );
+			// A self-claim mutates (assign() saves the fulfillment, which
+			// always advances `version` — the repository's own documented
+			// save behavior). $view was fetched before it ran,
+			// so it must be re-fetched afterward or the page bakes in a
+			// version the database has already moved past — the client's
+			// very first mutation would then always get a 409, since
+			// every previously-unassigned fulfillment self-claims on open
+			// (the common case). Found by the Playwright suite's first
+			// real transition attempt ever made against this page (F22);
+			// no PHPUnit test exercises version staleness this way, since
+			// none reads `$view` back out of `render()` to compare it
+			// against the database afterward.
+			if ( $this->maybe_self_claim( $view->fulfillment() ) ) {
+				$view = $this->detail->get( $fulfillment_id ) ?? $view;
+			}
+
 			$this->render_workspace( $view );
 		}
 
@@ -250,13 +265,16 @@ final class WorkspacePage implements Page {
 	 * request only.
 	 *
 	 * @param Fulfillment $fulfillment Fulfillment being opened.
+	 * @return bool Whether an assignment was actually made (the caller
+	 *              must re-fetch its already-loaded view when true, since
+	 *              this advances the fulfillment's version).
 	 */
-	private function maybe_self_claim( Fulfillment $fulfillment ): void {
+	private function maybe_self_claim( Fulfillment $fulfillment ): bool {
 		if ( null !== $fulfillment->assignee_id() ) {
-			return;
+			return false;
 		}
 
-		$this->assignments->assign( (int) $fulfillment->id(), get_current_user_id(), self::current_actor() );
+		return $this->assignments->assign( (int) $fulfillment->id(), get_current_user_id(), self::current_actor() );
 	}
 
 	/**
@@ -481,7 +499,11 @@ final class WorkspacePage implements Page {
 					$qty_current,
 					0,
 					$qty_ordered,
-					array( 'data-mpcf-item-id' => (string) $item->id() )
+					array(
+						'data-mpcf-item-id' => (string) $item->id(),
+						/* translators: %s: item name */
+						'aria-label'        => sprintf( __( 'Quantity for %s', 'mp-commerce-fulfillment' ), $item->name_snapshot() ),
+					)
 				)
 				: sprintf( '%d / %d', $item->qty_picked(), $item->qty_ordered() ) . ' &middot; ' . sprintf( '%d / %d', $item->qty_packed(), $item->qty_ordered() );
 
@@ -497,12 +519,24 @@ final class WorkspacePage implements Page {
 
 		echo $this->renderer->checklist_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
-		if ( null !== $active_field ) {
-			printf( '<button type="button" class="button" data-mpcf-complete-all data-mpcf-field="%s">%s</button>', esc_attr( $active_field ), esc_html__( 'Complete all', 'mp-commerce-fulfillment' ) );
-			printf( '<button type="button" class="button" data-mpcf-toggle-collapse-completed aria-pressed="false">%s</button>', esc_html__( 'Collapse completed', 'mp-commerce-fulfillment' ) );
-		}
+		// Always rendered, hidden when there is no active quantity field —
+		// never removed and re-added, since `packing.js`'s
+		// `refreshChecklist()` just toggles `hidden` on these same nodes
+		// after a transition changes the checklist's live/read-only state
+		// without a page reload (§IV.5.8 step 2).
+		printf(
+			'<button type="button" class="button" data-mpcf-complete-all data-mpcf-field="%s"%s>%s</button>',
+			esc_attr( (string) $active_field ),
+			null === $active_field ? ' hidden' : '',
+			esc_html__( 'Complete all', 'mp-commerce-fulfillment' )
+		);
+		printf(
+			'<button type="button" class="button" data-mpcf-toggle-collapse-completed aria-pressed="false"%s>%s</button>',
+			null === $active_field ? ' hidden' : '',
+			esc_html__( 'Collapse completed', 'mp-commerce-fulfillment' )
+		);
 
-		echo $this->renderer->scan_input( 'scan' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $this->renderer->scan_input( 'scan', array( 'aria-label' => __( 'Barcode scanner input', 'mp-commerce-fulfillment' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
 	/**
@@ -585,7 +619,7 @@ final class WorkspacePage implements Page {
 		echo '<p class="description">' . esc_html__( 'Enter a carrier or tracking number to create a shipment.', 'mp-commerce-fulfillment' ) . '</p>';
 
 		echo '<label>' . esc_html__( 'Carrier', 'mp-commerce-fulfillment' ) . '</label>';
-		echo '<select data-mpcf-carrier-select>';
+		printf( '<select data-mpcf-carrier-select aria-label="%s">', esc_attr__( 'Carrier', 'mp-commerce-fulfillment' ) );
 		printf( '<option value="">%s</option>', esc_html__( '— Select —', 'mp-commerce-fulfillment' ) );
 		foreach ( $this->carriers->all() as $carrier ) {
 			printf( '<option value="%s">%s</option>', esc_attr( $carrier['id'] ), esc_html( $carrier['label'] ) );
@@ -593,8 +627,9 @@ final class WorkspacePage implements Page {
 		echo '</select>';
 
 		printf(
-			'<label>%s</label><input type="text" placeholder="%s" data-mpcf-tracking-number>',
+			'<label>%s</label><input type="text" placeholder="%s" aria-label="%s" data-mpcf-tracking-number>',
 			esc_html__( 'Tracking number', 'mp-commerce-fulfillment' ),
+			esc_attr__( 'Tracking number', 'mp-commerce-fulfillment' ),
 			esc_attr__( 'Tracking number', 'mp-commerce-fulfillment' )
 		);
 
@@ -633,7 +668,7 @@ final class WorkspacePage implements Page {
 		);
 
 		echo '<label>' . esc_html__( 'Carrier', 'mp-commerce-fulfillment' ) . '</label>';
-		echo '<select data-mpcf-carrier-select>';
+		printf( '<select data-mpcf-carrier-select aria-label="%s">', esc_attr__( 'Carrier', 'mp-commerce-fulfillment' ) );
 		foreach ( $this->carriers->all() as $carrier ) {
 			printf(
 				'<option value="%s"%s>%s</option>',
@@ -645,9 +680,10 @@ final class WorkspacePage implements Page {
 		echo '</select>';
 
 		printf(
-			'<label>%s</label><input type="text" value="%s" data-mpcf-tracking-number>',
+			'<label>%s</label><input type="text" value="%s" aria-label="%s" data-mpcf-tracking-number>',
 			esc_html__( 'Tracking number', 'mp-commerce-fulfillment' ),
-			esc_attr( (string) $shipment->tracking()->number() )
+			esc_attr( (string) $shipment->tracking()->number() ),
+			esc_attr__( 'Tracking number', 'mp-commerce-fulfillment' )
 		);
 
 		echo '<h4>' . esc_html__( 'Packages', 'mp-commerce-fulfillment' ) . '</h4>';
@@ -686,14 +722,32 @@ final class WorkspacePage implements Page {
 		$spec = $package->spec();
 		$id   = (int) $package->id();
 
-		$body = $this->renderer->unit_input( "packages[{$id}][weight_grams]", $this->units->grams_to_display( $spec->weight_grams() ), $this->units->weight_unit_label(), array( 'data-mpcf-package-field' => 'weight_grams' ) )
-			. $this->renderer->unit_input( "packages[{$id}][length_mm]", $this->units->mm_to_display( $spec->length_mm() ), $this->units->dimension_unit_label(), array( 'data-mpcf-package-field' => 'length_mm' ) )
-			. $this->renderer->unit_input( "packages[{$id}][width_mm]", $this->units->mm_to_display( $spec->width_mm() ), $this->units->dimension_unit_label(), array( 'data-mpcf-package-field' => 'width_mm' ) )
-			. $this->renderer->unit_input( "packages[{$id}][height_mm]", $this->units->mm_to_display( $spec->height_mm() ), $this->units->dimension_unit_label(), array( 'data-mpcf-package-field' => 'height_mm' ) )
+		$weight_attrs = array(
+			'data-mpcf-package-field' => 'weight_grams',
+			'aria-label'              => __( 'Weight', 'mp-commerce-fulfillment' ),
+		);
+		$length_attrs = array(
+			'data-mpcf-package-field' => 'length_mm',
+			'aria-label'              => __( 'Length', 'mp-commerce-fulfillment' ),
+		);
+		$width_attrs  = array(
+			'data-mpcf-package-field' => 'width_mm',
+			'aria-label'              => __( 'Width', 'mp-commerce-fulfillment' ),
+		);
+		$height_attrs = array(
+			'data-mpcf-package-field' => 'height_mm',
+			'aria-label'              => __( 'Height', 'mp-commerce-fulfillment' ),
+		);
+
+		$body = $this->renderer->unit_input( "packages[{$id}][weight_grams]", $this->units->grams_to_display( $spec->weight_grams() ), $this->units->weight_unit_label(), $weight_attrs )
+			. $this->renderer->unit_input( "packages[{$id}][length_mm]", $this->units->mm_to_display( $spec->length_mm() ), $this->units->dimension_unit_label(), $length_attrs )
+			. $this->renderer->unit_input( "packages[{$id}][width_mm]", $this->units->mm_to_display( $spec->width_mm() ), $this->units->dimension_unit_label(), $width_attrs )
+			. $this->renderer->unit_input( "packages[{$id}][height_mm]", $this->units->mm_to_display( $spec->height_mm() ), $this->units->dimension_unit_label(), $height_attrs )
 			. sprintf(
-				'<input type="text" name="packages[%d][tracking_number]" value="%s" placeholder="%s" data-mpcf-package-field="tracking_number">',
+				'<input type="text" name="packages[%d][tracking_number]" value="%s" placeholder="%s" aria-label="%s" data-mpcf-package-field="tracking_number">',
 				$id,
 				esc_attr( (string) $package->tracking_number() ),
+				esc_attr__( 'Colli tracking number', 'mp-commerce-fulfillment' ),
 				esc_attr__( 'Colli tracking number', 'mp-commerce-fulfillment' )
 			);
 
@@ -722,8 +776,9 @@ final class WorkspacePage implements Page {
 		}
 
 		printf(
-			'<textarea name="new_note" rows="2" placeholder="%s" data-mpcf-new-note></textarea>',
-			esc_attr__( 'Add a note…', 'mp-commerce-fulfillment' )
+			'<textarea name="new_note" rows="2" placeholder="%s" aria-label="%s" data-mpcf-new-note></textarea>',
+			esc_attr__( 'Add a note…', 'mp-commerce-fulfillment' ),
+			esc_attr__( 'Add a note', 'mp-commerce-fulfillment' )
 		);
 		printf( '<button type="button" class="button" data-mpcf-add-note>%s</button>', esc_html__( 'Add note', 'mp-commerce-fulfillment' ) );
 	}
@@ -774,7 +829,22 @@ final class WorkspacePage implements Page {
 		}
 
 		if ( null !== $primary ) {
-			$attrs = array( 'data-mpcf-target' => $primary->target() );
+			// This form also contains the reason modal's `required`
+			// textarea (rendered further down, still inside the same
+			// `<form>` so its own submit bubbles to workspace.js's
+			// listener) — while that modal is hidden, native HTML5
+			// constraint validation cannot focus it to show the "please
+			// fill this in" bubble, so the browser silently blocks *every*
+			// submit on this form, including transitions that need no
+			// reason at all. Every mutation here already goes through
+			// three explicit validation layers of its own (§IV.5.7) —
+			// native browser validation was never wanted in the first
+			// place, so it is switched off outright rather than patched
+			// around per candidate.
+			$attrs = array(
+				'data-mpcf-target' => $primary->target(),
+				'formnovalidate'   => 'formnovalidate',
+			);
 
 			if ( $primary->requires_reason() ) {
 				$attrs['data-mpcf-requires-reason'] = '1';

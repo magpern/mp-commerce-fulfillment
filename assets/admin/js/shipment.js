@@ -125,7 +125,7 @@ function toDisplay( canonical, perUnit ) {
 	return String( value );
 }
 
-function unitInputElement( name, value, suffix, field ) {
+function unitInputElement( name, value, suffix, field, label ) {
 	var wrap = document.createElement( 'div' );
 	wrap.className = 'mpcf-ui-unit-input';
 
@@ -134,6 +134,7 @@ function unitInputElement( name, value, suffix, field ) {
 	input.className = 'mpcf-ui-unit-input__control';
 	input.name = name;
 	input.value = value;
+	input.setAttribute( 'aria-label', label );
 	input.setAttribute( 'data-mpcf-package-field', field );
 
 	var suffixSpan = document.createElement( 'span' );
@@ -164,16 +165,17 @@ function buildPackageItem( card, pkg ) {
 	item.className = 'mpcf-ui-repeater__item';
 	item.setAttribute( 'data-mpcf-package-id', String( pkg.id ) );
 
-	item.appendChild( unitInputElement( 'packages[' + pkg.id + '][weight_grams]', toDisplay( pkg.weight_grams, units.gramsPerUnit ), units.weightLabel, 'weight_grams' ) );
-	item.appendChild( unitInputElement( 'packages[' + pkg.id + '][length_mm]', toDisplay( pkg.length_mm, units.mmPerUnit ), units.dimensionLabel, 'length_mm' ) );
-	item.appendChild( unitInputElement( 'packages[' + pkg.id + '][width_mm]', toDisplay( pkg.width_mm, units.mmPerUnit ), units.dimensionLabel, 'width_mm' ) );
-	item.appendChild( unitInputElement( 'packages[' + pkg.id + '][height_mm]', toDisplay( pkg.height_mm, units.mmPerUnit ), units.dimensionLabel, 'height_mm' ) );
+	item.appendChild( unitInputElement( 'packages[' + pkg.id + '][weight_grams]', toDisplay( pkg.weight_grams, units.gramsPerUnit ), units.weightLabel, 'weight_grams', 'Weight' ) );
+	item.appendChild( unitInputElement( 'packages[' + pkg.id + '][length_mm]', toDisplay( pkg.length_mm, units.mmPerUnit ), units.dimensionLabel, 'length_mm', 'Length' ) );
+	item.appendChild( unitInputElement( 'packages[' + pkg.id + '][width_mm]', toDisplay( pkg.width_mm, units.mmPerUnit ), units.dimensionLabel, 'width_mm', 'Width' ) );
+	item.appendChild( unitInputElement( 'packages[' + pkg.id + '][height_mm]', toDisplay( pkg.height_mm, units.mmPerUnit ), units.dimensionLabel, 'height_mm', 'Height' ) );
 
 	var tracking = document.createElement( 'input' );
 	tracking.type = 'text';
 	tracking.name = 'packages[' + pkg.id + '][tracking_number]';
 	tracking.value = pkg.tracking_number || '';
 	tracking.placeholder = 'Colli tracking number';
+	tracking.setAttribute( 'aria-label', 'Colli tracking number' );
 	tracking.setAttribute( 'data-mpcf-package-field', 'tracking_number' );
 	item.appendChild( tracking );
 
@@ -313,14 +315,40 @@ function flushPackage( packageId ) {
 	var fields = pendingPackageFields[ packageId ];
 
 	if ( ! fields ) {
-		return;
+		return Promise.resolve( null );
 	}
 
 	delete pendingPackageFields[ packageId ];
 
-	mutate( function () {
+	return mutate( function () {
 		return api.updatePackage( packageId, fields );
 	} ).catch( function () {} );
+}
+
+/**
+ * Optimistically un-disables the primary action button — the shipment/
+ * package counterpart of `packing.js`'s identically-named function, same
+ * reasoning: `action-bar.js` checks `button.disabled` before it will even
+ * click the button, so a fast keyboard operator entering a package's
+ * weight and immediately pressing `Ctrl+Enter` (§IV.5.8 step 8) would
+ * otherwise have that keystroke silently dropped while waiting on the
+ * debounced flush's round trip to confirm `package_spec_present` server-
+ * side. Self-corrects via `workspace.js`'s 422 handling if ever wrong.
+ */
+function maybeEnablePrimaryActionOptimistically() {
+	var primary = document.querySelector( '[data-mpcf-primary-action]' );
+
+	if ( ! primary || ! primary.disabled ) {
+		return;
+	}
+
+	primary.disabled = false;
+
+	var guardMessage = document.querySelector( '[data-mpcf-guard-message]' );
+
+	if ( guardMessage ) {
+		guardMessage.remove();
+	}
 }
 
 function handlePackageFieldInput( input ) {
@@ -346,8 +374,38 @@ function handlePackageFieldInput( input ) {
 	var units = readUnitConfig( card );
 	var perUnit = 'weight_grams' === field ? units.gramsPerUnit : units.mmPerUnit;
 	var numeric = parseFloat( input.value );
+	var canonical = isNaN( numeric ) ? null : Math.round( numeric * perUnit );
 
-	queuePackageChange( packageId, field, isNaN( numeric ) ? null : Math.round( numeric * perUnit ) );
+	queuePackageChange( packageId, field, canonical );
+
+	// A package with any spec value present is what package_spec_present
+	// actually checks (Architecture Plan §IV.5.8 step 8) — a shipment
+	// already exists by the time this field is editable at all, so
+	// HasShipmentGuard is moot here.
+	if ( null !== canonical ) {
+		maybeEnablePrimaryActionOptimistically();
+	}
+}
+
+/**
+ * Force-flushes every package field edit still waiting on its debounce
+ * timer. `workspace.js`'s `flushPendingWrites()` calls this immediately
+ * before every transition attempt — the shipment/package counterpart of
+ * `packing.js`'s `flushPendingItems()` (Architecture Plan §IV.10, risk
+ * M2-R7: "no transition ever runs against unflushed local state"). Without
+ * it, a fast operator who edits a weight field and presses `Ctrl+Enter`
+ * before the 750ms debounce fires would have that edit silently dropped —
+ * `queuePackageChange()`'s timer only calls `flushPackage()` on its own
+ * schedule otherwise, and pressing `Ctrl+Enter` never blurs the field.
+ *
+ * @return {Promise}
+ */
+function flushPendingPackages() {
+	return Promise.all(
+		Object.keys( packageFlushTimers ).map( function ( packageId ) {
+			return flushPackage( parseInt( packageId, 10 ) );
+		} )
+	);
 }
 
 function handleAddPackage( button ) {
@@ -441,4 +499,8 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			handleRemovePackage( removeButton );
 		}
 	} );
+
+	if ( window.MpcfWorkspace ) {
+		window.MpcfWorkspace.flushPendingPackages = flushPendingPackages;
+	}
 } );

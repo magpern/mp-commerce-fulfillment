@@ -1,0 +1,15 @@
+{
+  "name": "mp-commerce-fulfillment-browser-tests",
+  "private": true,
+  "description": "Dev/CI-only Playwright harness (ADR-0006). Never shipped — see bin/build-zip.sh, bin/release-audit.sh, tests/unit/ReleaseArtifactGuardTest.php.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test:browser": "playwright test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@playwright/test": "^1.48.0"
+  }
+}

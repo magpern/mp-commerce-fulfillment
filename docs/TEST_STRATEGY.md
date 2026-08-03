@@ -57,6 +57,30 @@ file's own docblock for the command); findings are recorded in
 `docs/QUEUE_PERFORMANCE_VALIDATION.md` and must be rerun and updated
 whenever the schema, an index, or one of these query shapes changes.
 
+## Browser (`tests/browser/`, dev/CI only, `npx playwright test`)
+
+Milestone 2 (F22, ADR-0006) adds a fourth tier for real browser behavior
+PHPUnit structurally cannot observe: keyboard-only operation, focus
+management, accessibility, and print rendering. Never part of
+`composer test:unit`/`test:integration` — a separate `browser` CI job,
+running after both PHPUnit tiers, provisions a real running WordPress +
+WooCommerce site (`tests/bin/install-wp-site.sh`, distinct from
+`tests/bin/install-wp.sh`'s file-only PHPUnit fixture), seeds one paid
+order via `wp eval-file tests/browser/seed.php` (the plugin's real intake
+hook, not a direct table insert), and serves it with PHP's built-in
+server. `package.json`, `playwright.config.js` and `tests/browser/` are
+committed but never shipped — enforced by three independent defenses
+(`bin/build-zip.sh`'s post-copy assertion, `bin/release-audit.sh`'s zip
+denylist, `ReleaseArtifactGuardTest`), per ADR-0006's own requirement that
+a single missed exclusion must not be enough to reintroduce a Node
+runtime dependency. This first pass covers the keyboard-only
+queued-to-shipped path (acceptance criterion 1) and an `@axe-core/playwright`
+accessibility scan of the workspace (criterion 8); the two-browser-context
+409 conflict, offline/retry interception, the three responsive
+breakpoints, and queue-cursor navigation are deliberately not yet covered
+— a scope decision recorded here rather than silently left uncovered,
+and available to a follow-up commit without any change to the harness.
+
 ## Structural guards (mutation-verified)
 
 Regex-over-`src/` and, where needed, live introspection. Each guard is
@@ -79,6 +103,7 @@ the PR, not just asserted.
 | `MpdsVendorGuardTest` | The vendored `src/Vendor/Mpds/` copy matches its committed `MANIFEST` — a hand-edit fails this test. |
 | `CiMatrixGuardTest` / `CompatibilityMatrixTest` | The CI workflow's version coordinates match `docs/COMPATIBILITY.md` and the plugin header. |
 | `PluginVersionTest` | The plugin header `Version:`, `MPCF_VERSION`, and `readme.txt` Stable tag agree. |
+| `ReleaseArtifactGuardTest` | No Node/Playwright artifact and no runtime Composer dependency ever reaches a release build (ADR-0006) — `bin/build-zip.sh`, `bin/release-audit.sh`, `.gitignore`, `composer.json`, and `package.json` all carry the required guard. |
 
 ## Docker-only tooling
 

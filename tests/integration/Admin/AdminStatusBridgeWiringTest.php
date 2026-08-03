@@ -72,9 +72,11 @@ final class AdminStatusBridgeWiringTest extends WP_UnitTestCase {
 	 * and recovers the real `FulfillmentDetailPage` instance `wire_admin()`
 	 * built and closed over when registering its hidden submenu page —
 	 * `Plugin.php`'s own `add_action( 'admin_menu', function () use
-	 * ( $detail_page ) {...}, 20 )` — via `ReflectionFunction`'s bound
-	 * `use()` variables. This is reading back what the real composition
-	 * root actually built, not re-wiring an equivalent by hand.
+	 * ( $hidden_pages ) {...}, 20 )`, `$hidden_pages` being the
+	 * `[$detail_page, $workspace_page]` array both hidden pages share one
+	 * registration closure for — via `ReflectionFunction`'s bound `use()`
+	 * variables. This is reading back what the real composition root
+	 * actually built, not re-wiring an equivalent by hand.
 	 *
 	 * Priority 20 on `admin_menu` is not exclusively this plugin's — a real
 	 * WooCommerce install may hook something of its own at the same
@@ -107,8 +109,10 @@ final class AdminStatusBridgeWiringTest extends WP_UnitTestCase {
 
 				$bound = ( new ReflectionFunction( $callback ) )->getStaticVariables();
 
-				if ( isset( $bound['detail_page'] ) && $bound['detail_page'] instanceof \MPCF\Admin\FulfillmentDetailPage ) {
-					return $bound['detail_page'];
+				foreach ( $bound['hidden_pages'] ?? array() as $hidden_page ) {
+					if ( $hidden_page instanceof \MPCF\Admin\FulfillmentDetailPage ) {
+						return $hidden_page;
+					}
 				}
 			}
 		}

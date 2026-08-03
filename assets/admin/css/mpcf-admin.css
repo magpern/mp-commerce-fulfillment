@@ -16,6 +16,18 @@
 	outline-offset: -2px;
 }
 
+/* mp-admin-design-system's --mpcf-ds-muted (#6b7280) fails WCAG AA (4.5:1)
+ * against the near-white backgrounds it is actually used on in the
+ * Packing Workspace — the checklist row's SKU text, the scan sink's ready/
+ * paused indicator, and the timeline's relative-time text (found via the
+ * Playwright accessibility suite, F22). Design tokens exist precisely so
+ * a consumer can override the value without touching the vendored
+ * component CSS; this darkens it repo-wide within this plugin's own
+ * scope class rather than patching each component individually. */
+.mpcf-ui-scope {
+	--mpcf-ds-muted: #4b5563;
+}
+
 .mpcf-ui-drawer__close,
 .mpcf-ui-modal__close {
 	min-width: 44px;

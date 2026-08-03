@@ -129,6 +129,12 @@ function renderActionBar( actionsRegion, transitions ) {
 
 	var primaryButton = document.createElement( 'button' );
 	primaryButton.type = 'submit';
+	// The reason modal's hidden `required` textarea lives in this same
+	// form (WorkspacePage.php); native constraint validation cannot focus
+	// a hidden field to satisfy it, so it silently blocks every submit
+	// unless this is set — see WorkspacePage::render_action_bar()'s own
+	// comment on the server-rendered primary button for the full story.
+	primaryButton.formNoValidate = true;
 	primaryButton.className = 'button button-primary mpcf-ui-action-bar__primary';
 	primaryButton.setAttribute( 'data-mpcf-primary-action', '' );
 	primaryButton.setAttribute( 'data-mpcf-target', primary.target );
@@ -190,19 +196,34 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	} );
 
 	/**
-	 * `packing.js`'s debounced batch flush is forced before every
-	 * transition attempt (risk M2-R7: "no transition ever runs against
-	 * unflushed local state") — `flushPendingItems` is only set once
-	 * `packing.js`'s own `DOMContentLoaded` listener has run, which
+	 * `packing.js`'s debounced item batch and `shipment.js`'s debounced
+	 * package-field edits are both forced before every transition attempt
+	 * (risk M2-R7: "no transition ever runs against unflushed local
+	 * state") — `flushPendingItems`/`flushPendingPackages` are only set
+	 * once each module's own `DOMContentLoaded` listener has run, which
 	 * registration order guarantees happens before this function is ever
 	 * *called* (it only runs later, from a click/submit).
+	 *
+	 * Forcing those two covers a write still waiting on its debounce timer;
+	 * it does not cover one already in flight from an earlier, unrelated
+	 * edit (a blur-triggered package PATCH, say, or a still-running
+	 * shipment-creation chain) — `store.settle()` is what waits for those,
+	 * regardless of which module started them.
 	 */
 	function flushPendingWrites() {
+		var pending = [];
+
 		if ( window.MpcfWorkspace && window.MpcfWorkspace.flushPendingItems ) {
-			return window.MpcfWorkspace.flushPendingItems();
+			pending.push( window.MpcfWorkspace.flushPendingItems() );
 		}
 
-		return Promise.resolve( null );
+		if ( window.MpcfWorkspace && window.MpcfWorkspace.flushPendingPackages ) {
+			pending.push( window.MpcfWorkspace.flushPendingPackages() );
+		}
+
+		return Promise.all( pending ).then( function () {
+			return store.settle();
+		} );
 	}
 
 	function offerNextOrder() {
@@ -230,6 +251,35 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			.catch( function () {} );
 	}
 
+	/**
+	 * A transition response carries no item data, only `fulfillment` and
+	 * `transitions` — but the checklist's controls (a live stepper while
+	 * picking/packing, read-only otherwise) must become correct for the
+	 * new state without a page reload (§IV.5.8 step 2: "the checklist
+	 * becomes live"). One extra `GET /fulfillments/{id}` read per
+	 * transition is the only way to learn the fresh items; `packing.js`
+	 * does the actual rebuild via `refreshChecklist`, exposed on
+	 * `window.MpcfWorkspace` the same way `flushPendingItems` is.
+	 *
+	 * @param {string|null} state Fulfillment's state after the transition.
+	 */
+	function refreshChecklistForState( state ) {
+		if ( ! window.MpcfWorkspace || ! window.MpcfWorkspace.refreshChecklist ) {
+			return Promise.resolve( null );
+		}
+
+		var activeField = 'picking' === state ? 'qty_picked' : 'packing' === state ? 'qty_packed' : null;
+
+		return api
+			.getFulfillment( store.getFulfillmentId() )
+			.then( function ( result ) {
+				focus.capture();
+				window.MpcfWorkspace.refreshChecklist( result.items || [], activeField );
+				focus.restore();
+			} )
+			.catch( function () {} );
+	}
+
 	function submitTransition( target, reason ) {
 		return flushPendingWrites()
 			.then( function () {
@@ -238,11 +288,13 @@ document.addEventListener( 'DOMContentLoaded', function () {
 				} );
 			} )
 			.then( function ( result ) {
-				if ( result.fulfillment && 'shipped' === result.fulfillment.state ) {
-					offerNextOrder();
-				}
+				return refreshChecklistForState( result.fulfillment ? result.fulfillment.state : null ).then( function () {
+					if ( result.fulfillment && 'shipped' === result.fulfillment.state ) {
+						offerNextOrder();
+					}
 
-				return result;
+					return result;
+				} );
 			} )
 			.catch( function ( error ) {
 				notifyError( error );

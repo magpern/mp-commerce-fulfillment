@@ -47,13 +47,16 @@ final class Assets {
 		wp_enqueue_style( 'mpcf-mpds-components', MPCF_PLUGIN_URL . 'assets/mpds/css/components.css', array( 'mpcf-mpds-tokens' ), MPCF_VERSION );
 		wp_enqueue_style( 'mpcf-admin', MPCF_PLUGIN_URL . 'assets/admin/css/mpcf-admin.css', array( 'mpcf-mpds-components' ), MPCF_VERSION );
 
+		// Every vendored MPDS behavior module (this trio, plus toast/
+		// action-bar/scan-sink below) is a self-contained `(function(){...})()`
+		// IIFE — no `import`/`export` — so a plain classic script is
+		// correct; there is no WordPress "type" script-data key that
+		// changes a classic script's `<script>` tag (that only exists for
+		// the dedicated Script Modules API, `wp_enqueue_script_module()`,
+		// which is for real ES modules only — see enqueue_workspace_assets()).
 		wp_enqueue_script( 'mpcf-mpds-data-table-keynav', MPCF_PLUGIN_URL . 'assets/mpds/js/data-table-keynav.js', array(), MPCF_VERSION, true );
 		wp_enqueue_script( 'mpcf-mpds-drawer', MPCF_PLUGIN_URL . 'assets/mpds/js/drawer.js', array(), MPCF_VERSION, true );
 		wp_enqueue_script( 'mpcf-mpds-modal', MPCF_PLUGIN_URL . 'assets/mpds/js/modal.js', array(), MPCF_VERSION, true );
-
-		wp_script_add_data( 'mpcf-mpds-data-table-keynav', 'type', 'module' );
-		wp_script_add_data( 'mpcf-mpds-drawer', 'type', 'module' );
-		wp_script_add_data( 'mpcf-mpds-modal', 'type', 'module' );
 
 		if ( self::is_workspace_screen() ) {
 			$this->enqueue_workspace_assets();
@@ -62,41 +65,56 @@ final class Assets {
 
 	/**
 	 * Enqueues the Packing Workspace's own behavior modules — the vendored
-	 * MPDS ones its markup depends on (toast, action-bar, scan-sink) plus
-	 * this plugin's own bootstrap, checklist and keyboard-shortcut modules
-	 * — and localizes the small config object `assets/admin/js/api.js`
-	 * reads its REST base URL and nonce from. `packing.js`/`shortcuts.js`
-	 * load after `workspace.js` since both read `window.MpcfWorkspace`,
-	 * which `workspace.js` sets on its own `DOMContentLoaded` listener —
-	 * ES modules are deferred and execute in this enqueue order.
+	 * MPDS IIFEs its markup depends on (toast, action-bar, scan-sink;
+	 * classic scripts, same as the trio in {@see maybe_enqueue()}) plus
+	 * this plugin's own bootstrap, checklist, shipment, documents and
+	 * keyboard-shortcut modules, and localizes the small config object
+	 * `assets/admin/js/api.js` reads its REST base URL and nonce from.
+	 *
+	 * The plugin-owned five use real `import`/`export` (unlike every
+	 * vendored file here), so they are registered through WordPress's
+	 * dedicated Script Modules API (`wp_enqueue_script_module()`, since
+	 * WP 6.5) — never `wp_enqueue_script()` plus a `type` script-data key,
+	 * which is not a recognized key on the classic Scripts API and
+	 * silently produces a `<script>` tag with no `type="module"` at all
+	 * (found the hard way: every `import` then throws
+	 * `Cannot use import statement outside a module` and none of this
+	 * plugin's own workspace JS runs — a defect the Playwright suite's
+	 * first real page load caught, F22, since no PHPUnit test ever
+	 * renders a real `<script>` tag to inspect). `packing.js`/`shipment.js`/
+	 * `documents.js`/`shortcuts.js` load after `workspace.js` since each
+	 * reads `window.MpcfWorkspace`, which `workspace.js` sets on its own
+	 * `DOMContentLoaded` listener — script modules still execute in
+	 * registration order when (as here) none declares the others as a
+	 * module dependency, the same way deferred classic scripts do.
 	 */
 	private function enqueue_workspace_assets(): void {
 		wp_enqueue_script( 'mpcf-mpds-toast', MPCF_PLUGIN_URL . 'assets/mpds/js/toast.js', array(), MPCF_VERSION, true );
 		wp_enqueue_script( 'mpcf-mpds-action-bar', MPCF_PLUGIN_URL . 'assets/mpds/js/action-bar.js', array(), MPCF_VERSION, true );
 		wp_enqueue_script( 'mpcf-mpds-scan-sink', MPCF_PLUGIN_URL . 'assets/mpds/js/scan-sink.js', array(), MPCF_VERSION, true );
-		wp_enqueue_script( 'mpcf-workspace', MPCF_PLUGIN_URL . 'assets/admin/js/workspace.js', array(), MPCF_VERSION, true );
-		wp_enqueue_script( 'mpcf-packing', MPCF_PLUGIN_URL . 'assets/admin/js/packing.js', array(), MPCF_VERSION, true );
-		wp_enqueue_script( 'mpcf-shipment', MPCF_PLUGIN_URL . 'assets/admin/js/shipment.js', array(), MPCF_VERSION, true );
-		wp_enqueue_script( 'mpcf-documents', MPCF_PLUGIN_URL . 'assets/admin/js/documents.js', array(), MPCF_VERSION, true );
-		wp_enqueue_script( 'mpcf-shortcuts', MPCF_PLUGIN_URL . 'assets/admin/js/shortcuts.js', array(), MPCF_VERSION, true );
 
-		wp_script_add_data( 'mpcf-mpds-toast', 'type', 'module' );
-		wp_script_add_data( 'mpcf-mpds-action-bar', 'type', 'module' );
-		wp_script_add_data( 'mpcf-mpds-scan-sink', 'type', 'module' );
-		wp_script_add_data( 'mpcf-workspace', 'type', 'module' );
-		wp_script_add_data( 'mpcf-packing', 'type', 'module' );
-		wp_script_add_data( 'mpcf-shipment', 'type', 'module' );
-		wp_script_add_data( 'mpcf-documents', 'type', 'module' );
-		wp_script_add_data( 'mpcf-shortcuts', 'type', 'module' );
+		wp_enqueue_script_module( 'mpcf-workspace', MPCF_PLUGIN_URL . 'assets/admin/js/workspace.js', array(), MPCF_VERSION );
+		wp_enqueue_script_module( 'mpcf-packing', MPCF_PLUGIN_URL . 'assets/admin/js/packing.js', array(), MPCF_VERSION );
+		wp_enqueue_script_module( 'mpcf-shipment', MPCF_PLUGIN_URL . 'assets/admin/js/shipment.js', array(), MPCF_VERSION );
+		wp_enqueue_script_module( 'mpcf-documents', MPCF_PLUGIN_URL . 'assets/admin/js/documents.js', array(), MPCF_VERSION );
+		wp_enqueue_script_module( 'mpcf-shortcuts', MPCF_PLUGIN_URL . 'assets/admin/js/shortcuts.js', array(), MPCF_VERSION );
 
+		// Script modules have no `wp_add_inline_script()` counterpart —
+		// this small config object is set as an ordinary global via a
+		// classic, no-dependency inline script instead, printed in the
+		// footer alongside the module tags themselves; `api.js` reads it
+		// off `window.mpcfWorkspace` at call time, not at its own
+		// module-evaluation time, so it does not matter that this runs as
+		// a separate, unrelated script rather than truly "before" a
+		// specific module the way `wp_add_inline_script()`'s `before`
+		// position means for a classic script.
 		wp_add_inline_script(
-			'mpcf-workspace',
+			'mpcf-mpds-scan-sink',
 			sprintf(
 				'window.mpcfWorkspace = { restUrl: %s, nonce: %s };',
 				wp_json_encode( rest_url( 'mpcf/v1/' ) ),
 				wp_json_encode( wp_create_nonce( 'wp_rest' ) )
-			),
-			'before'
+			)
 		);
 	}
 

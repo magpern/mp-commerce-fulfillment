@@ -33,6 +33,16 @@ cp -R "$ROOT/vendor" "$BUILD/vendor"
 [ -d "$ROOT/languages" ] && cp -R "$ROOT/languages" "$BUILD/languages"
 [ -d "$ROOT/assets" ] && cp -R "$ROOT/assets" "$BUILD/assets"
 
+# Belt-and-suspenders (ADR-0006): the copy list above never names a Node
+# artifact, so this should never fire — but a future edit to this script
+# accidentally widening one of the `cp -R` lines above (e.g. copying the
+# repo root instead of a named directory) must fail loudly here rather
+# than silently shipping node_modules/tests/browser in the zip.
+if find "$BUILD" \( -iname 'package.json' -o -iname 'package-lock.json' -o -iname 'playwright.config.*' -o -type d -iname 'node_modules' -o -type d -iname 'browser' -o -type d -iname '.playwright' \) -print -quit | grep -q .; then
+    echo "A Node artifact (Playwright/npm) ended up in the build output — see ADR-0006." >&2
+    exit 1
+fi
+
 ( cd "$DIST" && zip -rq "mp-commerce-fulfillment-${VERSION}.zip" mp-commerce-fulfillment )
 
 echo "dist/mp-commerce-fulfillment-${VERSION}.zip"

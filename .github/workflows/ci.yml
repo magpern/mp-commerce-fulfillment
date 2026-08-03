@@ -155,6 +155,71 @@ jobs:
       - run: bash tests/bin/install-wp.sh
       - run: composer test:integration
 
+  # Dev/CI-only Playwright tier (ADR-0006). Runs after the PHPUnit legs
+  # (Architecture Plan §IV.16 risk M2-R5: a browser-suite problem must
+  # never block feature progress before the tiers that structurally
+  # cannot flake the same way have already passed) and the config's own
+  # `retries: process.env.CI ? 1 : 0` gives it exactly the one automatic
+  # retry that risk calls for, at the per-test grain rather than a whole-
+  # job rerun.
+  browser:
+    runs-on: ubuntu-latest
+    needs: [unit, integration]
+    services:
+      mysql:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: wordpress_browser
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      WP_DB_HOST: 127.0.0.1
+      WP_DB_NAME: wordpress_browser
+      WP_DB_USER: root
+      WP_DB_PASS: root
+      MPCF_BASE_URL: http://127.0.0.1:8888
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        id: setup-php
+        with:
+          php-version: '8.3'
+          extensions: mysqli
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/composer
+          key: ${{ runner.os }}-composer-${{ steps.setup-php.outputs.php-version }}-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-${{ steps.setup-php.outputs.php-version }}-
+      - run: composer install --prefer-dist --no-progress
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox
+      - run: bash tests/bin/install-wp-site.sh
+      - name: Serve the site
+        run: |
+          php -S 127.0.0.1:8888 -t tests/tmp/wordpress >/tmp/php-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf "$MPCF_BASE_URL/wp-login.php" >/dev/null && break
+            sleep 1
+          done
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   build:
     runs-on: ubuntu-latest
     steps:

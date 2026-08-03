@@ -105,6 +105,21 @@
 	<rule ref="WordPress.WP.AlternativeFunctions.unlink_unlink">
 		<exclude-pattern>*/tests/*</exclude-pattern>
 	</rule>
+	<rule ref="WordPress.WP.AlternativeFunctions.file_system_operations_fwrite">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+
+	<!-- tests/browser/seed.php is a `wp eval-file` CLI script (ADR-0006),
+	     not plugin runtime code or a PHPUnit test: its local variables
+	     name domain concepts rather than plugin-prefixed globals, and its
+	     one `echo` writes to CLI stdout for `wp eval-file`'s own capture,
+	     never to a browser. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<exclude-pattern>*/tests/browser/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.Security.EscapeOutput.OutputNotEscaped">
+		<exclude-pattern>*/tests/browser/*</exclude-pattern>
+	</rule>
 
 	<!-- Domain/Engine/Application are WordPress-free by invariant I6, so
 	     esc_html() is unavailable there; their exceptions are developer
