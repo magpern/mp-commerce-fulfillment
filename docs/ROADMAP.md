@@ -58,6 +58,20 @@ actual state before work starts.
 9. **M9 — Hardening & operational maturity** — not started.
 10. **1.0 — Commercial release** — not started.
 
+## Future capabilities (not scheduled)
+
+Documented for architectural guidance only. Not in the active milestone
+sequence above. Not required for current Biopentra operations.
+
+### Partial fulfillment & split shipments
+
+An operator may eventually need to ship available quantity while leaving
+the remainder open on the same fulfillment, then create additional
+shipments later. M2 intentionally requires all ordered quantity to be
+picked and packed before shipment; this capability is a future evolution
+of the existing shipment model, not a redesign. Full concept:
+`docs/ARCHITECTURE_PLAN.md` §24.1.
+
 Milestones beyond 1.0 (Returns & RMA, Multi-warehouse & locations, Carrier
 integrations, Automation & webhooks, Warehouse mobile mode) are listed in
 `docs/ARCHITECTURE_PLAN.md` §20 and are not yet scheduled.

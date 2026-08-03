@@ -29,6 +29,7 @@ This document is the **authoritative architectural specification** for Commerce 
 | M1 performance proof | 2026-08-02 | §III.7's D21 outcome updated with the actual 10k-row proof result: no full scan, no N+1, no non-scaling plan, no migration amendment required (`docs/QUEUE_PERFORMANCE_VALIDATION.md`). No architectural decision altered. |
 | M1 released | 2026-08-02 | PO accepted M1 and its release-candidate verification; `mp-admin-design-system` tagged `v0.2.0` and `mp-commerce-fulfillment` tagged `v0.1.0`, both published and independently re-verified against the downloaded release assets (`docs/M1_RELEASE_REPORT.md`). |
 | M2 Execution Plan (Part IV) | 2026-08-02 | Part IV appended: Milestone 2 (Packing Workspace & REST) execution plan, reconciled against M1's actual shipped state — reconciliation found one real M1 defect (the admin-side composition root wires a subscriber-less `EventDispatcher`, so admin-initiated transitions never reach `Woo\StatusBridge`) and three related findings in how transition eligibility is derived, all resolved by a single fix (§IV.3.B). Four PO decisions captured at approval: the dispatcher defect ships as its own `v0.1.1` patch before M2 feature work starts; multi-package "add package" ships in M2 without line-quantity allocation (M4); a minimal packing slip is pulled forward from M3 into M2; a dev/CI-only Playwright toolchain is added under new **ADR-0006**, which narrows ADR-0003's *Consequences* (shipped code stays framework-free and build-free) without altering its Decision. Two roadmap-sequencing amendments (§20's M2/M3 rows, §7.1's `mpcf_documents` milestone number) and ADR-0006 are the only document changes; no invariant, D-decision, layer rule, data-model semantic, engine contract or public-surface rule is altered. PO approved for implementation 2026-08-02. |
+| Partial fulfillment future capability | 2026-08-03 | §24.1 appended: partial fulfillment & split shipments documented as a future capability (operator dogfooding, M2). No architectural decision altered — a documentation-only pass. |
 
 ## Governance
 
@@ -516,7 +517,7 @@ Stages are independently replaceable: third parties override templates without t
 ## 11. Tracking
 
 - **Carrier registry, data-driven** (`mpcf_carriers` filter + bundled definitions): id, label, tracking-URL template (`https://…?id={tracking}`), tracking-number format hint (regex, warn-only), phone-required flag. Bundled set at M4 skews EU (PostNord, DHL, Bring, DPD, GLS, UPS, DB Schenker, Budbee, Instabox) + generic "Other" with manual URL. Data, not code — merchants and third parties add carriers without PHP in a later settings iteration.
-- **Multiple shipments per order and multiple packages per shipment** are native (§7.1): split shipments are additional `mpcf_shipments` rows; multi-parcel consignments are additional `mpcf_packages` rows, each with its own colli tracking number, dimensions, weight, photos and (later) label. Tracking display prefers package-level numbers when present, falling back to the consignment number.
+- **Multiple shipments per order and multiple packages per shipment** are native (§7.1): split shipments are additional `mpcf_shipments` rows; multi-parcel consignments are additional `mpcf_packages` rows, each with its own colli tracking number, dimensions, weight, photos and (later) label. Tracking display prefers package-level numbers when present, falling back to the consignment number. Partial-quantity shipping within one fulfillment is a future capability — see §24.1.
 - **Customer notification** (M4): "your order has shipped" email per shipment with tracking link(s) — delivered through the notification subsystem (§16.1) via its `EmailChannel` (wrapping the WC mailer for styling consistency); the dispatcher's dedup window means multi-package edits within a grace period send once. Plus `Woo\EmailTrackingHooks`: inject a tracking block into WC's own Completed-order email when the bridge maps shipped→completed (so merchants who keep WC emails get tracking there instead of a second email — setting chooses which).
 - **Shipment status** field (`pending/shipped/delivered/exception`) is manual/bridge-driven in v1; **live carrier tracking sync** (poll or webhook via `CarrierPort`) is the M-integrations milestone — the schema (`delivered_at`, `status`) and the Scheduler port are already shaped for it.
 - Tracking changes (add/edit/remove) are all audited with before/after payloads.
@@ -686,6 +687,14 @@ Each milestone is a usable release, tagged, installable. Detailed execution plan
 
 Sequencing notes: M3 before M4 because a printable slip is the single most-requested day-one artifact; M6 before M7 because batch picking without scanning is paper anyway; photography (M5) early because it is a headline differentiator and its guard integrates with the workflow engine; returns deliberately post-1.0 — it doubles the domain surface and deserves the stability of a frozen core.
 
+### 20.2 Future capabilities (not scheduled)
+
+These are documented for architectural guidance only. They are **not** in the milestone table above and are **not** required for current Biopentra warehouse operations.
+
+| Capability | Document |
+|---|---|
+| Partial fulfillment & split shipments | §24.1 |
+
 ### 20.1 M1 acceptance criteria (falsifiable)
 
 1. Paying a WooCommerce order (classic and Blocks checkout, HPOS on) creates exactly one `queued` fulfillment within the same request or the next AS tick; paying it twice creates no duplicate.
@@ -745,6 +754,72 @@ Sequencing notes: M3 before M4 because a printable slip is the single most-reque
 ## 24. Future opportunities (explicitly deferred, architecture-compatible)
 
 Admin workflow builder UI (definitions are already data); customer-facing tracking portal page + branded tracking emails; inbound logistics/purchase orders; address validation/correction pre-ship; rate shopping at pack time (choose cheapest carrier for measured weight/dims); packing-material optimization (box suggestion from item dims); SLA rules & alerting (age thresholds → notifications) on the automation engine; multi-source orders (the `order_source` column + `OrderSource` port admit non-WooCommerce feeds); photo annotations; voice picking; hardware station integrations (scales via WebHID/WebSerial — reads feed the same `PackageSpec` REST field); marketplace of carrier adapters as separate paid add-on plugins hooking `mpcf_carriers`/`CarrierPort`; additional notification channels (SMS/push/Slack/Teams) as `NotificationChannel` implementations; audit investigation mode and Audit Explorer (§13); cross-plugin MP Commerce integrations (Inventory feeding backorder detection, Shipping providing negotiated rates at pack time) strictly through the public surfaces of §2.2.
+
+### 24.1 Partial fulfillment & split shipments (future capability)
+
+**Future capability** — not in the active milestone schedule (§20). **Not required for current Biopentra warehouse operations.**
+
+#### Business scenario
+
+A typical case: a customer ordered five units of a line item, but only four are available in the warehouse — one is damaged, missing, or otherwise unavailable. An operator may eventually need to:
+
+- ship the available quantity now,
+- leave the remaining quantity open on the same fulfillment,
+- create an additional shipment later when the remainder becomes available or is otherwise resolved.
+
+This is distinct from multi-parcel consignments (several boxes in one handover) and from batch picking. It is about **partial quantity resolution** across one or more shipment events over time.
+
+#### Fulfillment vs shipment
+
+- **One fulfillment, multiple shipments.** The data model already admits N `mpcf_shipments` rows per fulfillment (§7.1, §11). A future partial-fulfillment workflow uses that shape: each carrier handover is its own shipment record.
+- **A shipment may complete while the fulfillment stays open.** An individual shipment may reach `shipped` (with tracking, audit, and customer notification) without the fulfillment aggregate reaching a terminal working-state exit. The fulfillment remains in a working state until every ordered quantity on every line is accounted for.
+- **Multiple shipments belong to one fulfillment.** Package-level allocation (`mpcf_package_items.qty`) is the existing hook for associating line quantities with physical consignments; line-level allocation UI is deferred (M4), but the persistence layer is already present.
+
+#### WooCommerce order completion
+
+The outbound status bridge (`§6.6 Woo\StatusBridge`) must not mark the WooCommerce order complete merely because the first shipment left the warehouse. **WooCommerce order completion must wait until every required quantity is either shipped, cancelled, refunded, or otherwise resolved** — evaluated across all fulfillments for that order. Today's default mapping (all fulfillments for the order have shipped → WC `completed`) is correct for the all-or-nothing M2 workflow; a partial-fulfillment future extends the completion predicate, not the bridge's event-driven shape.
+
+#### M2 intentional non-support
+
+Milestone 2 **deliberately does not** support partial fulfillment. Current operator behaviour remains:
+
+- **all ordered quantity must be picked** before the fulfillment advances past picking (`all_items_picked` guard);
+- **all items must be packed** before the fulfillment reaches `packed` (`all_items_packed` guard);
+- **shipment only after complete picking and packing** — the fulfillment transitions to `shipped` as a whole once guards pass and the operator ships.
+
+There is no partial-quantity advance, no "ship what we have" shortcut, and no per-line shipped-quantity tracking beyond `qty_picked` / `qty_packed` in M2.
+
+#### M2 interim path (unchanged)
+
+Until partial fulfillment ships, "ship what we have" is handled through mechanisms M2 already provides:
+
+- move the fulfillment into the **exception band** (e.g. `backordered`) with a reason and ship nothing until resolved; or
+- adjust the order in WooCommerce (reduce quantity, cancel line, refund) — `RefundObserver` flags the fulfillment and the workspace reads live order data through `OrderSource`.
+
+See also §IV.5 (Partial shipment) in the M2 execution plan.
+
+#### Architectural hooks already present (evolution, not redesign)
+
+Future implementers should extend what M2 shipped rather than replace it:
+
+| Hook | Role in a partial-fulfillment future |
+|---|---|
+| `mpcf_shipments` (N per fulfillment) | Each partial handover is an additional shipment row |
+| `mpcf_package_items.qty` | Associates specific line quantities with packages |
+| Data-defined `WorkflowDefinition` + guards | New partial-quantity guards and transitions without a second engine |
+| Event-driven `StatusBridge` | Completion criteria can require "all quantities resolved" instead of "first shipment shipped" |
+| Append-only audit (`mpcf_events`) | Each partial pick/pack/ship event remains auditable |
+
+High-level areas likely touched in a future milestone (no schema or API design here): partial-quantity workflow guards; per-line resolution / shipped tracking; fulfillment terminal conditions; bridge completion criteria. Those details belong in a future execution plan and, where they alter invariants or public contracts, in an ADR.
+
+#### Distinction from true split fulfillment
+
+Two concepts must not be conflated:
+
+1. **Partial fulfillment within one fulfillment** (this section) — ship available quantity now, remainder open, additional shipment(s) later, **one fulfillment aggregate per order** (`order_unique` unchanged).
+2. **True split fulfillment** — one order → **several independently-shipping fulfillment aggregates**, requiring relaxing the `order_unique` index on `mpcf_fulfillments (order_id, order_source)`. That is a separate post-1.0 track and requires its own ADR (see §IV.13).
+
+Documenting partial fulfillment now prevents today's all-or-nothing M2 decisions from being mistaken for permanent limitations of the shipment model — while keeping Biopentra's current workflow unchanged.
 
 ## 25. Final architecture recommendation
 
@@ -1390,7 +1465,7 @@ data model supports N shipments per fulfillment today, so a second carrier hando
 exception resolves needs no schema change. **True split fulfillment** (one order → several
 independently-shipping fulfillments) requires relaxing the `order_unique` index and is a post-1.0
 ADR (IV.13). Stating this now prevents a well-meaning future implementer from quietly dropping the
-index.
+index. Full future-capability guidance: §24.1.
 
 ---
 
@@ -1785,8 +1860,9 @@ Stated explicitly so scope gravity (R12) has nothing to grab.
   `ARCHITECTURE_FREEZE.md`, security review document.
 - **Post-1.0:** returns; the location hierarchy and location-sorted picking; `CarrierPort` label
   purchase and live tracking sync; webhooks and automation rules; scoped API keys; the tablet PWA;
-  true split fulfillment (needs an ADR to relax `order_unique`); the admin workflow builder; the
-  `mpcf_search_index` projection; audit investigation mode.
+  true split fulfillment (needs an ADR to relax `order_unique` — see §24.1 for distinction from
+  within-fulfillment partial shipping); partial fulfillment & split shipments (§24.1); the admin
+  workflow builder; the `mpcf_search_index` projection; audit investigation mode.
 
 ---
 
