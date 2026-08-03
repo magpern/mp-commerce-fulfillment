@@ -111,6 +111,14 @@ function returnFocusFromModal() {
 
 function observeModals() {
 	document.querySelectorAll( '[data-mpcf-modal]' ).forEach( function ( modal ) {
+		if ( 'mpcf-reason-modal' === modal.id ) {
+			// workspace.js opens this one programmatically (not via a
+			// [data-mpcf-modal-open] trigger this module ever sees) and
+			// owns its capture/restore exclusively (§IV.5.4) — tracking it
+			// here too would restore focus to a stale or wrong element.
+			return;
+		}
+
 		var wasHidden = modal.hidden;
 
 		new MutationObserver( function () {

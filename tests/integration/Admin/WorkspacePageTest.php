@@ -271,6 +271,59 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 		self::assertSame( $new_owner_id, $this->fulfillments->find( $id )->assignee_id() );
 	}
 
+	public function test_render_includes_the_reusable_reason_modal(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$html = $this->render_for( $this->seed() );
+
+		self::assertStringContainsString( 'id="mpcf-reason-modal"', $html );
+		self::assertStringContainsString( 'name="reason"', $html );
+	}
+
+	public function test_render_marks_exception_transitions_as_requiring_a_reason(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$id          = $this->seed();
+		$fulfillment = $this->fulfillments->find( $id );
+		$fulfillment->apply_transition( 'picking', null, new DateTimeImmutable() );
+		$this->fulfillments->save( $fulfillment );
+
+		$html = $this->render_for( $id );
+
+		self::assertStringContainsString( 'data-mpcf-target="problem"', $html );
+		self::assertMatchesRegularExpression( '/data-mpcf-target="problem"[^>]*data-mpcf-requires-reason/', $html );
+	}
+
+	public function test_render_shows_queue_cursor_links_when_a_cursor_is_present(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$previous_id = $this->seed();
+		$current_id  = $this->seed();
+		$next_id     = $this->seed();
+
+		$_GET['cursor'] = $previous_id . ',' . $current_id . ',' . $next_id; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test harness simulating the opaque cursor query param.
+
+		$html = $this->render_for( $current_id );
+
+		self::assertStringContainsString( 'data-mpcf-queue-prev', $html );
+		self::assertStringContainsString( 'data-mpcf-queue-next', $html );
+		self::assertStringContainsString( 'fulfillment_id=' . $previous_id, $html );
+		self::assertStringContainsString( 'fulfillment_id=' . $next_id, $html );
+
+		unset( $_GET['cursor'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Test harness cleanup, so later tests in this class do not inherit this cursor.
+	}
+
+	public function test_render_omits_queue_cursor_links_without_a_cursor_param(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		unset( $_GET['cursor'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Test harness cleanup.
+
+		$html = $this->render_for( $this->seed() );
+
+		self::assertStringNotContainsString( 'data-mpcf-queue-prev', $html );
+		self::assertStringNotContainsString( 'data-mpcf-queue-next', $html );
+	}
+
 	public function test_the_primary_button_is_disabled_with_the_guards_message_when_a_guard_blocks_it(): void {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
 

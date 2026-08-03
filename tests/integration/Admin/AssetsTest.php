@@ -36,6 +36,7 @@ final class AssetsTest extends WP_UnitTestCase {
 		self::assertTrue( wp_script_is( 'mpcf-workspace', 'enqueued' ) );
 		self::assertTrue( wp_script_is( 'mpcf-packing', 'enqueued' ) );
 		self::assertTrue( wp_script_is( 'mpcf-shipment', 'enqueued' ) );
+		self::assertTrue( wp_script_is( 'mpcf-documents', 'enqueued' ) );
 		self::assertTrue( wp_script_is( 'mpcf-shortcuts', 'enqueued' ) );
 		self::assertTrue( wp_script_is( 'mpcf-mpds-toast', 'enqueued' ) );
 		self::assertTrue( wp_script_is( 'mpcf-mpds-action-bar', 'enqueued' ) );
@@ -50,6 +51,7 @@ final class AssetsTest extends WP_UnitTestCase {
 		self::assertFalse( wp_script_is( 'mpcf-workspace', 'enqueued' ) );
 		self::assertFalse( wp_script_is( 'mpcf-packing', 'enqueued' ) );
 		self::assertFalse( wp_script_is( 'mpcf-shipment', 'enqueued' ) );
+		self::assertFalse( wp_script_is( 'mpcf-documents', 'enqueued' ) );
 		self::assertFalse( wp_script_is( 'mpcf-shortcuts', 'enqueued' ) );
 		self::assertFalse( wp_script_is( 'mpcf-mpds-toast', 'enqueued' ) );
 	}

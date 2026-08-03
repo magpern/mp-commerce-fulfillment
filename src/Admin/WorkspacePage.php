@@ -305,6 +305,7 @@ final class WorkspacePage implements Page {
 		echo $this->renderer->workspace_layout_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		$this->render_action_bar( $fulfillment, $candidates );
+		$this->render_reason_modal();
 
 		echo '</form>';
 
@@ -746,6 +747,8 @@ final class WorkspacePage implements Page {
 		echo $this->renderer->action_bar_open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->renderer->action_bar_identity( $identity ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
+		$this->render_queue_cursor( (int) $fulfillment->id() );
+
 		printf(
 			'<button type="button" class="button-link" data-mpcf-modal-open="mpcf-shortcut-sheet" aria-label="%s">%s</button>',
 			esc_attr__( 'Keyboard shortcuts', 'mp-commerce-fulfillment' ),
@@ -763,23 +766,112 @@ final class WorkspacePage implements Page {
 			}
 
 			printf(
-				'<button type="button" class="button" data-mpcf-secondary-action data-mpcf-target="%s">%s</button>',
+				'<button type="button" class="button" data-mpcf-secondary-action data-mpcf-target="%s"%s>%s</button>',
 				esc_attr( $candidate->target() ),
+				$candidate->requires_reason() ? ' data-mpcf-requires-reason' : '', // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- A fixed literal attribute string, not user input.
 				esc_html( $candidate->label() )
 			);
 		}
 
 		if ( null !== $primary ) {
+			$attrs = array( 'data-mpcf-target' => $primary->target() );
+
+			if ( $primary->requires_reason() ) {
+				$attrs['data-mpcf-requires-reason'] = '1';
+			}
+
 			if ( $primary->is_approved() ) {
-				echo $this->renderer->action_bar_primary( $primary->label(), array( 'data-mpcf-target' => $primary->target() ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				echo $this->renderer->action_bar_primary( $primary->label(), $attrs ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			} else {
-				echo $this->renderer->action_bar_primary( $primary->label(), array( 'disabled' => 'disabled' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				$attrs['disabled'] = 'disabled';
+				echo $this->renderer->action_bar_primary( $primary->label(), $attrs ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				printf( '<span class="description" data-mpcf-guard-message>%s</span>', esc_html( (string) $primary->rejection_message() ) );
 			}
 		}
 
 		echo $this->renderer->action_bar_actions_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->renderer->action_bar_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	/**
+	 * Renders Previous/Next navigation within the queue's current filter/
+	 * sort slice, when the workspace was opened with one (Architecture
+	 * Plan §IV.5.3 — the `[`/`]` shortcuts and `shortcuts.js` both target
+	 * these same real anchors). The cursor is an opaque comma-separated id
+	 * list the Queue screen builds (§IV.5.1) — this page only ever reads
+	 * its own position in it, never how it was built.
+	 *
+	 * @param int $fulfillment_id Fulfillment currently open.
+	 */
+	private function render_queue_cursor( int $fulfillment_id ): void {
+		$cursor = isset( $_GET['cursor'] ) ? sanitize_text_field( wp_unslash( $_GET['cursor'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation param.
+
+		if ( '' === $cursor ) {
+			return;
+		}
+
+		$ids      = array_values( array_filter( array_map( 'absint', explode( ',', $cursor ) ) ) );
+		$position = array_search( $fulfillment_id, $ids, true );
+
+		if ( false === $position ) {
+			return;
+		}
+
+		echo '<nav class="mpcf-workspace__queue-cursor">';
+
+		if ( $position > 0 ) {
+			printf(
+				'<a href="%s" data-mpcf-queue-prev>%s</a>',
+				esc_url( $this->workspace_url( $ids[ $position - 1 ], $cursor ) ),
+				esc_html__( '← Previous', 'mp-commerce-fulfillment' )
+			);
+		}
+
+		if ( $position < count( $ids ) - 1 ) {
+			printf(
+				'<a href="%s" data-mpcf-queue-next>%s</a>',
+				esc_url( $this->workspace_url( $ids[ $position + 1 ], $cursor ) ),
+				esc_html__( 'Next →', 'mp-commerce-fulfillment' )
+			);
+		}
+
+		echo '</nav>';
+	}
+
+	/**
+	 * A workspace URL for another fulfillment, carrying the same cursor
+	 * forward so repeated `]` presses keep walking the same queue slice.
+	 *
+	 * @param int    $fulfillment_id Target fulfillment.
+	 * @param string $cursor         The opaque cursor string.
+	 */
+	private function workspace_url( int $fulfillment_id, string $cursor ): string {
+		return add_query_arg(
+			array(
+				'page'           => self::SLUG,
+				'fulfillment_id' => $fulfillment_id,
+				'cursor'         => $cursor,
+			),
+			admin_url( 'admin.php' )
+		);
+	}
+
+	/**
+	 * Renders the one reusable reason-capture modal every candidate
+	 * transition with `requires_reason() === true` opens (Architecture
+	 * Plan §IV.5.7) — `workspace.js` sets which target is pending before
+	 * showing it and reads its textarea on confirm, so a single modal
+	 * serves every exception-state edge without knowing in advance which
+	 * ones the governing workflow declares.
+	 */
+	private function render_reason_modal(): void {
+		echo $this->renderer->reason_modal( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			'mpcf-reason-modal',
+			__( 'Reason required', 'mp-commerce-fulfillment' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Passed as a method argument, not printed; reason_modal() escapes it internally.
+			'reason',
+			__( 'This action is recorded on the audit trail. Add a reason:', 'mp-commerce-fulfillment' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Passed as a method argument, not printed; reason_modal() escapes it internally.
+			__( 'Confirm', 'mp-commerce-fulfillment' ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Passed as a method argument, not printed; reason_modal() escapes it internally.
+		);
 	}
 
 	/**

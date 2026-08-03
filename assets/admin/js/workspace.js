@@ -11,6 +11,7 @@
  */
 
 import { createStore } from './store.js';
+import { api } from './api.js';
 
 /**
  * Architecture Plan §IV.5.4 — one manager owns focus for the whole
@@ -113,6 +114,11 @@ function renderActionBar( actionsRegion, transitions ) {
 		button.className = 'button';
 		button.setAttribute( 'data-mpcf-secondary-action', '' );
 		button.setAttribute( 'data-mpcf-target', candidate.target );
+
+		if ( candidate.requires_reason ) {
+			button.setAttribute( 'data-mpcf-requires-reason', '' );
+		}
+
 		button.textContent = candidate.label;
 		actionsRegion.appendChild( button );
 	} );
@@ -126,6 +132,11 @@ function renderActionBar( actionsRegion, transitions ) {
 	primaryButton.className = 'button button-primary mpcf-ui-action-bar__primary';
 	primaryButton.setAttribute( 'data-mpcf-primary-action', '' );
 	primaryButton.setAttribute( 'data-mpcf-target', primary.target );
+
+	if ( primary.requires_reason ) {
+		primaryButton.setAttribute( 'data-mpcf-requires-reason', '' );
+	}
+
 	primaryButton.textContent = primary.label;
 
 	if ( ! primary.approved ) {
@@ -143,6 +154,20 @@ function renderActionBar( actionsRegion, transitions ) {
 	}
 }
 
+function notifyError( error ) {
+	document.dispatchEvent(
+		new CustomEvent( 'data-mpcf-toast', {
+			detail: {
+				message: error.message,
+				variant: 'error',
+				persistent: 409 === error.status,
+				actionLabel: 409 === error.status ? 'Reload' : undefined,
+				actionHref: 409 === error.status ? window.location.href : undefined
+			}
+		} )
+	);
+}
+
 document.addEventListener( 'DOMContentLoaded', function () {
 	var root = document.querySelector( '[data-mpcf-workspace]' );
 
@@ -153,6 +178,8 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	var store = createStore( root );
 	var focus = createFocusManager( '[data-mpcf-scan-sink]' );
 	var actionsRegion = root.querySelector( '.mpcf-ui-action-bar__actions' );
+	var reasonModal = document.getElementById( 'mpcf-reason-modal' );
+	var pendingReasonTarget = null;
 
 	store.onUpdate( function ( payload ) {
 		if ( actionsRegion && payload && payload.transitions ) {
@@ -162,6 +189,172 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		}
 	} );
 
+	/**
+	 * `packing.js`'s debounced batch flush is forced before every
+	 * transition attempt (risk M2-R7: "no transition ever runs against
+	 * unflushed local state") — `flushPendingItems` is only set once
+	 * `packing.js`'s own `DOMContentLoaded` listener has run, which
+	 * registration order guarantees happens before this function is ever
+	 * *called* (it only runs later, from a click/submit).
+	 */
+	function flushPendingWrites() {
+		if ( window.MpcfWorkspace && window.MpcfWorkspace.flushPendingItems ) {
+			return window.MpcfWorkspace.flushPendingItems();
+		}
+
+		return Promise.resolve( null );
+	}
+
+	function offerNextOrder() {
+		var nextLink = document.querySelector( '[data-mpcf-queue-next]' );
+
+		document.dispatchEvent(
+			new CustomEvent( 'data-mpcf-toast', {
+				detail: {
+					message: 'Shipped.',
+					variant: 'success',
+					actionLabel: nextLink ? 'Next order →' : undefined,
+					actionHref: nextLink ? nextLink.getAttribute( 'href' ) : undefined
+				}
+			} )
+		);
+	}
+
+	function refreshActionBarAfterFailure() {
+		api.getTransitions( store.getFulfillmentId() )
+			.then( function ( result ) {
+				focus.capture();
+				renderActionBar( actionsRegion, result.transitions );
+				focus.restore();
+			} )
+			.catch( function () {} );
+	}
+
+	function submitTransition( target, reason ) {
+		return flushPendingWrites()
+			.then( function () {
+				return store.mutate( function () {
+					return api.submitTransition( store.getFulfillmentId(), target, store.getVersion(), reason );
+				} );
+			} )
+			.then( function ( result ) {
+				if ( result.fulfillment && 'shipped' === result.fulfillment.state ) {
+					offerNextOrder();
+				}
+
+				return result;
+			} )
+			.catch( function ( error ) {
+				notifyError( error );
+
+				// A 422 guard rejection means the candidate list this
+				// button was built from is stale (another actor changed
+				// something server-side between page load and this
+				// click) — refetch and re-render rather than leaving a
+				// now-wrong action bar on screen.
+				if ( 'mpcf_guard_rejected' === error.code || 422 === error.status ) {
+					refreshActionBarAfterFailure();
+				}
+			} );
+	}
+
+	function openReasonModal( target ) {
+		if ( ! reasonModal ) {
+			submitTransition( target, null );
+			return;
+		}
+
+		pendingReasonTarget = target;
+
+		var textarea = reasonModal.querySelector( 'textarea' );
+
+		if ( textarea ) {
+			textarea.value = '';
+		}
+
+		focus.capture();
+		reasonModal.hidden = false;
+
+		var autofocus = reasonModal.querySelector( '[data-mpcf-modal-autofocus]' ) || reasonModal.querySelector( 'button[data-mpcf-modal-close]' );
+
+		if ( autofocus ) {
+			autofocus.focus();
+		}
+	}
+
+	function beginTransition( element ) {
+		if ( ! element ) {
+			return;
+		}
+
+		var target = element.getAttribute( 'data-mpcf-target' );
+
+		if ( ! target ) {
+			return;
+		}
+
+		if ( element.hasAttribute( 'data-mpcf-requires-reason' ) ) {
+			openReasonModal( target );
+			return;
+		}
+
+		submitTransition( target, null );
+	}
+
+	root.addEventListener( 'submit', function ( event ) {
+		event.preventDefault();
+
+		var submitter = event.submitter || root.querySelector( '[data-mpcf-primary-action]' );
+
+		if ( reasonModal && submitter && reasonModal.contains( submitter ) ) {
+			var textarea = reasonModal.querySelector( 'textarea' );
+			var reason = textarea ? textarea.value : '';
+			var target = pendingReasonTarget;
+
+			reasonModal.hidden = true;
+
+			if ( target ) {
+				submitTransition( target, reason );
+			}
+
+			return;
+		}
+
+		beginTransition( submitter );
+	} );
+
+	root.addEventListener( 'click', function ( event ) {
+		var secondary = event.target.closest( '[data-mpcf-secondary-action]' );
+
+		if ( secondary ) {
+			beginTransition( secondary );
+		}
+	} );
+
+	/**
+	 * One observer covers every way the reason modal can close — the
+	 * Cancel button, Escape (`modal.js`'s own handler sets `hidden`
+	 * directly, with no click event this module could otherwise hook),
+	 * and the confirm-submit path above. This modal is opened
+	 * programmatically (not via a `[data-mpcf-modal-open]` trigger click),
+	 * so `shortcuts.js`'s generic opener-tracking has nothing to restore
+	 * focus to for it — this module owns its capture (`openReasonModal()`)
+	 * and its restore (here) exclusively, matching the "one manager owns
+	 * focus" rule this file's own docblock states (§IV.5.4).
+	 */
+	if ( reasonModal ) {
+		var reasonModalWasHidden = reasonModal.hidden;
+
+		new MutationObserver( function () {
+			if ( reasonModal.hidden && ! reasonModalWasHidden ) {
+				pendingReasonTarget = null;
+				focus.restore();
+			}
+
+			reasonModalWasHidden = reasonModal.hidden;
+		} ).observe( reasonModal, { attributes: true, attributeFilter: [ 'hidden' ] } );
+	}
+
 	focus.restingFocus();
 
 	document.addEventListener( 'keydown', function ( event ) {
@@ -169,10 +362,11 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			return;
 		}
 
-		if ( document.querySelector( '.mpcf-ui-modal[open], [data-mpcf-modal-open].is-open' ) ) {
-			// A future modal-close binding (shortcuts.js, F17) owns
-			// returning focus once it actually closes something; this
-			// bootstrap only owns the no-modal-open fallback below.
+		if ( document.querySelector( '[data-mpcf-modal]:not([hidden])' ) ) {
+			// `modal.js`'s own Escape handler closes it; the return-focus
+			// side of that (§IV.5.4, rule 3) is owned above, at the
+			// `[data-mpcf-modal-close]` click handler and the reason-modal
+			// confirm path — both fire regardless of what closed the modal.
 			return;
 		}
 
