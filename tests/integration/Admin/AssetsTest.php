@@ -23,6 +23,16 @@ use WP_UnitTestCase;
  * (it asserted against `wp_script_is()`, which stayed happily green while
  * the real `<script>` tag never carried `type="module"` at all; only a
  * real browser loading a real `<script>` tag ever caught that, F22).
+ *
+ * `WP_Script_Modules::get_queue()`/`get_registered()` are not usable here —
+ * both are `@since` later than 6.5.0 (the plugin's supported floor, per
+ * `.github/workflows/ci.yml`'s `integration (floor, …, 6.5.*, …)` leg), so
+ * a test built against a newer local WordPress checkout passed while CI's
+ * floor leg failed with "Call to undefined method". `print_enqueued_
+ * script_modules()` is public since 6.5.0 and is what these tests capture
+ * instead — asserting the same real, rendered `<script type="module">` tag
+ * a browser would actually receive, which is also strictly closer to what
+ * this suite is meant to prove.
  */
 final class AssetsTest extends WP_UnitTestCase {
 
@@ -36,18 +46,29 @@ final class AssetsTest extends WP_UnitTestCase {
 		$GLOBALS['wp_script_modules'] = new \WP_Script_Modules(); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- A WordPress core global, not a plugin symbol.
 	}
 
+	/**
+	 * Renders whatever is currently enqueued in the Script Modules registry
+	 * the same way a real page footer would, via the one introspection
+	 * method public since 6.5.0.
+	 */
+	private function render_enqueued_script_modules(): string {
+		ob_start();
+		wp_script_modules()->print_enqueued_script_modules();
+
+		return (string) ob_get_clean();
+	}
+
 	public function test_workspace_script_is_enqueued_only_on_the_workspace_screen(): void {
 		$_GET['page'] = 'mpcf-workspace'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test harness simulating the admin screen query param.
 
 		( new Assets() )->maybe_enqueue( '' );
 
-		$modules = wp_script_modules()->get_queue();
+		$html = $this->render_enqueued_script_modules();
 
-		self::assertContains( 'mpcf-workspace', $modules );
-		self::assertContains( 'mpcf-packing', $modules );
-		self::assertContains( 'mpcf-shipment', $modules );
-		self::assertContains( 'mpcf-documents', $modules );
-		self::assertContains( 'mpcf-shortcuts', $modules );
+		foreach ( array( 'mpcf-workspace', 'mpcf-packing', 'mpcf-shipment', 'mpcf-documents', 'mpcf-shortcuts' ) as $module_id ) {
+			self::assertStringContainsString( "id=\"{$module_id}-js-module\"", $html );
+		}
+
 		self::assertTrue( wp_script_is( 'mpcf-mpds-toast', 'enqueued' ) );
 		self::assertTrue( wp_script_is( 'mpcf-mpds-action-bar', 'enqueued' ) );
 		self::assertTrue( wp_script_is( 'mpcf-mpds-scan-sink', 'enqueued' ) );
@@ -58,7 +79,7 @@ final class AssetsTest extends WP_UnitTestCase {
 
 		( new Assets() )->maybe_enqueue( '' );
 
-		self::assertSame( array(), wp_script_modules()->get_queue() );
+		self::assertSame( '', $this->render_enqueued_script_modules() );
 		self::assertFalse( wp_script_is( 'mpcf-mpds-toast', 'enqueued' ) );
 	}
 
@@ -67,8 +88,12 @@ final class AssetsTest extends WP_UnitTestCase {
 
 		( new Assets() )->maybe_enqueue( '' );
 
+		$html = $this->render_enqueued_script_modules();
+
 		foreach ( array( 'mpcf-workspace', 'mpcf-packing', 'mpcf-shipment', 'mpcf-documents', 'mpcf-shortcuts' ) as $module_id ) {
-			self::assertNotNull( wp_script_modules()->get_registered( $module_id ), "{$module_id} must be registered as a real script module, not a classic script." );
+			self::assertStringContainsString( 'type="module"', $html );
+			self::assertStringContainsString( "id=\"{$module_id}-js-module\"", $html, "{$module_id} must be registered as a real script module, not a classic script." );
+			self::assertFalse( wp_script_is( $module_id, 'registered' ), "{$module_id} must not also sit in the classic wp_scripts() registry." );
 		}
 	}
 
