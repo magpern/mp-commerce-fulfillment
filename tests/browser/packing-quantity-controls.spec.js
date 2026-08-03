@@ -27,10 +27,10 @@ test.describe( 'Packing Workspace — quantity controls', () => {
 		const { primary, stepper } = await openPickingWorkspace( page, testInfo );
 		const incrementButton = page.locator( '[data-mpcf-quantity-increment]' ).first();
 		const checklistRow = page.locator( '.mpcf-ui-checklist__row' ).first();
-		const quantityDisplay = page.locator( '.mpcf-workspace__quantity-display' ).first();
+		const quantityDisplay = page.locator( '.mpcf-workspace__quantity-processed' ).first();
 
 		await expect( stepper ).toHaveValue( '0' );
-		await expect( quantityDisplay ).toContainText( 'Picked: 0 /' );
+		await expect( quantityDisplay ).toContainText( 'Picked: 0' );
 
 		const itemsRequest = page.waitForResponse(
 			response =>
@@ -41,7 +41,7 @@ test.describe( 'Packing Workspace — quantity controls', () => {
 
 		await incrementButton.click();
 		await expect( stepper ).toHaveValue( '1' );
-		await expect( quantityDisplay ).toContainText( 'Picked: 1 /' );
+		await expect( quantityDisplay ).toContainText( 'Picked: 1' );
 
 		const response = await itemsRequest;
 		const body = await response.json();
@@ -108,11 +108,14 @@ test.describe( 'Packing Workspace — quantity controls', () => {
 	test( 'ordered quantity is visible in checklist', async ( { page }, testInfo ) => {
 		await openPickingWorkspace( page, testInfo );
 
-		const quantityLabel = page.locator( '.mpcf-workspace__quantity-label' ).first();
-		await expect( quantityLabel ).toContainText( /^Ordered: \d+/ );
+		const ordered = page.locator( '.mpcf-workspace__quantity-ordered' ).first();
+		await expect( ordered ).toContainText( /^Ordered: \d+/ );
 
-		const quantityDisplay = page.locator( '.mpcf-workspace__quantity-display' ).first();
-		await expect( quantityDisplay ).toContainText( /^Picked: \d+ \/ \d+/ );
+		const processed = page.locator( '.mpcf-workspace__quantity-processed' ).first();
+		await expect( processed ).toContainText( /^Picked: \d+/ );
+
+		const remaining = page.locator( '.mpcf-workspace__quantity-remaining' ).first();
+		await expect( remaining ).toContainText( /^Remaining: \d+/ );
 	} );
 
 	test( 'row becomes complete when all ordered quantity is picked', async ( { page }, testInfo ) => {

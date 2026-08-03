@@ -429,7 +429,7 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 		$html = $this->render_for( $id );
 
 		self::assertStringContainsString( 'disabled', $html );
-		self::assertStringContainsString( 'must be fully packed', strtolower( $html ) );
+		self::assertStringContainsString( 'Pack all picked items before marking this fulfillment as packed.', $html );
 	}
 
 	public function test_render_shows_the_customer_note_when_present(): void {
@@ -458,5 +458,95 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 
 		self::assertStringContainsString( 'Leave at door<br>', $html );
 		self::assertStringContainsString( 'Ring bell twice', $html );
+	}
+
+	public function test_queued_workspace_renders_stage_banner_and_start_picking_guidance(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$html = $this->render_for( $this->seed() );
+
+		self::assertStringContainsString( 'data-mpcf-stage-banner', $html );
+		self::assertStringContainsString( 'data-mpcf-stage="queued"', $html );
+		self::assertStringContainsString( 'Start picking to record the items you collect.', $html );
+		self::assertStringContainsString( 'Start picking to enable quantity recording', $html );
+		self::assertStringContainsString( 'mpcf-workspace__shipment-disclosure--muted', $html );
+		self::assertStringNotContainsString( 'mpcf-workspace__shipment-disclosure--muted" open', $html );
+	}
+
+	public function test_picking_workspace_shows_ordered_picked_and_remaining(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$id          = $this->seed( 3 );
+		$fulfillment = $this->fulfillments->find( $id );
+		$fulfillment->apply_transition( 'picking', null, new DateTimeImmutable() );
+		$this->fulfillments->save( $fulfillment );
+
+		$html = $this->render_for( $id );
+
+		self::assertStringContainsString( 'Ordered: 3', $html );
+		self::assertStringContainsString( 'Picked: 0', $html );
+		self::assertStringContainsString( 'Remaining: 3', $html );
+		self::assertStringContainsString( 'Record each item as it is picked.', $html );
+	}
+
+	public function test_packing_workspace_shows_ordered_packed_remaining_and_open_shipment(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$id          = $this->seed( 2 );
+		$fulfillment = $this->fulfillments->find( $id );
+		$fulfillment->apply_transition( 'packing', null, new DateTimeImmutable() );
+		$this->fulfillments->save( $fulfillment );
+
+		$html = $this->render_for( $id );
+
+		self::assertStringContainsString( 'Ordered: 2', $html );
+		self::assertStringContainsString( 'Packed: 0', $html );
+		self::assertStringContainsString( 'Remaining: 2', $html );
+		self::assertStringContainsString( 'mpcf-workspace__shipment-disclosure--secondary', $html );
+		self::assertMatchesRegularExpression( '/mpcf-workspace__shipment-disclosure--secondary"[^>]*\sopen/', $html );
+	}
+
+	public function test_packed_workspace_emphasizes_shipment_disclosure(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$id          = $this->seed();
+		$fulfillment = $this->fulfillments->find( $id );
+		foreach ( array( 'picking', 'picked', 'packing', 'packed' ) as $state ) {
+			$fulfillment->apply_transition( $state, null, new DateTimeImmutable() );
+		}
+		$this->fulfillments->save( $fulfillment );
+
+		$html = $this->render_for( $id );
+
+		self::assertStringContainsString( 'Confirm shipment and tracking details, then ship the order.', $html );
+		self::assertStringContainsString( 'mpcf-workspace__shipment-disclosure--primary', $html );
+	}
+
+	public function test_shipped_workspace_renders_success_panel(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$id          = $this->seed();
+		$fulfillment = $this->fulfillments->find( $id );
+		foreach ( array( 'picking', 'picked', 'packing', 'packed', 'shipped' ) as $state ) {
+			$fulfillment->apply_transition( $state, null, new DateTimeImmutable() );
+		}
+		$this->fulfillments->save( $fulfillment );
+
+		$html = $this->render_for( $id );
+
+		self::assertStringContainsString( 'data-mpcf-shipped-success', $html );
+		self::assertStringContainsString( 'This fulfillment has been shipped.', $html );
+		self::assertStringContainsString( 'data-mpcf-shipped-next-order', $html );
+		self::assertStringContainsString( 'data-mpcf-stage="shipped"', $html );
+	}
+
+	public function test_customer_instructions_render_in_work_region_callout(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$html = $this->render_for( $this->seed_with_customer_note( 'Fragile — handle with care' ) );
+
+		self::assertStringContainsString( 'data-mpcf-customer-instructions', $html );
+		self::assertStringContainsString( 'mpcf-ui-panel--warning', $html );
+		self::assertStringContainsString( 'Fragile — handle with care', $html );
 	}
 }
