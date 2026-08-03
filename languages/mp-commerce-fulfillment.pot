@@ -104,125 +104,129 @@ msgstr ""
 msgid "Shipped today"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:134
-#: src/Admin/FulfillmentDetailPage.php:141
-#: src/Admin/FulfillmentDetailPage.php:167
-#: src/Admin/FulfillmentDetailPage.php:180
+#: src/Admin/FulfillmentDetailPage.php:139
+#: src/Admin/FulfillmentDetailPage.php:146
+#: src/Admin/FulfillmentDetailPage.php:172
+#: src/Admin/FulfillmentDetailPage.php:185
 #: src/Admin/QueuePage.php:621
 msgid "Fulfillment Detail"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:168
+#: src/Admin/FulfillmentDetailPage.php:173
 #: src/Admin/WorkspacePage.php:233
 msgid "No fulfillment selected"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:168
+#: src/Admin/FulfillmentDetailPage.php:173
 msgid "Open a fulfillment from the Queue to see its detail."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:181
+#: src/Admin/FulfillmentDetailPage.php:186
 msgid "Not found"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:181
+#: src/Admin/FulfillmentDetailPage.php:186
 msgid "This fulfillment no longer exists."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:209
+#: src/Admin/FulfillmentDetailPage.php:216
 msgid "Fulfillment for order"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:211
+#: src/Admin/FulfillmentDetailPage.php:218
 msgid "Customer:"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:212
+#: src/Admin/FulfillmentDetailPage.php:219
 msgid "Items:"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:215
+#: src/Admin/FulfillmentDetailPage.php:222
 msgid "State:"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:220
+#: src/Admin/FulfillmentDetailPage.php:227
 #: src/Admin/WorkspacePage.php:427
 msgid "View order"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:234
+#: src/Admin/FulfillmentDetailPage.php:241
 msgid "Transitions"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:243
+#: src/Admin/FulfillmentDetailPage.php:250
 msgid "No transitions are available."
 msgstr ""
 
 #. translators: %s: target state label
-#: src/Admin/FulfillmentDetailPage.php:308
+#: src/Admin/FulfillmentDetailPage.php:315
 #, php-format
 msgid "Why is this fulfillment moving to \"%s\"?"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:323
+#: src/Admin/FulfillmentDetailPage.php:332
 msgid "Audit trail"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:328
-#: src/Admin/WorkspacePage.php:567
+#: src/Admin/FulfillmentDetailPage.php:339
+#: src/Admin/WorkspacePage.php:572
 msgid "System"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:329
-#: src/Admin/WorkspacePage.php:568
+#: src/Admin/FulfillmentDetailPage.php:340
+#: src/Admin/WorkspacePage.php:573
 msgid "ago"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:354
+#: src/Admin/FulfillmentDetailPage.php:372
+msgid "Audit trail pagination"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:404
 msgid "Fulfillment created from order."
 msgstr ""
 
 #. translators: 1: origin state, 2: destination state, 3: optional reason
-#: src/Admin/FulfillmentDetailPage.php:362
+#: src/Admin/FulfillmentDetailPage.php:412
 #, php-format
 msgid "Moved from \"%1$s\" to \"%2$s\".%3$s"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:382
-#: src/Admin/WorkspacePage.php:764
+#: src/Admin/FulfillmentDetailPage.php:432
+#: src/Admin/WorkspacePage.php:769
 msgid "Notes"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:386
-#: src/Admin/WorkspacePage.php:768
+#: src/Admin/FulfillmentDetailPage.php:436
+#: src/Admin/WorkspacePage.php:773
 msgid "pinned"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:390
-#: src/Admin/WorkspacePage.php:772
+#: src/Admin/FulfillmentDetailPage.php:440
+#: src/Admin/WorkspacePage.php:777
 msgid "Unknown"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:399
-#: src/Admin/WorkspacePage.php:783
+#: src/Admin/FulfillmentDetailPage.php:449
+#: src/Admin/WorkspacePage.php:788
 msgid "Add note"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:421
+#: src/Admin/FulfillmentDetailPage.php:471
 #: src/Admin/QueuePage.php:273
 msgid "Fulfillment not found."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:428
+#: src/Admin/FulfillmentDetailPage.php:478
 #: src/Admin/QueuePage.php:280
 msgid "You are not allowed to make this change."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:446
+#: src/Admin/FulfillmentDetailPage.php:496
 msgid "You are not allowed to add notes."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:450
+#: src/Admin/FulfillmentDetailPage.php:500
 msgid "A note cannot be empty."
 msgstr ""
 
@@ -394,7 +398,7 @@ msgid "Open a fulfillment from the Queue to start packing."
 msgstr ""
 
 #: src/Admin/WorkspacePage.php:342
-#: src/Admin/WorkspacePage.php:809
+#: src/Admin/WorkspacePage.php:814
 msgid "Keyboard shortcuts"
 msgstr ""
 
@@ -512,98 +516,98 @@ msgstr ""
 msgid "Timeline"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:583
+#: src/Admin/WorkspacePage.php:588
 msgid "View full audit trail"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:594
+#: src/Admin/WorkspacePage.php:599
 msgid "Shipment"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:619
+#: src/Admin/WorkspacePage.php:624
 msgid "Enter a carrier or tracking number to create a shipment."
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:621
-#: src/Admin/WorkspacePage.php:622
-#: src/Admin/WorkspacePage.php:670
-#: src/Admin/WorkspacePage.php:671
+#: src/Admin/WorkspacePage.php:626
+#: src/Admin/WorkspacePage.php:627
+#: src/Admin/WorkspacePage.php:675
+#: src/Admin/WorkspacePage.php:676
 msgid "Carrier"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:623
+#: src/Admin/WorkspacePage.php:628
 msgid "— Select —"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:631
-#: src/Admin/WorkspacePage.php:632
-#: src/Admin/WorkspacePage.php:633
-#: src/Admin/WorkspacePage.php:684
-#: src/Admin/WorkspacePage.php:686
+#: src/Admin/WorkspacePage.php:636
+#: src/Admin/WorkspacePage.php:637
+#: src/Admin/WorkspacePage.php:638
+#: src/Admin/WorkspacePage.php:689
+#: src/Admin/WorkspacePage.php:691
 msgid "Tracking number"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:636
-#: src/Admin/WorkspacePage.php:689
+#: src/Admin/WorkspacePage.php:641
+#: src/Admin/WorkspacePage.php:694
 #: templates/documents/packing-slip.php:79
 msgid "Packages"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:645
-#: src/Admin/WorkspacePage.php:704
+#: src/Admin/WorkspacePage.php:650
+#: src/Admin/WorkspacePage.php:709
 msgid "Add package"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:727
+#: src/Admin/WorkspacePage.php:732
 msgid "Weight"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:731
+#: src/Admin/WorkspacePage.php:736
 msgid "Length"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:735
+#: src/Admin/WorkspacePage.php:740
 msgid "Width"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:739
+#: src/Admin/WorkspacePage.php:744
 msgid "Height"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:750
-#: src/Admin/WorkspacePage.php:751
+#: src/Admin/WorkspacePage.php:755
+#: src/Admin/WorkspacePage.php:756
 msgid "Colli tracking number"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:780
+#: src/Admin/WorkspacePage.php:785
 msgid "Add a note…"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:781
+#: src/Admin/WorkspacePage.php:786
 msgid "Add a note"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:810
+#: src/Admin/WorkspacePage.php:815
 msgid "? Shortcuts"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:896
+#: src/Admin/WorkspacePage.php:901
 msgid "← Previous"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:904
+#: src/Admin/WorkspacePage.php:909
 msgid "Next →"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:940
+#: src/Admin/WorkspacePage.php:945
 msgid "Reason required"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:942
+#: src/Admin/WorkspacePage.php:947
 msgid "This action is recorded on the audit trail. Add a reason:"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:943
+#: src/Admin/WorkspacePage.php:948
 msgid "Confirm"
 msgstr ""
 

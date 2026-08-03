@@ -115,4 +115,75 @@ final class WpdbEventRepositoryTest extends WP_UnitTestCase {
 		self::assertNotSame( '', $hash );
 		self::assertSame( array(), $this->repository->timeline_for_fulfillment( $this->fulfillment_id ), 'A global event must not appear in any fulfillment-scoped timeline.' );
 	}
+
+	/**
+	 * Appends `$count` bare `fulfillment.state_changed` events, chained,
+	 * `payload.seq` numbered from 0 — the shared fixture for the paginated
+	 * and "most recent" reader tests below.
+	 *
+	 * @param int $count Number of events to append.
+	 */
+	private function append_sequence( int $count ): void {
+		$prev_hash = null;
+
+		for ( $i = 0; $i < $count; $i++ ) {
+			$prev_hash = $this->repository->append(
+				DomainEvent::for_fulfillment( $this->fulfillment_id, 'fulfillment.state_changed', Actor::system(), new DateTimeImmutable(), array( 'seq' => $i ) ),
+				$prev_hash
+			);
+		}
+	}
+
+	public function test_timeline_page_for_fulfillment_returns_one_page_oldest_first_with_a_correct_total(): void {
+		$this->append_sequence( 7 );
+
+		$page = $this->repository->timeline_page_for_fulfillment( $this->fulfillment_id, 1, 3 );
+
+		self::assertSame( 7, $page->total() );
+		self::assertSame( 1, $page->page() );
+		self::assertSame( 3, $page->per_page() );
+		self::assertSame( 3, $page->total_pages() );
+		self::assertCount( 3, $page->items() );
+		self::assertSame( array( 0, 1, 2 ), array_column( array_column( $page->items(), 'payload' ), 'seq' ) );
+	}
+
+	public function test_timeline_page_for_fulfillment_returns_the_remainder_on_the_last_page(): void {
+		$this->append_sequence( 7 );
+
+		$page = $this->repository->timeline_page_for_fulfillment( $this->fulfillment_id, 3, 3 );
+
+		self::assertCount( 1, $page->items(), 'The last page of an uneven total must hold only the remainder, not pad or overflow.' );
+		self::assertSame( 6, $page->items()[0]['payload']['seq'] );
+	}
+
+	public function test_timeline_page_for_fulfillment_does_not_include_events_for_another_fulfillment(): void {
+		$other_fulfillment_id = ( new WpdbFulfillmentRepository() )->insert(
+			Fulfillment::intake( 1003, 'woocommerce', 1, 'standard', 'queued', '#1003', 'Jo Doe', 1, new DateTimeImmutable() )
+		);
+
+		$this->append_sequence( 2 );
+		$this->repository->append( DomainEvent::for_fulfillment( $other_fulfillment_id, 'fulfillment.state_changed', Actor::system(), new DateTimeImmutable() ), null );
+
+		$page = $this->repository->timeline_page_for_fulfillment( $this->fulfillment_id, 1, 20 );
+
+		self::assertSame( 2, $page->total() );
+	}
+
+	public function test_recent_for_fulfillment_returns_exactly_the_limit_oldest_first_among_themselves(): void {
+		$this->append_sequence( 7 );
+
+		$recent = $this->repository->recent_for_fulfillment( $this->fulfillment_id, 5 );
+
+		self::assertCount( 5, $recent );
+		self::assertSame( array( 2, 3, 4, 5, 6 ), array_column( array_column( $recent, 'payload' ), 'seq' ), 'Must be the 5 most recent, oldest-first among themselves — not "whichever page-of-5 happens to be last".' );
+	}
+
+	public function test_recent_for_fulfillment_returns_every_row_when_fewer_than_the_limit_exist(): void {
+		$this->append_sequence( 3 );
+
+		$recent = $this->repository->recent_for_fulfillment( $this->fulfillment_id, 5 );
+
+		self::assertCount( 3, $recent );
+		self::assertSame( array( 0, 1, 2 ), array_column( array_column( $recent, 'payload' ), 'seq' ) );
+	}
 }

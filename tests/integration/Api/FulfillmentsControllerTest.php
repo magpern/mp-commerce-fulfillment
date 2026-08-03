@@ -14,7 +14,9 @@ use MPCF\Application\EventDispatcher;
 use MPCF\Application\TransitionContextFactory;
 use MPCF\Application\WorkflowService;
 use MPCF\Capabilities;
+use DateTimeImmutable;
 use MPCF\Domain\Event\Actor;
+use MPCF\Domain\Event\DomainEvent;
 use MPCF\Domain\Workflow\StandardWorkflow;
 use MPCF\Engine\GuardRegistry;
 use MPCF\Engine\WorkflowEngine;
@@ -123,6 +125,36 @@ final class FulfillmentsControllerTest extends WP_UnitTestCase {
 		self::assertSame( $id, $data['fulfillment']['id'] );
 		self::assertCount( 1, $data['items'] );
 		self::assertSame( 2, $data['items'][0]['qty_ordered'] );
+	}
+
+	public function test_get_fulfillment_recent_events_returns_only_the_5_most_recent(): void {
+		// F23 (Architecture Plan §IV.10, risk M2-R11): this used to be
+		// `array_slice($view->timeline(), -5)` — the same unbounded-fetch
+		// pattern fixed everywhere else the timeline is read.
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_OPERATOR ) ) );
+
+		$id     = $this->seed_fulfillment( 2002 );
+		$events = new WpdbEventRepository();
+		$prev   = $events->last_hash_for_fulfillment( $id );
+
+		for ( $i = 0; $i < 8; $i++ ) {
+			$prev = $events->append(
+				DomainEvent::for_fulfillment( $id, "test.marker_{$i}", Actor::system(), new DateTimeImmutable() ),
+				$prev
+			);
+		}
+
+		$response = $this->server->dispatch( new WP_REST_Request( 'GET', "/mpcf/v1/fulfillments/{$id}" ) );
+
+		self::assertSame( 200, $response->get_status() );
+		$types = array_column( $response->get_data()['recent_events'], 'event_type' );
+
+		self::assertCount( 5, $types );
+		self::assertSame(
+			array( 'test.marker_3', 'test.marker_4', 'test.marker_5', 'test.marker_6', 'test.marker_7' ),
+			$types,
+			'Must be the 5 most recent, oldest-first among themselves.'
+		);
 	}
 
 	public function test_get_fulfillment_404s_for_an_unknown_id(): void {

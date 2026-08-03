@@ -12,6 +12,7 @@ namespace MPCF\Tests\Unit\Application\Doubles;
 use DateTimeImmutable;
 use MPCF\Domain\Event\Canonicalizer;
 use MPCF\Domain\Event\DomainEvent;
+use MPCF\Domain\EventTimelinePage;
 use MPCF\Domain\Repository\EventRepository;
 
 /**
@@ -59,6 +60,23 @@ final class InMemoryEventRepository implements EventRepository {
 				static fn( array $row ): bool => $row['fulfillment_id'] === $fulfillment_id
 			)
 		);
+	}
+
+	public function timeline_page_for_fulfillment( int $fulfillment_id, int $page, int $per_page ): EventTimelinePage {
+		$matching = $this->timeline_for_fulfillment( $fulfillment_id );
+		$page     = max( 1, $page );
+		$per_page = max( 1, $per_page );
+
+		return new EventTimelinePage(
+			array_slice( $matching, ( $page - 1 ) * $per_page, $per_page ),
+			count( $matching ),
+			$page,
+			$per_page
+		);
+	}
+
+	public function recent_for_fulfillment( int $fulfillment_id, int $limit ): array {
+		return array_slice( $this->timeline_for_fulfillment( $fulfillment_id ), -1 * max( 1, $limit ) );
 	}
 
 	/**

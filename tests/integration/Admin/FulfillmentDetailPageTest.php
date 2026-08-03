@@ -242,4 +242,51 @@ final class FulfillmentDetailPageTest extends WP_UnitTestCase {
 		self::assertNull( $error );
 		self::assertCount( 1, $this->notes->find_for_fulfillment( $id ) );
 	}
+
+	/**
+	 * `render()` echoes directly, so this captures output via
+	 * `ob_start()`/`ob_get_clean()`, the same technique the Queue's and
+	 * Workspace's own admin-screen integration tests use.
+	 *
+	 * @param int $fulfillment_id Fulfillment id.
+	 * @param int $paged          `paged` query-string value to simulate.
+	 */
+	private function render_for( int $fulfillment_id, int $paged = 1 ): string {
+		$_GET['fulfillment_id'] = (string) $fulfillment_id; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test harness simulating a query param, not real request input.
+		$_GET['paged']          = (string) $paged; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test harness simulating a query param, not real request input.
+
+		ob_start();
+		$this->build_page()->render();
+
+		return (string) ob_get_clean();
+	}
+
+	public function test_the_audit_trail_paginates_at_20_rows_per_page(): void {
+		// F23 (Architecture Plan §IV.10, risk M2-R11): this screen used to
+		// render its fulfillment's entire, unbounded event chain in one go.
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_OPERATOR ) ) );
+
+		$id        = $this->seed( 7001 );
+		$events    = new \MPCF\Infrastructure\Database\WpdbEventRepository();
+		$prev_hash = $events->last_hash_for_fulfillment( $id );
+
+		// 1 (intake) + 24 markers = 25 total: page 1 holds 20, page 2 holds 5.
+		for ( $i = 0; $i < 24; $i++ ) {
+			$prev_hash = $events->append(
+				\MPCF\Domain\Event\DomainEvent::for_fulfillment( $id, "test.marker_{$i}", \MPCF\Domain\Event\Actor::system(), new DateTimeImmutable() ),
+				$prev_hash
+			);
+		}
+
+		$page_one = $this->render_for( $id, 1 );
+		$page_two = $this->render_for( $id, 2 );
+
+		self::assertStringContainsString( 'test.marker_0<', $page_one, 'Page 1 must hold the oldest events.' );
+		self::assertStringNotContainsString( 'test.marker_23<', $page_one, 'Page 1 must not overflow into the newest events.' );
+
+		self::assertStringNotContainsString( 'test.marker_0<', $page_two, 'Page 2 must not repeat page 1\'s rows.' );
+		self::assertStringContainsString( 'test.marker_23<', $page_two, 'Page 2 must hold the newest events.' );
+
+		self::assertStringContainsString( 'aria-current="page">2<', $page_two );
+	}
 }

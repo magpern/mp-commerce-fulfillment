@@ -2,16 +2,20 @@
 /**
  * Milestone 1 acceptance criterion 3 / Architecture Plan §III.2.2: proves
  * every real Queue/Dashboard query shape stays indexed at 10,000 rows.
+ * Re-run for Milestone 2 (F23, §IV.10/§IV.15) with an M2-shaped event
+ * distribution (14 event types, not M1's one) and two new shapes —
+ * workspace load and a tracking-number lookup — added alongside the
+ * original M1 shapes rather than replacing them.
  *
  * Not part of `composer test:integration` or CI — seeding 10,000
- * fulfillments (plus their items and audit events) on every run would
- * slow the whole suite down for no benefit once this proof has run once
- * per schema change. Run explicitly, against the same Docker test
- * environment as the rest of the integration suite:
+ * fulfillments (plus their items, audit events, shipments and packages) on
+ * every run would slow the whole suite down for no benefit once this proof
+ * has run once per schema change. Run explicitly, against the same Docker
+ * test environment as the rest of the integration suite:
  *
  *   docker run --rm --network mpcf-test-net -v "$PWD":/app -w /app \
  *     -e WP_DB_HOST=mpcf-test-db mpcf-test-runner:latest \
- *     bash -c "vendor/bin/phpunit -c phpunit-performance.xml.dist"
+ *     bash -c "bash tests/bin/install-wp.sh && vendor/bin/phpunit -c phpunit-performance.xml.dist"
  *
  * Findings are recorded in `docs/QUEUE_PERFORMANCE_VALIDATION.md` — rerun
  * this file and update that document whenever the schema, an index, or one
@@ -25,13 +29,20 @@ declare( strict_types=1 );
 namespace MPCF\Tests\Integration\Performance;
 
 use MPCF\Application\DashboardService;
+use MPCF\Application\EventDispatcher;
 use MPCF\Application\QueueService;
+use MPCF\Application\ShippingService;
 use MPCF\Domain\FulfillmentQuery;
 use MPCF\Domain\Workflow\StandardWorkflow;
 use MPCF\Infrastructure\Database\Schema;
 use MPCF\Infrastructure\Database\WpdbEventRepository;
+use MPCF\Infrastructure\Database\WpdbFulfillmentItemRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
+use MPCF\Infrastructure\Database\WpdbNoteRepository;
+use MPCF\Infrastructure\Database\WpdbPackageItemRepository;
+use MPCF\Infrastructure\Database\WpdbPackageRepository;
 use MPCF\Infrastructure\Database\WpdbSearchQuery;
+use MPCF\Infrastructure\Database\WpdbShipmentRepository;
 use MPCF\Infrastructure\SystemClock;
 use MPCF\Plugin;
 use WP_UnitTestCase;
@@ -126,6 +137,22 @@ final class QueuePerformanceProofTest extends WP_UnitTestCase {
 	 * @var bool
 	 */
 	private static bool $seeded = false;
+
+	/**
+	 * A fulfillment id that reached `packed` — has a shipment, a package,
+	 * and a `mpcf_shipments.tracking_number` — for the workspace-load and
+	 * tracking-search shapes below. Set by {@see seed_dataset()}.
+	 *
+	 * @var int
+	 */
+	private static int $packed_fulfillment_id = 0;
+
+	/**
+	 * `TRACK-{order_id}` for {@see $packed_fulfillment_id}'s shipment.
+	 *
+	 * @var string
+	 */
+	private static string $known_tracking_number = '';
 
 	/**
 	 * Seeds the 10,000-row dataset exactly once for the whole class, via
@@ -268,6 +295,90 @@ final class QueuePerformanceProofTest extends WP_UnitTestCase {
 		$this->measure( 'Dashboard shipped_today (event_type + created_at range)', static fn() => $dashboard->shipped_today() );
 	}
 
+	/**
+	 * F23 (Architecture Plan §IV.10): the workspace's server-rendered
+	 * initial load — one fulfillment plus its items, last-5 timeline,
+	 * shipments/packages and notes — each read checked independently (this
+	 * is several distinct queries, not one `measure()`-able statement), and
+	 * the whole bundle timed end to end against §IV.15's own 300ms budget
+	 * for this shape (not the general 200ms default).
+	 */
+	public function test_workspace_load_is_indexed(): void {
+		self::assertGreaterThan( 0, self::$packed_fulfillment_id, 'Sanity: seeding must have recorded a packed fulfillment id.' );
+
+		$id           = self::$packed_fulfillment_id;
+		$fulfillments = new WpdbFulfillmentRepository();
+		$items        = new WpdbFulfillmentItemRepository();
+		$events       = new WpdbEventRepository();
+		$notes        = new WpdbNoteRepository();
+		$shipping     = new ShippingService(
+			$fulfillments,
+			$items,
+			new WpdbShipmentRepository(),
+			new WpdbPackageRepository(),
+			new WpdbPackageItemRepository(),
+			$events,
+			new EventDispatcher(),
+			new SystemClock()
+		);
+
+		$fulfillments->find( $id );
+		$this->assert_last_query_is_indexed( 'workspace load: fulfillment lookup (PRIMARY)' );
+
+		$items->find_for_fulfillment( $id );
+		$this->assert_last_query_is_indexed( 'workspace load: items (fulfillment_id)' );
+
+		$events->recent_for_fulfillment( $id, 5 );
+		$this->assert_last_query_is_indexed( 'workspace load: last-5 timeline (fulfillment_id, ORDER BY id DESC LIMIT 5)' );
+
+		$shipping->list_for_fulfillment( $id );
+		$this->assert_last_query_is_indexed( 'workspace load: packages (shipment_id)' );
+
+		$notes->find_for_fulfillment( $id );
+		$this->assert_last_query_is_indexed( 'workspace load: notes (fulfillment_id)' );
+
+		$this->measure(
+			'workspace load, end to end (fulfillment + items + timeline(5) + shipments/packages + notes)',
+			static function () use ( $fulfillments, $items, $events, $shipping, $notes, $id ) {
+				$fulfillments->find( $id );
+				$items->find_for_fulfillment( $id );
+				$events->recent_for_fulfillment( $id, 5 );
+				$shipping->list_for_fulfillment( $id );
+				$notes->find_for_fulfillment( $id );
+			},
+			300.0
+		);
+	}
+
+	/**
+	 * F23 (Architecture Plan §IV.6/D22): "`SearchQuery` must resolve a
+	 * scanned tracking number... without an unindexed scan" is a schema
+	 * readiness property — `mpcf_shipments.tracking_number` already carries
+	 * its own `KEY` ({@see Schema::shipments_ddl()}). Wiring the Queue's
+	 * user-facing search box to actually classify tracking-shaped terms
+	 * ({@see \MPCF\Domain\SearchTermClassifier}) is not part of the M2 UI
+	 * this milestone shipped (the workspace resolves a fulfillment's own
+	 * shipment directly by fulfillment id, never by searching a tracking
+	 * number) — recorded here as a scope decision, not silently left
+	 * unmeasured. This proves the property the schema promises; it is not,
+	 * itself, evidence that the Queue's search box supports this today.
+	 */
+	public function test_tracking_number_lookup_is_indexed(): void {
+		global $wpdb;
+
+		self::assertNotSame( '', self::$known_tracking_number, 'Sanity: seeding must have recorded a known tracking number.' );
+
+		$table = Schema::table( Schema::SHIPMENTS );
+
+		$this->measure(
+			'tracking-number lookup (mpcf_shipments.tracking_number, exact match)',
+			function () use ( $wpdb, $table ) {
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is Schema-built, never user input.
+				return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE tracking_number = %s", self::$known_tracking_number ), ARRAY_A );
+			}
+		);
+	}
+
 	// -----------------------------------------------------------------
 	// Harness
 	// -----------------------------------------------------------------
@@ -291,9 +402,20 @@ final class QueuePerformanceProofTest extends WP_UnitTestCase {
 	 * @param string $label Human-readable name for this lookup shape.
 	 */
 	private function assert_search_lookup_is_indexed( string $term, string $label ): void {
-		global $wpdb;
-
 		( new WpdbSearchQuery() )->search( $term );
+
+		$this->assert_last_query_is_indexed( $label );
+	}
+
+	/**
+	 * Checks `EXPLAIN` on whatever `$wpdb->last_query` currently holds —
+	 * the shared assertion {@see assert_search_lookup_is_indexed()} and the
+	 * workspace-load shape's per-read checks both need.
+	 *
+	 * @param string $label Human-readable name for this query shape.
+	 */
+	private function assert_last_query_is_indexed( string $label ): void {
+		global $wpdb;
 
 		$explain = $wpdb->get_results( 'EXPLAIN ' . $wpdb->last_query, ARRAY_A ) ?? array();
 
@@ -317,11 +439,12 @@ final class QueuePerformanceProofTest extends WP_UnitTestCase {
 	 * by hand after a run) and fails the test if `EXPLAIN` shows a full
 	 * table scan.
 	 *
-	 * @param string   $label Human-readable name for this query shape.
-	 * @param callable $call  Zero-arg call to measure.
+	 * @param string   $label        Human-readable name for this query shape.
+	 * @param callable $call         Zero-arg call to measure.
+	 * @param float    $threshold_ms p95 budget in milliseconds — the reference container's 200ms default for most shapes, or a shape-specific figure (Architecture Plan §IV.15's workspace-load budget is 300ms, not 200ms).
 	 * @return array{result: mixed, timings: list<float>}
 	 */
-	private function measure( string $label, callable $call ): array {
+	private function measure( string $label, callable $call, float $threshold_ms = 200.0 ): array {
 		global $wpdb;
 
 		$timings = array();
@@ -362,7 +485,7 @@ final class QueuePerformanceProofTest extends WP_UnitTestCase {
 			)
 		);
 
-		self::assertLessThan( 200.0, $p95, "{$label}: p95 of {$p95}ms exceeds the 200ms reference-container target." );
+		self::assertLessThan( $threshold_ms, $p95, "{$label}: p95 of {$p95}ms exceeds the {$threshold_ms}ms reference-container target." );
 
 		return array(
 			'result'  => $result,
@@ -383,11 +506,13 @@ final class QueuePerformanceProofTest extends WP_UnitTestCase {
 		$items_table        = Schema::table( Schema::FULFILLMENT_ITEMS );
 		$events_table       = Schema::table( Schema::EVENTS );
 
-		$order_id   = 600000;
-		$rows       = array();
-		$item_rows  = array();
-		$event_rows = array();
-		$name_index = 0;
+		$order_id      = 600000;
+		$rows          = array();
+		$item_rows     = array();
+		$event_rows    = array();
+		$shipment_rows = array();
+		$package_rows  = array();
+		$name_index    = 0;
 
 		foreach ( self::STATE_COUNTS as $state => $count ) {
 			$is_open = in_array( $state, self::OPEN_STATES, true );
@@ -469,6 +594,57 @@ final class QueuePerformanceProofTest extends WP_UnitTestCase {
 						$event_time,
 					);
 				}
+
+				// M2-shaped event distribution (Architecture Plan §IV.10,
+				// F23): every fulfillment that reached a given milestone
+				// state also carries the M2 event types a real pack would
+				// have produced getting there — the M1 proof measured
+				// `event_type` vs `created_at` selectivity with exactly one
+				// event type in the table; M2 shipped 13 more, and this is
+				// what makes that re-measurement mean something.
+				$actor_id = $assignee_id ?? 1;
+				$reached  = static fn( array $states ): bool => in_array( $state, $states, true );
+
+				if ( $reached( array( 'packing', 'packed', 'shipped', 'delivered', 'completed' ) ) ) {
+					$event_rows[] = array( $fulfillment_row_index, 'items.picked', 'user', $actor_id, 'Seed', wp_json_encode( array( 'lines' => $item_count ) ), null, hash( 'sha256', $order_id . ':items.picked' ), $state_entered_at );
+				}
+
+				if ( $reached( array( 'packed', 'shipped', 'delivered', 'completed' ) ) ) {
+					$event_rows[] = array( $fulfillment_row_index, 'items.packed', 'user', $actor_id, 'Seed', wp_json_encode( array( 'lines' => $item_count ) ), null, hash( 'sha256', $order_id . ':items.packed' ), $state_entered_at );
+					$event_rows[] = array( $fulfillment_row_index, 'shipment.created', 'user', $actor_id, 'Seed', wp_json_encode( array( 'carrier_id' => 'postnord' ) ), null, hash( 'sha256', $order_id . ':shipment.created' ), $state_entered_at );
+					$event_rows[] = array( $fulfillment_row_index, 'package.created', 'user', $actor_id, 'Seed', wp_json_encode( array( 'seq' => 1 ) ), null, hash( 'sha256', $order_id . ':package.created' ), $state_entered_at );
+					$event_rows[] = array( $fulfillment_row_index, 'shipment.updated', 'user', $actor_id, 'Seed', wp_json_encode( array( 'tracking_number' => 'TRACK-' . $order_id ) ), null, hash( 'sha256', $order_id . ':shipment.updated' ), $state_entered_at );
+					$event_rows[] = array( $fulfillment_row_index, 'document.rendered', 'user', $actor_id, 'Seed', wp_json_encode( array( 'doc_type' => 'packing_slip' ) ), null, hash( 'sha256', $order_id . ':document.rendered' ), $state_entered_at );
+
+					$shipment_status = $reached( array( 'shipped', 'delivered', 'completed' ) ) ? 'shipped' : 'pending';
+
+					$shipment_rows[] = array(
+						$fulfillment_row_index,
+						'postnord',
+						'standard',
+						'TRACK-' . $order_id,
+						null,
+						$shipment_status,
+						'shipped' === $shipment_status ? $state_entered_at : null,
+						$reached( array( 'delivered', 'completed' ) ) ? $state_entered_at : null,
+						$state_entered_at,
+					);
+
+					$package_rows[] = array( count( $shipment_rows ) - 1, 1, wp_rand( 200, 5000 ), wp_rand( 100, 400 ), wp_rand( 100, 400 ), wp_rand( 50, 300 ), null, $state_entered_at );
+
+					if ( 0 === self::$packed_fulfillment_id ) {
+						self::$packed_fulfillment_id = $fulfillment_row_index; // Resolved to a real id alongside $ids below.
+						self::$known_tracking_number = 'TRACK-' . $order_id;
+					}
+				}
+
+				if ( $reached( array( 'shipped', 'delivered', 'completed' ) ) ) {
+					$event_rows[] = array( $fulfillment_row_index, 'shipment.shipped', 'user', $actor_id, 'Seed', wp_json_encode( array() ), null, hash( 'sha256', $order_id . ':shipment.shipped' ), $state_entered_at );
+				}
+
+				if ( $reached( array( 'delivered', 'completed' ) ) ) {
+					$event_rows[] = array( $fulfillment_row_index, 'shipment.delivered', 'user', $actor_id, 'Seed', wp_json_encode( array() ), null, hash( 'sha256', $order_id . ':shipment.delivered' ), $state_entered_at );
+				}
 			}
 		}
 
@@ -487,7 +663,7 @@ final class QueuePerformanceProofTest extends WP_UnitTestCase {
 
 			$payload = json_decode( $event_row[5], true );
 
-			if ( in_array( $payload['to'], array( 'packed', 'shipped' ), true ) && 0 === wp_rand( 0, 9 ) ) {
+			if ( in_array( $payload['to'] ?? null, array( 'packed', 'shipped' ), true ) && 0 === wp_rand( 0, 9 ) ) {
 				$event_row[8] = $today;
 				++$forced_today;
 			}
@@ -534,6 +710,44 @@ final class QueuePerformanceProofTest extends WP_UnitTestCase {
 			array( 'fulfillment_id', 'event_type', 'actor_type', 'actor_id', 'actor_label_snapshot', 'payload', 'prev_hash', 'hash', 'created_at' ),
 			array( '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' ),
 			$event_rows
+		);
+
+		self::$packed_fulfillment_id = (int) $ids[ self::$packed_fulfillment_id ];
+
+		$shipments_table = Schema::table( Schema::SHIPMENTS );
+		$packages_table  = Schema::table( Schema::PACKAGES );
+
+		$shipment_rows = array_map(
+			static function ( $row ) use ( $ids ) {
+				$row[0] = (int) $ids[ $row[0] ];
+				return $row;
+			},
+			$shipment_rows
+		);
+
+		self::bulk_insert(
+			$shipments_table,
+			array( 'fulfillment_id', 'carrier_id', 'service', 'tracking_number', 'tracking_url', 'status', 'shipped_at', 'delivered_at', 'created_at' ),
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ),
+			$shipment_rows
+		);
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $shipments_table is Schema-built, never user input.
+		$shipment_ids = $wpdb->get_col( "SELECT id FROM {$shipments_table} ORDER BY id ASC" );
+
+		$package_rows = array_map(
+			static function ( $row ) use ( $shipment_ids ) {
+				$row[0] = (int) $shipment_ids[ $row[0] ];
+				return $row;
+			},
+			$package_rows
+		);
+
+		self::bulk_insert(
+			$packages_table,
+			array( 'shipment_id', 'seq', 'weight_grams', 'length_mm', 'width_mm', 'height_mm', 'tracking_number', 'created_at' ),
+			array( '%d', '%d', '%d', '%d', '%d', '%d', '%s', '%s' ),
+			$package_rows
 		);
 	}
 

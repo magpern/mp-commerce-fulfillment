@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace MPCF\Application;
 
+use MPCF\Domain\EventTimelinePage;
 use MPCF\Domain\Repository\EventRepository;
 use MPCF\Domain\Repository\FulfillmentItemRepository;
 use MPCF\Domain\Repository\FulfillmentRepository;
@@ -88,5 +89,30 @@ final class FulfillmentDetailService {
 			$this->events->timeline_for_fulfillment( $fulfillment_id ),
 			$this->notes->find_for_fulfillment( $fulfillment_id )
 		);
+	}
+
+	/**
+	 * One page of a fulfillment's audit timeline — the Fulfillment Detail
+	 * screen's paginated audit trail (Architecture Plan §IV.10, risk
+	 * M2-R11).
+	 *
+	 * @param int $fulfillment_id Fulfillment id.
+	 * @param int $page           1-indexed page number.
+	 * @param int $per_page       Rows per page.
+	 */
+	public function get_timeline_page( int $fulfillment_id, int $page, int $per_page ): EventTimelinePage {
+		return $this->events->timeline_page_for_fulfillment( $fulfillment_id, $page, $per_page );
+	}
+
+	/**
+	 * The `$limit` most recently appended events for a fulfillment — the
+	 * Packing Workspace's "last five events" (Architecture Plan §IV.5.2).
+	 *
+	 * @param int $fulfillment_id Fulfillment id.
+	 * @param int $limit          Maximum rows to return.
+	 * @return list<array<string, mixed>>
+	 */
+	public function get_recent_timeline( int $fulfillment_id, int $limit ): array {
+		return $this->events->recent_for_fulfillment( $fulfillment_id, $limit );
 	}
 }

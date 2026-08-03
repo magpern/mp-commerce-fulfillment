@@ -563,7 +563,12 @@ final class WorkspacePage implements Page {
 		echo '<h3>' . esc_html__( 'Timeline', 'mp-commerce-fulfillment' ) . '</h3>';
 		echo $this->renderer->timeline_open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
-		foreach ( array_slice( $view->timeline(), -5 ) as $event ) {
+		// The last five events, fetched with their own bounded query
+		// (Architecture Plan §IV.10, risk M2-R11) — not the full chain
+		// {@see FulfillmentDetailView::timeline()} still legitimately
+		// exposes for hash-chaining/full-history consumers, sliced down to
+		// five after the fact.
+		foreach ( $this->detail->get_recent_timeline( $fulfillment->id(), 5 ) as $event ) {
 			$actor = '' !== (string) $event['actor_label_snapshot'] ? (string) $event['actor_label_snapshot'] : __( 'System', 'mp-commerce-fulfillment' );
 			$when  = human_time_diff( strtotime( (string) $event['created_at'] ) ) . ' ' . __( 'ago', 'mp-commerce-fulfillment' );
 

@@ -43,6 +43,11 @@ final class FulfillmentDetailPage implements Page {
 	public const SLUG = 'mpcf-fulfillment-detail';
 
 	/**
+	 * Audit-trail rows per page.
+	 */
+	private const TIMELINE_PER_PAGE = 20;
+
+	/**
 	 * Nonce action for the transition form.
 	 */
 	private const TRANSITION_NONCE_ACTION = 'mpcf_detail_transition';
@@ -187,9 +192,11 @@ final class FulfillmentDetailPage implements Page {
 			return;
 		}
 
+		$timeline_page = isset( $_GET['paged'] ) ? max( 1, (int) $_GET['paged'] ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, no state change.
+
 		$this->render_summary( $view );
 		$this->render_transitions( $view->fulfillment() );
-		$this->render_timeline( $view );
+		$this->render_timeline( $view, $timeline_page );
 		$this->render_notes( $view );
 
 		$this->shell->close_content();
@@ -315,16 +322,20 @@ final class FulfillmentDetailPage implements Page {
 	}
 
 	/**
-	 * Renders the full audit timeline.
+	 * Renders one page of the audit timeline (Architecture Plan §IV.10,
+	 * risk M2-R11: the full chain, unbounded, is what this replaced).
 	 *
 	 * @param FulfillmentDetailView $view Assembled detail view.
+	 * @param int                   $page 1-indexed page number.
 	 */
-	private function render_timeline( FulfillmentDetailView $view ): void {
+	private function render_timeline( FulfillmentDetailView $view, int $page ): void {
 		$this->shell->open_section_card( __( 'Audit trail', 'mp-commerce-fulfillment' ) );
+
+		$timeline = $this->detail->get_timeline_page( (int) $view->fulfillment()->id(), $page, self::TIMELINE_PER_PAGE );
 
 		echo $this->renderer->timeline_open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
-		foreach ( $view->timeline() as $event ) {
+		foreach ( $timeline->items() as $event ) {
 			$actor = '' !== (string) $event['actor_label_snapshot'] ? (string) $event['actor_label_snapshot'] : __( 'System', 'mp-commerce-fulfillment' );
 			$when  = human_time_diff( strtotime( (string) $event['created_at'] ) ) . ' ' . __( 'ago', 'mp-commerce-fulfillment' );
 
@@ -338,9 +349,48 @@ final class FulfillmentDetailPage implements Page {
 
 		echo $this->renderer->timeline_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
+		$this->render_timeline_pagination( $timeline, (int) $view->fulfillment()->id() );
+
 		$this->shell->close_section_card();
 
 		$this->render_reason_modals( $view->fulfillment() );
+	}
+
+	/**
+	 * Renders the audit-trail pager, following the same page-number-link
+	 * convention {@see QueuePage::render_pagination()} already established
+	 * for this plugin, rather than inventing a second one.
+	 *
+	 * @param \MPCF\Domain\EventTimelinePage $timeline       Current page result.
+	 * @param int                            $fulfillment_id Fulfillment whose trail this is.
+	 */
+	private function render_timeline_pagination( \MPCF\Domain\EventTimelinePage $timeline, int $fulfillment_id ): void {
+		if ( $timeline->total_pages() <= 1 ) {
+			return;
+		}
+
+		echo '<nav class="mpcf-timeline-pagination" aria-label="' . esc_attr__( 'Audit trail pagination', 'mp-commerce-fulfillment' ) . '">';
+
+		$total_pages = $timeline->total_pages();
+
+		for ( $page_number = 1; $page_number <= $total_pages; $page_number++ ) {
+			$url = add_query_arg(
+				array(
+					'page'           => self::SLUG,
+					'fulfillment_id' => $fulfillment_id,
+					'paged'          => $page_number,
+				),
+				admin_url( 'admin.php' )
+			);
+
+			if ( $page_number === $timeline->page() ) {
+				printf( '<span aria-current="page">%d</span> ', (int) $page_number );
+			} else {
+				printf( '<a href="%s">%d</a> ', esc_url( $url ), (int) $page_number );
+			}
+		}
+
+		echo '</nav>';
 	}
 
 	/**

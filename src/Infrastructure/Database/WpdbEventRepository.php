@@ -12,6 +12,7 @@ namespace MPCF\Infrastructure\Database;
 use DateTimeImmutable;
 use MPCF\Domain\Event\Canonicalizer;
 use MPCF\Domain\Event\DomainEvent;
+use MPCF\Domain\EventTimelinePage;
 use MPCF\Domain\Repository\EventRepository;
 
 /**
@@ -89,6 +90,84 @@ final class WpdbEventRepository implements EventRepository {
 			},
 			$rows ?? array()
 		);
+	}
+
+	/**
+	 * Decodes a row's JSON `payload` column back into an array — the same
+	 * per-row transform {@see timeline_for_fulfillment()} applies, shared
+	 * so the two bounded readers below stay identical to it.
+	 *
+	 * @param array<string, mixed> $row Raw row from `$wpdb->get_results()`.
+	 * @return array<string, mixed>
+	 */
+	private function decode_payload( array $row ): array {
+		$row['payload'] = json_decode( (string) $row['payload'], true ) ?? array();
+
+		return $row;
+	}
+
+	/**
+	 * One page of a fulfillment's chain, oldest first overall — the
+	 * standard count-then-limit/offset pattern ({@see
+	 * WpdbFulfillmentRepository::query()}), scoped to a single
+	 * `fulfillment_id` equality match so no dynamic `WHERE` is needed.
+	 *
+	 * @param int $fulfillment_id Fulfillment id.
+	 * @param int $page           1-indexed page number.
+	 * @param int $per_page       Rows per page.
+	 */
+	public function timeline_page_for_fulfillment( int $fulfillment_id, int $page, int $per_page ): EventTimelinePage {
+		global $wpdb;
+
+		$table    = Schema::table( Schema::EVENTS );
+		$page     = max( 1, $page );
+		$per_page = max( 1, $per_page );
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is Schema-built, never user input.
+		$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE fulfillment_id = %d", $fulfillment_id ) );
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is Schema-built, never user input.
+				"SELECT * FROM {$table} WHERE fulfillment_id = %d ORDER BY id ASC LIMIT %d OFFSET %d",
+				$fulfillment_id,
+				$per_page,
+				( $page - 1 ) * $per_page
+			),
+			ARRAY_A
+		);
+
+		return new EventTimelinePage( array_map( array( $this, 'decode_payload' ), $rows ?? array() ), $total, $page, $per_page );
+	}
+
+	/**
+	 * The `$limit` most recently appended events for a fulfillment, oldest
+	 * first among themselves. Deliberately not "the last page of size
+	 * `$limit`" ({@see timeline_page_for_fulfillment()}) — that page can
+	 * hold fewer than `$limit` rows whenever the total isn't an exact
+	 * multiple of it, which is the wrong shape for "show me the last five,
+	 * always" (Architecture Plan §IV.5.2). Ordering `DESC` and reversing in
+	 * PHP is what makes an exact-`$limit` read possible while still using
+	 * the primary key index both directions.
+	 *
+	 * @param int $fulfillment_id Fulfillment id.
+	 * @param int $limit          Maximum rows to return.
+	 */
+	public function recent_for_fulfillment( int $fulfillment_id, int $limit ): array {
+		global $wpdb;
+
+		$table = Schema::table( Schema::EVENTS );
+		$rows  = $wpdb->get_results(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is Schema-built, never user input.
+				"SELECT * FROM {$table} WHERE fulfillment_id = %d ORDER BY id DESC LIMIT %d",
+				$fulfillment_id,
+				max( 1, $limit )
+			),
+			ARRAY_A
+		);
+
+		return array_map( array( $this, 'decode_payload' ), array_reverse( $rows ?? array() ) );
 	}
 
 	/**

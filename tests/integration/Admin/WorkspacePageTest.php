@@ -19,6 +19,8 @@ use MPCF\Application\NoteService;
 use MPCF\Application\ShippingService;
 use MPCF\Application\WorkflowService;
 use MPCF\Capabilities;
+use MPCF\Domain\Event\Actor;
+use MPCF\Domain\Event\DomainEvent;
 use MPCF\Domain\Fulfillment;
 use MPCF\Domain\FulfillmentItem;
 use MPCF\Domain\Workflow\StandardWorkflow;
@@ -268,6 +270,39 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 		$real_version = $this->fulfillments->find( $id )->version();
 
 		self::assertStringContainsString( 'data-mpcf-version="' . $real_version . '"', $html );
+	}
+
+	public function test_the_timeline_shows_only_the_5_most_recent_events(): void {
+		// F23 (Architecture Plan §IV.10, risk M2-R11): the timeline region
+		// used to fetch the fulfillment's *entire* chain and slice it down
+		// to 5 in PHP; it now reads exactly 5 via its own bounded query.
+		// Seeding 9 distinct, identifiable event types and asserting the 4
+		// oldest are absent while the 5 newest are present is what
+		// distinguishes "queried the last 5" from "queried everything and
+		// happened to render fine" — a passing count alone couldn't.
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$id = $this->seed();
+		$this->render_for( $id ); // Forces the self-claim first, so it doesn't land inside the 9 markers appended below.
+
+		$prev_hash = $this->events->last_hash_for_fulfillment( $id );
+
+		for ( $i = 0; $i < 9; $i++ ) {
+			$prev_hash = $this->events->append(
+				DomainEvent::for_fulfillment( $id, "test.timeline_marker_{$i}", Actor::system(), new DateTimeImmutable() ),
+				$prev_hash
+			);
+		}
+
+		$html = $this->render_for( $id );
+
+		foreach ( range( 0, 3 ) as $i ) {
+			self::assertStringNotContainsString( "test.timeline_marker_{$i}<", $html, "Marker {$i} is one of the 4 oldest and must not render." );
+		}
+
+		foreach ( range( 4, 8 ) as $i ) {
+			self::assertStringContainsString( "test.timeline_marker_{$i}<", $html, "Marker {$i} is one of the 5 most recent and must render." );
+		}
 	}
 
 	public function test_opening_a_fulfillment_already_assigned_to_someone_else_does_not_reassign_it(): void {

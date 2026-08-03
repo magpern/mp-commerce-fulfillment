@@ -229,10 +229,9 @@ final class FulfillmentsController extends AbstractRestController {
 		}
 
 		// The workspace's outcome column shows only the last five events
-		// (Architecture Plan §IV.5.2); the full, unbounded chain stays a
-		// Fulfillment Detail concern until §IV.10's timeline pagination
-		// (F23) gives it a real page size.
-		$recent_events = array_slice( $view->timeline(), -5 );
+		// (Architecture Plan §IV.5.2), fetched with its own bounded query
+		// (§IV.10, risk M2-R11, F23) — not sliced from the full chain.
+		$recent_events = $this->detail->get_recent_timeline( (int) $view->fulfillment()->id(), 5 );
 
 		return $this->respond(
 			array(
