@@ -48,4 +48,16 @@ final class OrderSnapshotTest extends TestCase {
 
 		self::assertSame( $lines, $snapshot->ship_to_lines() );
 	}
+
+	public function test_customer_note_defaults_to_empty(): void {
+		$snapshot = OrderSnapshot::create( 1001, 'woocommerce', '#1001', 'Jane Doe', 'processing', array() );
+
+		self::assertSame( '', $snapshot->customer_note() );
+	}
+
+	public function test_customer_note_is_exposed_when_supplied(): void {
+		$snapshot = OrderSnapshot::create( 1001, 'woocommerce', '#1001', 'Jane Doe', 'processing', array(), array(), 'Pack in green bag' );
+
+		self::assertSame( 'Pack in green bag', $snapshot->customer_note() );
+	}
 }

@@ -55,3 +55,30 @@ body.mpcf-operator-mode #wpcontent,
 body.mpcf-operator-mode #wpfooter {
 	margin-left: 0;
 }
+
+.mpcf-workspace__customer-note {
+	margin: 0;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+.mpcf-workspace__customer-note-icon {
+	margin-right: 0.25em;
+}
+
+/* Keep checklist steppers above the sticky action bar (z-index 90) so +/−
+ * remain clickable when the bar overlaps the bottom of the work region. */
+.mpcf-ui-quantity-stepper__increment,
+.mpcf-ui-quantity-stepper__decrement,
+.mpcf-ui-quantity-stepper__value {
+	position: relative;
+	z-index: 95;
+}
+
+.mpcf-workspace {
+	scroll-padding-bottom: 96px;
+}
+
+.mpcf-ui-workspace-layout__region--work {
+	padding-bottom: 96px;
+}

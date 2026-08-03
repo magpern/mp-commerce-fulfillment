@@ -53,7 +53,8 @@ final class WooOrderSource implements OrderSource {
 			(string) $order->get_formatted_billing_full_name(),
 			(string) $order->get_status(),
 			$this->line_items( $order ),
-			$this->ship_to_lines( $order )
+			$this->ship_to_lines( $order ),
+			(string) $order->get_customer_note()
 		);
 	}
 

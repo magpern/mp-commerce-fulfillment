@@ -174,7 +174,7 @@ function notifyError( error ) {
 	);
 }
 
-document.addEventListener( 'DOMContentLoaded', function () {
+function initWorkspace() {
 	var root = document.querySelector( '[data-mpcf-workspace]' );
 
 	if ( ! root ) {
@@ -437,4 +437,10 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			}
 		}
 	};
-} );
+}
+
+if ( 'loading' === document.readyState ) {
+	document.addEventListener( 'DOMContentLoaded', initWorkspace );
+} else {
+	initWorkspace();
+}

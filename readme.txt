@@ -4,7 +4,7 @@ Tags: woocommerce, fulfillment, warehouse, shipping, picking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.2.1
+Stable tag: 0.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,17 @@ Performance Order Storage (HPOS).
 3. WooCommerce 8.2+ must be installed and active.
 
 == Changelog ==
+
+= 0.2.2 =
+* Fix: Packing Workspace quantity controls — +/− buttons, direct number input,
+  and the "Picked" / "Packed" counter now stay in sync and persist correctly.
+  Stepper buttons are wired directly so the sticky action bar cannot swallow
+  clicks; typing or using the native spinner commits on input/blur; unchanged
+  quantity resubmits no longer write duplicate audit events.
+* Fix: Checkout customer note text is shown in the workspace under
+  "Customer instructions" (not just a presence flag).
+* Tests: unit, integration, and browser coverage for the picking quantity
+  workflow and customer-note rendering.
 
 = 0.2.1 =
 * Fix: WorkspaceFlags fatal when opening a fulfillment for a customer order

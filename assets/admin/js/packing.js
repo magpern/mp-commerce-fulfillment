@@ -140,11 +140,29 @@ function applyItemResult( item ) {
 		if ( undefined !== authoritative ) {
 			input.value = String( authoritative );
 			input.setAttribute( 'aria-valuenow', String( authoritative ) );
+
+			var display = row.querySelector( '.mpcf-workspace__quantity-display' );
+			if ( display && parsed ) {
+				var fieldLabel = 'qty_picked' === parsed.field ? 'Picked' : 'Packed';
+				display.textContent = fieldLabel + ': ' + String( authoritative ) + ' / ' + String( item.qty_ordered );
+			}
 		}
 	}
 
 	if ( undefined !== item.qty_picked && undefined !== item.qty_packed && undefined !== item.qty_ordered ) {
-		var complete = item.qty_picked >= item.qty_ordered && item.qty_packed >= item.qty_ordered;
+		var complete;
+
+		if ( input ) {
+			var parsed = parseName( input.name );
+			if ( parsed ) {
+				complete = item[ parsed.field ] >= item.qty_ordered;
+			} else {
+				complete = false;
+			}
+		} else {
+			complete = item.qty_picked >= item.qty_ordered && item.qty_packed >= item.qty_ordered;
+		}
+
 		row.classList.toggle( COMPLETE_CLASS, complete );
 	}
 }
@@ -228,6 +246,15 @@ function setRowValue( row, nextValue ) {
 	input.setAttribute( 'aria-valuenow', String( clamped ) );
 	row.classList.toggle( COMPLETE_CLASS, clamped >= max );
 
+	var display = row.querySelector( '.mpcf-workspace__quantity-display' );
+	if ( display ) {
+		var parsed = parseName( input.name );
+		if ( parsed ) {
+			var fieldLabel = 'qty_picked' === parsed.field ? 'Picked' : 'Packed';
+			display.textContent = fieldLabel + ': ' + String( clamped ) + ' / ' + String( max );
+		}
+	}
+
 	var parsed = parseName( input.name );
 
 	if ( parsed ) {
@@ -236,6 +263,28 @@ function setRowValue( row, nextValue ) {
 
 	applyCollapseState();
 	maybeEnablePrimaryActionOptimistically();
+}
+
+/**
+ * Reads one quantity input's current value, clamps it, and queues the
+ * resulting absolute quantity for the debounced flush — the path direct
+ * typing and the native number spinner use, which never pass through the
+ * +/- button handlers.
+ *
+ * @param {HTMLInputElement} input `.mpcf-ui-quantity-stepper__value` element.
+ */
+function commitInputValue( input ) {
+	var row = input.closest( '.mpcf-ui-checklist__row' );
+
+	if ( ! row ) {
+		return;
+	}
+
+	var min = parseInt( input.min, 10 ) || 0;
+	var max = parseInt( input.max, 10 ) || 0;
+	var next = clamp( parseInt( input.value, 10 ) || 0, min, max );
+
+	setRowValue( row, next );
 }
 
 /**
@@ -302,7 +351,24 @@ function applyCollapseState() {
 	}
 }
 
-function buildStepper( name, value, max ) {
+function buildStepper( name, value, max, activeField ) {
+	var container = document.createElement( 'div' );
+	container.className = 'mpcf-workspace__item-quantities';
+
+	var label = document.createElement( 'div' );
+	label.className = 'mpcf-workspace__quantity-label';
+	label.textContent = 'Ordered: ' + String( max );
+	container.appendChild( label );
+
+	var stepperContainer = document.createElement( 'div' );
+	stepperContainer.className = 'mpcf-workspace__quantity-stepper';
+
+	var display = document.createElement( 'div' );
+	display.className = 'mpcf-workspace__quantity-display';
+	var fieldLabel = 'qty_picked' === activeField ? 'Picked' : 'Packed';
+	display.textContent = fieldLabel + ': ' + String( value ) + ' / ' + String( max );
+	stepperContainer.appendChild( display );
+
 	var wrap = document.createElement( 'div' );
 	wrap.className = 'mpcf-ui-quantity-stepper';
 	wrap.setAttribute( 'role', 'group' );
@@ -336,7 +402,10 @@ function buildStepper( name, value, max ) {
 	wrap.appendChild( input );
 	wrap.appendChild( increment );
 
-	return wrap;
+	stepperContainer.appendChild( wrap );
+	container.appendChild( stepperContainer );
+
+	return container;
 }
 
 /**
@@ -372,7 +441,7 @@ export function refreshChecklist( items, activeField ) {
 		var current = 'qty_picked' === activeField ? item.qty_picked : item.qty_packed;
 
 		control.textContent = '';
-		control.appendChild( buildStepper( 'items[' + item.id + '][' + activeField + ']', current, item.qty_ordered ) );
+		control.appendChild( buildStepper( 'items[' + item.id + '][' + activeField + ']', current, item.qty_ordered, activeField ) );
 		row.classList.toggle( COMPLETE_CLASS, current >= item.qty_ordered );
 	} );
 
@@ -388,17 +457,67 @@ export function refreshChecklist( items, activeField ) {
 	}
 
 	applyCollapseState();
+	bindStepperControls();
 }
 
-document.addEventListener( 'DOMContentLoaded', function () {
+/**
+ * Wires +/- buttons and the number input on every stepper in the checklist.
+ * Bound directly on each control so a sticky action bar above the stepper
+ * cannot swallow +/- clicks, and so controls rebuilt by `refreshChecklist()`
+ * get fresh handlers without a page reload.
+ */
+function bindStepperControls() {
+	document.querySelectorAll( '.mpcf-ui-quantity-stepper' ).forEach( function ( stepper ) {
+		if ( 'true' === stepper.getAttribute( 'data-mpcf-stepper-bound' ) ) {
+			return;
+		}
+
+		stepper.setAttribute( 'data-mpcf-stepper-bound', 'true' );
+
+		var row = stepper.closest( '.mpcf-ui-checklist__row' );
+
+		if ( ! row ) {
+			return;
+		}
+
+		var decrement = stepper.querySelector( '[data-mpcf-quantity-decrement]' );
+		var increment = stepper.querySelector( '[data-mpcf-quantity-increment]' );
+		var input = stepper.querySelector( '.mpcf-ui-quantity-stepper__value' );
+
+		if ( decrement ) {
+			decrement.addEventListener( 'click', function ( event ) {
+				event.preventDefault();
+				event.stopPropagation();
+				decrementRow( row );
+			} );
+		}
+
+		if ( increment ) {
+			increment.addEventListener( 'click', function ( event ) {
+				event.preventDefault();
+				event.stopPropagation();
+				incrementRow( row );
+			} );
+		}
+
+		if ( input ) {
+			input.addEventListener( 'input', function () {
+				commitInputValue( input );
+			} );
+		}
+	} );
+}
+
+function initPacking() {
 	if ( ! document.querySelector( '.mpcf-ui-checklist' ) ) {
 		return;
 	}
 
+	bindStepperControls();
+
 	// The whole row is the increment target (Architecture Plan §IV.5.2) —
-	// clicking or tapping anywhere in it that is not the decrement button
-	// increments by one; the increment button and the number input itself
-	// keep their own native behavior.
+	// clicking or tapping anywhere in it that is not a stepper control
+	// increments by one.
 	document.addEventListener( 'click', function ( event ) {
 		var row = event.target.closest( '.mpcf-ui-checklist__row' );
 
@@ -406,12 +525,11 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			return;
 		}
 
-		if ( event.target.closest( '[data-mpcf-quantity-decrement]' ) ) {
-			decrementRow( row );
-			return;
-		}
-
-		if ( event.target.closest( '[data-mpcf-quantity-increment]' ) || event.target.closest( '.mpcf-ui-quantity-stepper__value' ) ) {
+		if (
+			event.target.closest( '[data-mpcf-quantity-decrement]' ) ||
+			event.target.closest( '[data-mpcf-quantity-increment]' ) ||
+			event.target.closest( '.mpcf-ui-quantity-stepper__value' )
+		) {
 			return;
 		}
 
@@ -428,12 +546,24 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		}
 	} );
 
+	document.addEventListener( 'change', function ( event ) {
+		if ( ! event.target.matches( '.mpcf-ui-quantity-stepper__value' ) ) {
+			return;
+		}
+
+		commitInputValue( event.target );
+		flush();
+	} );
+
 	document.addEventListener(
 		'focusout',
 		function ( event ) {
-			if ( event.target.closest && event.target.closest( '.mpcf-ui-quantity-stepper__value' ) ) {
-				flush();
+			if ( ! event.target.matches( '.mpcf-ui-quantity-stepper__value' ) ) {
+				return;
 			}
+
+			commitInputValue( event.target );
+			flush();
 		},
 		true
 	);
@@ -461,4 +591,10 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		window.MpcfWorkspace.flushPendingItems = flush;
 		window.MpcfWorkspace.refreshChecklist = refreshChecklist;
 	}
-} );
+}
+
+if ( 'loading' === document.readyState ) {
+	document.addEventListener( 'DOMContentLoaded', initPacking );
+} else {
+	initPacking();
+}

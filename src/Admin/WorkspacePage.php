@@ -437,6 +437,10 @@ final class WorkspacePage implements Page {
 		}
 		echo '</address>';
 
+		if ( null !== $order ) {
+			$this->render_customer_instructions( $order->customer_note() );
+		}
+
 		/**
 		 * Filters the context-column flags shown for one fulfillment in the
 		 * Packing Workspace (Architecture Plan §9.4/§IV.5.2's named
@@ -476,6 +480,28 @@ final class WorkspacePage implements Page {
 	}
 
 	/**
+	 * Renders the WooCommerce customer note when one is present — the
+	 * full checkout instructions, not just the presence flag.
+	 *
+	 * @param string $customer_note Raw note from the owning order.
+	 */
+	private function render_customer_instructions( string $customer_note ): void {
+		$customer_note = trim( $customer_note );
+
+		if ( '' === $customer_note ) {
+			return;
+		}
+
+		echo '<div class="mpcf-workspace__customer-instructions">';
+		echo '<h3>' . esc_html__( 'Customer instructions', 'mp-commerce-fulfillment' ) . '</h3>';
+		printf(
+			'<p class="mpcf-workspace__customer-note"><span class="mpcf-workspace__customer-note-icon" aria-hidden="true">⚠</span> %s</p>',
+			wp_kses( nl2br( esc_html( $customer_note ), false ), array( 'br' => array() ) )
+		);
+		echo '</div>';
+	}
+
+	/**
 	 * Renders the work (centre) region: the stepper, the item checklist,
 	 * and the scan sink.
 	 *
@@ -493,8 +519,16 @@ final class WorkspacePage implements Page {
 			$qty_ordered = $item->qty_ordered();
 			$qty_current = null === $active_field ? 0 : ( 'qty_picked' === $active_field ? $item->qty_picked() : $item->qty_packed() );
 
-			$control = null !== $active_field
-				? $this->renderer->quantity_stepper(
+			if ( null !== $active_field ) {
+				$control = '<div class="mpcf-workspace__item-quantities">';
+				$control .= '<div class="mpcf-workspace__quantity-label">';
+				$control .= sprintf( esc_html__( 'Ordered: %d', 'mp-commerce-fulfillment' ), $qty_ordered );
+				$control .= '</div>';
+				$control .= '<div class="mpcf-workspace__quantity-stepper">';
+				/* translators: %1$s: active field label (Picked or Packed), %2$d: current value, %3$d: ordered value */
+				$field_label = 'qty_picked' === $active_field ? esc_html__( 'Picked', 'mp-commerce-fulfillment' ) : esc_html__( 'Packed', 'mp-commerce-fulfillment' );
+				$control .= sprintf( '<div class="mpcf-workspace__quantity-display">%s: %d / %d</div>', $field_label, $qty_current, $qty_ordered );
+				$control .= $this->renderer->quantity_stepper(
 					"items[{$item->id()}][{$active_field}]",
 					$qty_current,
 					0,
@@ -504,8 +538,12 @@ final class WorkspacePage implements Page {
 						/* translators: %s: item name */
 						'aria-label'        => sprintf( __( 'Quantity for %s', 'mp-commerce-fulfillment' ), $item->name_snapshot() ),
 					)
-				)
-				: sprintf( '%d / %d', $item->qty_picked(), $item->qty_ordered() ) . ' &middot; ' . sprintf( '%d / %d', $item->qty_packed(), $item->qty_ordered() );
+				); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- renderer-escaped.
+				$control .= '</div>';
+				$control .= '</div>';
+			} else {
+				$control = sprintf( '%d / %d', $item->qty_picked(), $item->qty_ordered() ) . ' &middot; ' . sprintf( '%d / %d', $item->qty_packed(), $item->qty_ordered() );
+			}
 
 			echo $this->renderer->checklist_row( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				'',

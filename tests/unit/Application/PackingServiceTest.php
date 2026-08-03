@@ -245,6 +245,36 @@ final class PackingServiceTest extends TestCase {
 		self::assertSame( 'invalid_payload', $outcome->failure_code() );
 	}
 
+	public function test_a_no_op_batch_writes_nothing_and_appends_no_audit_event(): void {
+		$this->service->update_quantities(
+			$this->fulfillment_id,
+			1,
+			array(
+				array(
+					'item_id'    => $this->item_a_id,
+					'qty_picked' => 1,
+				),
+			),
+			Actor::system()
+		);
+
+		$outcome = $this->service->update_quantities(
+			$this->fulfillment_id,
+			2,
+			array(
+				array(
+					'item_id'    => $this->item_a_id,
+					'qty_picked' => 1,
+				),
+			),
+			Actor::system()
+		);
+
+		self::assertTrue( $outcome->is_success() );
+		self::assertSame( 2, $outcome->version(), 'An idempotent resubmit must not advance version.' );
+		self::assertCount( 1, $this->events->timeline_for_fulfillment( $this->fulfillment_id ) );
+	}
+
 	public function test_complete_all_sets_every_line_to_its_ordered_quantity(): void {
 		$outcome = $this->service->complete_all( $this->fulfillment_id, 1, 'qty_picked', Actor::system() );
 

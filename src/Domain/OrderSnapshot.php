@@ -72,6 +72,15 @@ final class OrderSnapshot {
 	private array $ship_to_lines;
 
 	/**
+	 * The order's customer note (checkout instructions), when present.
+	 * A live read for the Packing Workspace context column — not
+	 * snapshotted onto the fulfillment at intake time.
+	 *
+	 * @var string
+	 */
+	private string $customer_note;
+
+	/**
 	 * Assembles a snapshot. Use {@see create()} instead of calling this
 	 * directly.
 	 *
@@ -82,8 +91,9 @@ final class OrderSnapshot {
 	 * @param string                        $status        Order status.
 	 * @param array<int, OrderLineSnapshot> $items         Line items.
 	 * @param array<int, string>            $ship_to_lines Ship-to address, as display lines.
+	 * @param string                        $customer_note Customer checkout note.
 	 */
-	private function __construct( int $order_id, string $order_source, string $order_number, string $customer_name, string $status, array $items, array $ship_to_lines ) {
+	private function __construct( int $order_id, string $order_source, string $order_number, string $customer_name, string $status, array $items, array $ship_to_lines, string $customer_note ) {
 		$this->order_id      = $order_id;
 		$this->order_source  = $order_source;
 		$this->order_number  = $order_number;
@@ -91,6 +101,7 @@ final class OrderSnapshot {
 		$this->status        = $status;
 		$this->items         = $items;
 		$this->ship_to_lines = $ship_to_lines;
+		$this->customer_note = $customer_note;
 	}
 
 	/**
@@ -103,9 +114,10 @@ final class OrderSnapshot {
 	 * @param string                        $status        Order status.
 	 * @param array<int, OrderLineSnapshot> $items         Line items.
 	 * @param array<int, string>            $ship_to_lines Ship-to address, as display lines.
+	 * @param string                        $customer_note Customer checkout note.
 	 */
-	public static function create( int $order_id, string $order_source, string $order_number, string $customer_name, string $status, array $items, array $ship_to_lines = array() ): self {
-		return new self( $order_id, $order_source, $order_number, $customer_name, $status, $items, $ship_to_lines );
+	public static function create( int $order_id, string $order_source, string $order_number, string $customer_name, string $status, array $items, array $ship_to_lines = array(), string $customer_note = '' ): self {
+		return new self( $order_id, $order_source, $order_number, $customer_name, $status, $items, $ship_to_lines, $customer_note );
 	}
 
 	/**
@@ -159,5 +171,12 @@ final class OrderSnapshot {
 	 */
 	public function ship_to_lines(): array {
 		return $this->ship_to_lines;
+	}
+
+	/**
+	 * The order's customer note (checkout instructions), when present.
+	 */
+	public function customer_note(): string {
+		return $this->customer_note;
 	}
 }

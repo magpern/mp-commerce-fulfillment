@@ -137,6 +137,16 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 		return $fulfillment->id();
 	}
 
+	private function seed_with_customer_note( string $customer_note ): int {
+		$order = $this->create_paid_order();
+		$order->set_customer_note( $customer_note );
+		$order->save();
+
+		$fulfillment = $this->fulfillments->find_by_order_id( $order->get_id() );
+
+		return $fulfillment->id();
+	}
+
 	private function render_for( int $fulfillment_id ): string {
 		$_GET['fulfillment_id'] = (string) $fulfillment_id; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test harness simulating a query param, not real request input.
 
@@ -405,5 +415,33 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 
 		self::assertStringContainsString( 'disabled', $html );
 		self::assertStringContainsString( 'must be fully packed', strtolower( $html ) );
+	}
+
+	public function test_render_shows_the_customer_note_when_present(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$html = $this->render_for( $this->seed_with_customer_note( 'Pack in green bag' ) );
+
+		self::assertStringContainsString( 'Customer instructions', $html );
+		self::assertStringContainsString( 'mpcf-workspace__customer-note', $html );
+		self::assertStringContainsString( 'Pack in green bag', $html );
+	}
+
+	public function test_render_omits_the_customer_instructions_block_without_a_customer_note(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$html = $this->render_for( $this->seed() );
+
+		self::assertStringNotContainsString( 'Customer instructions', $html );
+		self::assertStringNotContainsString( 'mpcf-workspace__customer-instructions', $html );
+	}
+
+	public function test_render_preserves_multiline_customer_note_line_breaks(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$html = $this->render_for( $this->seed_with_customer_note( "Leave at door\nRing bell twice" ) );
+
+		self::assertStringContainsString( 'Leave at door<br>', $html );
+		self::assertStringContainsString( 'Ring bell twice', $html );
 	}
 }

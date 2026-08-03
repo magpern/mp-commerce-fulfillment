@@ -100,4 +100,24 @@ final class WooOrderSourceTest extends WP_UnitTestCase {
 		self::assertNotNull( $snapshot );
 		self::assertCount( 1, $snapshot->items() );
 	}
+
+	public function test_find_returns_the_orders_customer_note(): void {
+		$order = $this->create_paid_order();
+		$order->set_customer_note( 'Pack in green bag' );
+		$order->save();
+
+		$snapshot = ( new WooOrderSource() )->find( $order->get_id() );
+
+		self::assertNotNull( $snapshot );
+		self::assertSame( 'Pack in green bag', $snapshot->customer_note() );
+	}
+
+	public function test_find_returns_an_empty_customer_note_when_none_is_set(): void {
+		$order = $this->create_paid_order();
+
+		$snapshot = ( new WooOrderSource() )->find( $order->get_id() );
+
+		self::assertNotNull( $snapshot );
+		self::assertSame( '', $snapshot->customer_note() );
+	}
 }

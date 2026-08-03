@@ -133,25 +133,52 @@ final class PackingService {
 				return PackingOutcome::failed( 'invalid_payload', "Line for item {$item_id} sets neither qty_picked nor qty_packed." );
 			}
 
-			$item = $existing[ $item_id ];
+			$item    = $existing[ $item_id ];
+			$changed = false;
 
 			if ( array_key_exists( 'qty_picked', $line ) ) {
+				$previous = $item->qty_picked();
 				$item->record_picked( (int) $line['qty_picked'] );
-				$picked_changes[] = array(
-					'item_id'    => $item_id,
-					'qty_picked' => $item->qty_picked(),
-				);
+
+				if ( $item->qty_picked() !== $previous ) {
+					$picked_changes[] = array(
+						'item_id'    => $item_id,
+						'qty_picked' => $item->qty_picked(),
+					);
+					$changed          = true;
+				}
 			}
 
 			if ( array_key_exists( 'qty_packed', $line ) ) {
+				$previous = $item->qty_packed();
 				$item->record_packed( (int) $line['qty_packed'] );
-				$packed_changes[] = array(
-					'item_id'    => $item_id,
-					'qty_packed' => $item->qty_packed(),
-				);
+
+				if ( $item->qty_packed() !== $previous ) {
+					$packed_changes[] = array(
+						'item_id'    => $item_id,
+						'qty_packed' => $item->qty_packed(),
+					);
+					$changed          = true;
+				}
 			}
 
-			$updated[ $item_id ] = $item;
+			if ( $changed ) {
+				$updated[ $item_id ] = $item;
+			}
+		}
+
+		if ( array() === $updated ) {
+			$unchanged = array();
+
+			foreach ( $lines as $line ) {
+				$item_id = (int) ( $line['item_id'] ?? 0 );
+
+				if ( isset( $existing[ $item_id ] ) ) {
+					$unchanged[] = $existing[ $item_id ];
+				}
+			}
+
+			return PackingOutcome::succeeded( $unchanged, $fulfillment->version() );
 		}
 
 		if ( ! $this->fulfillments->touch( $fulfillment_id, $expected_version ) ) {
