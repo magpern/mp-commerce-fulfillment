@@ -148,4 +148,61 @@ final class OrderOverviewServiceTest extends TestCase {
 		self::assertSame( 0, $result->total() );
 		self::assertSame( array(), $result->items() );
 	}
+
+	public function test_order_led_search_falls_back_to_fulfillment_search_when_woo_finds_nothing(): void {
+		$orders = new class() implements OrderSource {
+			public function find( int $order_id ): ?\MPCF\Domain\OrderSnapshot {
+				return null;
+			}
+
+			public function find_ids_by_status( string $status ): array {
+				return array();
+			}
+
+			public function list_summaries( array $statuses, int $page, int $per_page, string $search = '' ): OperationalOrderListResult {
+				unset( $statuses, $search );
+
+				return new OperationalOrderListResult( array(), 0, $page, $per_page );
+			}
+
+			public function summaries_by_ids( array $order_ids ): array {
+				$out = array();
+
+				foreach ( $order_ids as $id ) {
+					$out[] = OperationalOrderSummary::create( (int) $id, (string) $id, 'Sku Buyer', 'processing', new DateTimeImmutable( '2026-08-01 13:00:00' ) );
+				}
+
+				return $out;
+			}
+		};
+
+		$fulfillments = new InMemoryFulfillmentRepository();
+		$id           = $fulfillments->insert(
+			Fulfillment::intake( 300, 'woocommerce', 1, 'standard', 'queued', '300', 'Sku Buyer', 1, new DateTimeImmutable( '2026-08-01 13:00:00' ) )
+		);
+
+		$search = new class( (int) $id ) implements SearchQuery {
+			/**
+			 * @var int
+			 */
+			private int $fid;
+
+			public function __construct( int $fid ) {
+				$this->fid = $fid;
+			}
+
+			public function search( string $term ): array {
+				unset( $term );
+
+				return array( $this->fid );
+			}
+		};
+
+		$service = new OrderOverviewService( $orders, $fulfillments, $search );
+		$result  = $service->list( new OrderOverviewQuery( OrderOverviewQuery::FILTER_ALL, 'STERILE' ) );
+
+		self::assertCount( 1, $result->items() );
+		self::assertSame( 300, $result->items()[0]->order_id() );
+		self::assertSame( 'Start picking', $result->items()[0]->next_action() );
+	}
 }

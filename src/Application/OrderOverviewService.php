@@ -93,8 +93,16 @@ final class OrderOverviewService {
 	 * @param OrderOverviewQuery $query Query.
 	 */
 	private function list_order_led( OrderOverviewQuery $query ): OrderOverviewResult {
-		$statuses  = $this->woo_statuses_for_filter( $query->filter() );
-		$result    = $this->orders->list_summaries( $statuses, $query->page(), $query->per_page(), $query->search() );
+		$statuses = $this->woo_statuses_for_filter( $query->filter() );
+		$result   = $this->orders->list_summaries( $statuses, $query->page(), $query->per_page(), $query->search() );
+
+		// Woo's free-text `s` covers order # / customer. When it finds nothing,
+		// fall back to the existing fulfillment SearchQuery (order id / SKU /
+		// customer snapshot) so SKU search stays practical without new infra.
+		if ( '' !== $query->search() && array() === $result->items() ) {
+			return $this->list_order_led_via_fulfillment_search( $query, $statuses );
+		}
+
 		$order_ids = array_map( static fn( OperationalOrderSummary $row ): int => $row->order_id(), $result->items() );
 		$map       = $this->fulfillments->find_map_by_order_ids( $order_ids );
 
@@ -105,6 +113,74 @@ final class OrderOverviewService {
 		}
 
 		return new OrderOverviewResult( $rows, $result->total(), $result->page(), $result->per_page() );
+	}
+
+	/**
+	 * Resolves an order-led search through fulfillment SearchQuery, then
+	 * keeps only orders whose Woo status matches the active filter.
+	 *
+	 * @param OrderOverviewQuery $query    Query.
+	 * @param array<int, string> $statuses Allowed Woo statuses (empty = any).
+	 */
+	private function list_order_led_via_fulfillment_search( OrderOverviewQuery $query, array $statuses ): OrderOverviewResult {
+		$fulfillment_ids = $this->resolve_search_fulfillment_ids( $query->search() );
+
+		if ( null === $fulfillment_ids || array() === $fulfillment_ids ) {
+			return new OrderOverviewResult( array(), 0, $query->page(), $query->per_page() );
+		}
+
+		// Pull a generous candidate window, then filter by Woo status and page
+		// in memory — search hits are already a small, indexed id set.
+		$candidates = $this->fulfillments->query(
+			new FulfillmentQuery(
+				array(),
+				null,
+				$fulfillment_ids,
+				null,
+				'created_at',
+				'DESC',
+				1,
+				max( count( $fulfillment_ids ), $query->per_page() )
+			)
+		);
+
+		$order_ids   = array_map( static fn( Fulfillment $f ): int => $f->order_id(), $candidates->items() );
+		$summaries   = $this->orders->summaries_by_ids( $order_ids );
+		$summary_map = array();
+
+		foreach ( $summaries as $summary ) {
+			$summary_map[ $summary->order_id() ] = $summary;
+		}
+
+		$fulfillment_map = array();
+
+		foreach ( $candidates->items() as $fulfillment ) {
+			if ( ! isset( $fulfillment_map[ $fulfillment->order_id() ] ) ) {
+				$fulfillment_map[ $fulfillment->order_id() ] = $fulfillment;
+			}
+		}
+
+		$matched = array();
+
+		foreach ( $order_ids as $order_id ) {
+			$summary = $summary_map[ $order_id ] ?? null;
+
+			if ( null === $summary ) {
+				continue;
+			}
+
+			if ( array() !== $statuses && ! in_array( $summary->status(), $statuses, true ) ) {
+				continue;
+			}
+
+			$matched[] = $this->to_row( $summary, $fulfillment_map[ $order_id ] ?? null );
+		}
+
+		$total  = count( $matched );
+		$offset = ( $query->page() - 1 ) * $query->per_page();
+		$page   = array_slice( $matched, $offset, $query->per_page() );
+
+		return new OrderOverviewResult( $page, $total, $query->page(), $query->per_page() );
 	}
 
 	/**
