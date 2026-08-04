@@ -1,6 +1,6 @@
 # Commerce Fulfillment for WooCommerce — Architecture Specification
 
-**Status:** **Architecture Freeze v1.0** — Architecture Plan Rev 2.1 and Milestone 0 Execution Plan Rev 1 approved by the Product Owner 2026-07-31 as the permanent architectural baseline for Commerce Fulfillment. M0–M2 are closed (`v0.0.1`, `v0.1.0`/`v0.1.1`, `v0.2.0`). **Milestone 3 (Ops UX — Workspace + Orders + release stabilization) is release-candidate for `v0.3.0`; tag requires separate PO approval.** Mission Control Dashboard/Queue redesign remains deferred. Documents I is sequenced as M4.
+**Status:** **Architecture Freeze v1.0** — Architecture Plan Rev 2.1 and Milestone 0 Execution Plan Rev 1 approved by the Product Owner 2026-07-31 as the permanent architectural baseline for Commerce Fulfillment. M0–M3 are closed (`v0.0.1`, `v0.1.0`/`v0.1.1`, `v0.2.0`, `v0.3.0`). Mission Control Dashboard/Queue redesign remains deferred. Documents I is sequenced as M4.
 **Working name:** Commerce Fulfillment (commercial name TBD — internal identifiers are rename-proof and never churn).
 **Internal identity (fixed, PO-approved 2026-07-31):** namespace `MPCF\`, prefix `mpcf_`, tables `{$wpdb->prefix}mpcf_*`, text domain `mp-commerce-fulfillment`, constants `MPCF_*`, capability prefix `mpcf_`.
 **Repo (to create):** private GitHub `magpern/mp-commerce-fulfillment`, plus sibling `magpern/mp-admin-design-system` (PO-approved 2026-07-31).

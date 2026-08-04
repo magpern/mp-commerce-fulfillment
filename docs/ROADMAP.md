@@ -49,8 +49,7 @@ actual state before work starts.
     Detail) never reached `Woo\StatusBridge` — only `RefundObserver`-driven
     transitions did. See `docs/ARCHITECTURE_PLAN.md` §IV.2 and
     `docs/M1_RELEASE_REPORT.md`'s addendum for full evidence.
-3. **M3 — Ops UX (Workspace next-action + Orders)** — **release candidate for
-   `v0.3.0`** (implementation complete 2026-08-04; tag pending PO acceptance).
+3. **M3 — Ops UX (Workspace next-action + Orders)** — **released as `v0.3.0`**.
    Ships M3-D Workspace stage guidance / quantity disclosure / shipped
    success path, M3-E Orders read-only overview, and M3-F iterative
    dogfood + operator-feedback polish. Mission Control Dashboard/Queue
