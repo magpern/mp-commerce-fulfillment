@@ -12,6 +12,7 @@ namespace MPCF\Tests\Integration\Admin;
 
 use MPCF\Admin\DashboardPage;
 use MPCF\Admin\FulfillmentDetailPage;
+use MPCF\Admin\OrdersPage;
 use MPCF\Admin\QueuePage;
 use MPCF\Capabilities;
 use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
@@ -83,7 +84,7 @@ final class CapabilityMatrixTest extends WP_UnitTestCase {
 	}
 
 	public function test_every_screen_declares_view_queue_as_its_gating_capability(): void {
-		// All three M1 screens are visible to both Operator and Lead — the
+		// All M1/M3 operator-visible screens are visible to both Operator and Lead — the
 		// distinction between the two roles is enforced per-action inside
 		// the screens (QueuePageTest/FulfillmentDetailPageTest), not by
 		// hiding entire screens from the operator. capability() is a pure
@@ -92,6 +93,7 @@ final class CapabilityMatrixTest extends WP_UnitTestCase {
 		self::assertSame( Capabilities::VIEW_QUEUE, self::capability_of( QueuePage::class ) );
 		self::assertSame( Capabilities::VIEW_QUEUE, self::capability_of( FulfillmentDetailPage::class ) );
 		self::assertSame( Capabilities::VIEW_QUEUE, self::capability_of( DashboardPage::class ) );
+		self::assertSame( Capabilities::VIEW_QUEUE, self::capability_of( OrdersPage::class ) );
 	}
 
 	private static function capability_of( string $page_class ): string {

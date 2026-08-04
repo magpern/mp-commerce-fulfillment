@@ -13,6 +13,7 @@ namespace MPCF\Tests\Integration\Admin;
 
 use MPCF\Admin\DashboardPage;
 use MPCF\Admin\FulfillmentDetailPage;
+use MPCF\Admin\OrdersPage;
 use MPCF\Admin\QueuePage;
 use MPCF\Capabilities;
 use MPCF\Plugin;
@@ -78,7 +79,7 @@ final class MenuVisibilityTest extends WP_UnitTestCase {
 		do_action( 'admin_menu' ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 	}
 
-	public function test_operator_sees_the_fulfillment_menu_with_dashboard_and_queue_only(): void {
+	public function test_operator_sees_the_fulfillment_menu_with_dashboard_queue_and_orders(): void {
 		$this->register_menu_as( self::factory()->user->create( array( 'role' => Capabilities::ROLE_OPERATOR ) ) );
 
 		global $submenu;
@@ -89,6 +90,7 @@ final class MenuVisibilityTest extends WP_UnitTestCase {
 
 		self::assertContains( DashboardPage::SLUG, $slugs );
 		self::assertContains( QueuePage::SLUG, $slugs );
+		self::assertContains( OrdersPage::SLUG, $slugs );
 
 		// Fulfillment Detail's entry is deliberately still present in
 		// $submenu — Plugin.php no longer calls remove_submenu_page(),
@@ -113,7 +115,7 @@ final class MenuVisibilityTest extends WP_UnitTestCase {
 		self::assertStringContainsString( 'display:none', $head );
 	}
 
-	public function test_lead_sees_the_same_two_visible_menu_items_as_an_operator(): void {
+	public function test_lead_sees_the_same_visible_menu_items_as_an_operator(): void {
 		$this->register_menu_as( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
 
 		global $submenu;
@@ -122,6 +124,7 @@ final class MenuVisibilityTest extends WP_UnitTestCase {
 
 		self::assertContains( DashboardPage::SLUG, $slugs );
 		self::assertContains( QueuePage::SLUG, $slugs );
+		self::assertContains( OrdersPage::SLUG, $slugs );
 	}
 
 	public function test_administrator_sees_the_fulfillment_menu_too(): void {
