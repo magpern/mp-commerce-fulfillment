@@ -1,6 +1,6 @@
 # Commerce Fulfillment for WooCommerce — Architecture Specification
 
-**Status:** **Architecture Freeze v1.0** — Architecture Plan Rev 2.1 and Milestone 0 Execution Plan Rev 1 approved by the Product Owner 2026-07-31 as the permanent architectural baseline for Commerce Fulfillment. M0 is closed (`v0.0.1` released). M1 is closed (`v0.1.0` released, `v0.1.1` defect patch tracked separately). **Milestone 2 Execution Plan (Part IV — Packing Workspace & REST) approved by the Product Owner 2026-08-02 — M2 is approved for implementation through release-candidate preparation; final `v0.3.0`/`v0.2.0` tags require separate PO approval.**
+**Status:** **Architecture Freeze v1.0** — Architecture Plan Rev 2.1 and Milestone 0 Execution Plan Rev 1 approved by the Product Owner 2026-07-31 as the permanent architectural baseline for Commerce Fulfillment. M0–M2 are closed (`v0.0.1`, `v0.1.0`/`v0.1.1`, `v0.2.0`). **Milestone 3 (Ops UX — Workspace + Orders + release stabilization) is release-candidate for `v0.3.0`; tag requires separate PO approval.** Mission Control Dashboard/Queue redesign remains deferred. Documents I is sequenced as M4.
 **Working name:** Commerce Fulfillment (commercial name TBD — internal identifiers are rename-proof and never churn).
 **Internal identity (fixed, PO-approved 2026-07-31):** namespace `MPCF\`, prefix `mpcf_`, tables `{$wpdb->prefix}mpcf_*`, text domain `mp-commerce-fulfillment`, constants `MPCF_*`, capability prefix `mpcf_`.
 **Repo (to create):** private GitHub `magpern/mp-commerce-fulfillment`, plus sibling `magpern/mp-admin-design-system` (PO-approved 2026-07-31).
@@ -30,6 +30,7 @@ This document is the **authoritative architectural specification** for Commerce 
 | M1 released | 2026-08-02 | PO accepted M1 and its release-candidate verification; `mp-admin-design-system` tagged `v0.2.0` and `mp-commerce-fulfillment` tagged `v0.1.0`, both published and independently re-verified against the downloaded release assets (`docs/M1_RELEASE_REPORT.md`). |
 | M2 Execution Plan (Part IV) | 2026-08-02 | Part IV appended: Milestone 2 (Packing Workspace & REST) execution plan, reconciled against M1's actual shipped state — reconciliation found one real M1 defect (the admin-side composition root wires a subscriber-less `EventDispatcher`, so admin-initiated transitions never reach `Woo\StatusBridge`) and three related findings in how transition eligibility is derived, all resolved by a single fix (§IV.3.B). Four PO decisions captured at approval: the dispatcher defect ships as its own `v0.1.1` patch before M2 feature work starts; multi-package "add package" ships in M2 without line-quantity allocation (M4); a minimal packing slip is pulled forward from M3 into M2; a dev/CI-only Playwright toolchain is added under new **ADR-0006**, which narrows ADR-0003's *Consequences* (shipped code stays framework-free and build-free) without altering its Decision. Two roadmap-sequencing amendments (§20's M2/M3 rows, §7.1's `mpcf_documents` milestone number) and ADR-0006 are the only document changes; no invariant, D-decision, layer rule, data-model semantic, engine contract or public-surface rule is altered. PO approved for implementation 2026-08-02. |
 | Partial fulfillment future capability | 2026-08-03 | §24.1 appended: partial fulfillment & split shipments documented as a future capability (operator dogfooding, M2). No architectural decision altered — a documentation-only pass. |
+| M3 Ops UX / Part V | 2026-08-04 | Roadmap sequencing amendment: M3 becomes Ops UX (Workspace next-action + Orders + dogfood stabilization) for `v0.3.0`; Documents I moves to M4; later milestones +1. Mission Control A/B/C deferred. Part V appended (execution summary). No invariant, D-decision, layer rule, data-model semantic, engine contract, or public-surface rule altered. |
 
 ## Governance
 
@@ -670,22 +671,23 @@ Each milestone is a usable release, tagged, installable. Detailed execution plan
 |---|---|---|---|---|
 | **M0** | 0.0.x | Bootstrap & MPDS extraction | `mp-admin-design-system` v0.1.0 repo (tokens + the *existing* extracted component set + shell + behavior JS + contract tests; new §8.4 components land with the milestones that need them); plugin repo skeleton (main file, Plugin, Settings, Capabilities, PersistedKeys, migration framework, guard framework, CI, build/release tooling, canonical docs incl. this document); `bin/sync-mpds.sh` + vendor guard; activates inert | — (migration framework + `mpcf_db_version` only; schema v1 lands in M1) |
 | **M1** | 0.1.0 | Fulfillment core — Warehouse MVP | Intake (paid → fulfillment, idempotent, CLI backfill); workflow engine + standard workflow; Queue (filters, search, bulk assign); fulfillment detail (timeline, notes, manual transitions); audit stream + hash chain; roles/capabilities + operator mode; status bridge v1; dashboard v1; uninstall policy | fulfillments, items, events, notes |
-| **M2** | 0.2.0 | Packing Workspace & REST | `mpcf/v1` (fulfillments, transitions, items, notes, shipments); the workspace (checklist, packages + specs, manual carrier+tracking, sticky action bar, drawer from queue); optimistic-concurrency UX; Application Passwords documented | shipments, packages, package_items |
-| **M3** | 0.3.0 | Documents I | Assembler/renderer/template architecture; packing slip + picking list (print-HTML, barcode payloads, branding settings, template overrides); render audit + reprint history | documents |
-| **M4** | 0.4.0 | Tracking & notifications | Carrier registry (EU-skewed bundled set); tracking validation hints; multi-package UX polish; notification subsystem (policy/dispatcher/EmailChannel, §16.1) with shipped email per shipment + WC-email tracking block; bridge mapping settings UI | — |
-| **M5** | 0.5.0 | Package photography | Capture slots, protected store + streamer, SHA-256 audit fingerprints, photo-required workflow guard, retention purge job | media |
-| **M6** | 0.6.0 | Barcode & scan mode | Scan sink → pick/pack by SKU/EAN scan; scannable queue (slip barcode opens workspace); mismatch handling; kbd/scan-first workspace mode | — |
-| **M7** | 0.7.0 | Batch picking | BatchBuilder engine; batch creation from queue; batch picking list document; batch → per-order packing handoff | batches, batch_items |
-| **M8** | 0.8.0 | Analytics I | Daily rollups (Action Scheduler + backfill CLI); Analytics screen (throughput, durations p50/p90, carrier mix, exception rates); dashboard trends; operator stats behind D17 | stats_daily |
-| **M9** | 0.9.0 → RC | Hardening & operational maturity | i18n complete, Site Health tests, `wp mpcf doctor`/`audit verify`, privacy exporter/eraser, performance baselines at 50k fulfillments, security review doc, `ARCHITECTURE_FREEZE.md`, compatibility matrix | — |
+| **M2** | 0.2.0 | Packing Workspace & REST | `mpcf/v1` (fulfillments, transitions, items, notes, shipments); the workspace (checklist, packages + specs, manual carrier+tracking, sticky action bar, drawer from queue); optimistic-concurrency UX; Application Passwords documented; minimal packing slip pulled forward | shipments, packages, package_items, documents |
+| **M3** | 0.3.0 | Ops UX (Workspace + Orders) | Workspace stage guidance / next-action clarity, quantity disclosure, shipped success path (M3-D); Orders read-only overview (M3-E); release stabilization & dogfood polish (M3-F). Mission Control Dashboard/Queue redesign (A/B/C) deferred post-0.3.0 | — |
+| **M4** | 0.4.0 | Documents I | Assembler/renderer/template architecture beyond M2 packing slip; picking list (print-HTML, barcode payloads, branding settings, template overrides); render audit + reprint history; PDF port | (documents already from M2; additive columns/indexes as needed) |
+| **M5** | 0.5.0 | Tracking & notifications | Carrier registry (EU-skewed bundled set); tracking validation hints; multi-package UX polish; notification subsystem (policy/dispatcher/EmailChannel, §16.1) with shipped email per shipment + WC-email tracking block; bridge mapping settings UI | — |
+| **M6** | 0.6.0 | Package photography | Capture slots, protected store + streamer, SHA-256 audit fingerprints, photo-required workflow guard, retention purge job | media |
+| **M7** | 0.7.0 | Barcode & scan mode | Scan sink → pick/pack by SKU/EAN scan; scannable queue (slip barcode opens workspace); mismatch handling; kbd/scan-first workspace mode | — |
+| **M8** | 0.8.0 | Batch picking | BatchBuilder engine; batch creation from queue; batch picking list document; batch → per-order packing handoff | batches, batch_items |
+| **M9** | 0.9.0 | Analytics I | Daily rollups (Action Scheduler + backfill CLI); Analytics screen (throughput, durations p50/p90, carrier mix, exception rates); dashboard trends; operator stats behind D17 | stats_daily |
+| **M10** | 0.9.x → RC | Hardening & operational maturity | i18n complete, Site Health tests, `wp mpcf doctor`/`audit verify`, privacy exporter/eraser, performance baselines at 50k fulfillments, security review doc, `ARCHITECTURE_FREEZE.md`, compatibility matrix | — |
 | **1.0** | 1.0.0 | Commercial release | Freeze public surface (hooks, REST v1, schema semantics, template contract) | — |
-| M10 | 1.1.0 | Returns & RMA | Return aggregate + workflow, return slip doc, customer-initiated intake hook, refund handoff to WC | returns, return_items |
-| M11 | 1.2.0 | Multi-warehouse & locations | Location hierarchy (facility/warehouse/zone/shelf/bin as data, §7.1), item-location assignment, location-sorted picking, warehouse routing rules, per-warehouse queues | locations, item_locations |
-| M12 | 1.3.0 | Carrier integrations I | `CarrierPort` label purchase + tracking sync (first adapters chosen by PO — candidates: Sendcloud, nShift, EasyPost as an aggregator strategy); label documents; CN22/CN23 + commercial invoice (PDF renderer lands here) | carrier_accounts |
-| M13 | 1.4.0 | Automation & webhooks | Outgoing HMAC webhooks, automation rules (event→condition→action), scoped API keys | webhooks, api_keys, rules |
-| M14 | 1.5.0 | Warehouse mobile mode | PWA-style tablet frontend over `mpcf/v1` (scan-first), station login via API keys | — |
+| M11 | 1.1.0 | Returns & RMA | Return aggregate + workflow, return slip doc, customer-initiated intake hook, refund handoff to WC | returns, return_items |
+| M12 | 1.2.0 | Multi-warehouse & locations | Location hierarchy (facility/warehouse/zone/shelf/bin as data, §7.1), item-location assignment, location-sorted picking, warehouse routing rules, per-warehouse queues | locations, item_locations |
+| M13 | 1.3.0 | Carrier integrations I | `CarrierPort` label purchase + tracking sync (first adapters chosen by PO — candidates: Sendcloud, nShift, EasyPost as an aggregator strategy); label documents; CN22/CN23 + commercial invoice (PDF renderer lands here) | carrier_accounts |
+| M14 | 1.4.0 | Automation & webhooks | Outgoing HMAC webhooks, automation rules (event→condition→action), scoped API keys | webhooks, api_keys, rules |
+| M15 | 1.5.0 | Warehouse mobile mode | PWA-style tablet frontend over `mpcf/v1` (scan-first), station login via API keys | — |
 
-Sequencing notes: M3 before M4 because a printable slip is the single most-requested day-one artifact; M6 before M7 because batch picking without scanning is paper anyway; photography (M5) early because it is a headline differentiator and its guard integrates with the workflow engine; returns deliberately post-1.0 — it doubles the domain surface and deserves the stability of a frozen core.
+Sequencing notes: M3 Ops UX before M4 Documents because warehouse next-action clarity and Orders overview were required to make the M2 workspace usable day-to-day; Documents I (pick list / stored renders / PDF) follows once Ops UX is stable. M7 before M8 because batch picking without scanning is paper anyway; photography (M6) early because it is a headline differentiator and its guard integrates with the workflow engine; returns deliberately post-1.0 — it doubles the domain surface and deserves the stability of a frozen core.
 
 ### 20.2 Future capabilities (not scheduled)
 
@@ -1985,3 +1987,40 @@ available on the dev host.
 **First concrete step on approval:** append this document to `docs/ARCHITECTURE_PLAN.md` as Part IV
 and record the approval in the version-history table — the same D0 ritual that opened M1 — then
 begin the `v0.1.1` patch track (P1–P3), then MPDS E1–E9.
+
+---
+
+# Part V — Milestone 3 Execution Summary (Ops UX → v0.3.0)
+
+**Status:** Release candidate documentation (2026-08-04). Architecture Freeze v1.0 remains authoritative. Tag `v0.3.0` requires separate PO acceptance.
+
+## V.1 Scope that shipped
+
+| Package | Delivered |
+|---|---|
+| M3-D | Workspace stage guidance, next-action clarity, quantity disclosure, packing/shipping emphasis, shipped success path |
+| M3-E | Orders read-only overview (Woo status + optional fulfillment; Open destinations) |
+| M3-F | Iterative operator dogfood, approved polish only, docs reconciliation, release validation |
+
+## V.2 Explicitly deferred (not in v0.3.0)
+
+- **M3-A** Mission Control Dashboard bands / CTAs
+- **M3-B** Shared band/next-action extraction for Dashboard/Queue
+- **M3-C** Queue next-action column & Mission Control presets
+- Shell/Settings polish, Documents I (→ **M4**), partial fulfillment, analytics, barcode semantics
+
+## V.3 Operational success metric
+
+The Product Owner must complete every required warehouse scenario without stopping because the next action is unclear. Automated tests support this metric; they do not replace it.
+
+## V.4 Observation backlog
+
+All dogfood findings live only in [`docs/DOGFOOD_LESSONS.md`](DOGFOOD_LESSONS.md). Release reports summarize counts and outcomes; they do not duplicate lesson entries.
+
+## V.5 Validation philosophy
+
+Primary confidence: PHPUnit, integration tests, and manual operator dogfooding. Playwright verifies browser-specific behaviour only; full Playwright regression is not a standard release gate.
+
+## V.6 Roadmap amendment
+
+§20 table updated so M3 = Ops UX at 0.3.0 and Documents I = M4. Post-1.0 milestones renumbered M11–M15. No ADR required (sequencing only; no invariant or D-decision change).

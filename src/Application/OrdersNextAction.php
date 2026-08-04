@@ -79,7 +79,7 @@ final class OrdersNextAction {
 			default:
 				return self::pack(
 					self::woo_status_label( $woo_status ),
-					__( 'Open in WooCommerce', 'mp-commerce-fulfillment' ),
+					__( 'Open order', 'mp-commerce-fulfillment' ),
 					self::OPEN_WOOCOMMERCE
 				);
 		}
@@ -118,7 +118,7 @@ final class OrdersNextAction {
 	}
 
 	/**
-	 * Human label for a known Woo status without naming WooCommerce helpers
+	 * Human label for a known store status without naming store helpers
 	 * (invariant I8 — Application stays platform-agnostic).
 	 *
 	 * @param string $woo_status WC status key.

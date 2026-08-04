@@ -49,14 +49,24 @@ actual state before work starts.
     Detail) never reached `Woo\StatusBridge` — only `RefundObserver`-driven
     transitions did. See `docs/ARCHITECTURE_PLAN.md` §IV.2 and
     `docs/M1_RELEASE_REPORT.md`'s addendum for full evidence.
-3. **M3 — Documents I** — not started.
-4. **M4 — Tracking & notifications** — not started.
-5. **M5 — Package photography** — not started.
-6. **M6 — Barcode & scan mode** — not started.
-7. **M7 — Batch picking** — not started.
-8. **M8 — Analytics I** — not started.
-9. **M9 — Hardening & operational maturity** — not started.
-10. **1.0 — Commercial release** — not started.
+3. **M3 — Ops UX (Workspace next-action + Orders)** — **release candidate for
+   `v0.3.0`** (implementation complete 2026-08-04; tag pending PO acceptance).
+   Ships M3-D Workspace stage guidance / quantity disclosure / shipped
+   success path, M3-E Orders read-only overview, and M3-F iterative
+   dogfood + operator-feedback polish. Mission Control Dashboard/Queue
+   redesign (M3-A/B/C) is deferred post-0.3.0. Permanent operational
+   backlog: `docs/DOGFOOD_LESSONS.md`. Evidence: `docs/M3_RELEASE_REPORT.md`.
+4. **M4 — Documents I** — not started (was previously labelled M3). Assembler/
+   renderer/template architecture beyond the M2 packing-slip pull-forward;
+   picking list; stored renders; PDF port; template overrides; branding;
+   reprint history.
+5. **M5 — Tracking & notifications** — not started.
+6. **M6 — Package photography** — not started.
+7. **M7 — Barcode & scan mode** — not started.
+8. **M8 — Batch picking** — not started.
+9. **M9 — Analytics I** — not started.
+10. **M10 — Hardening & operational maturity** — not started.
+11. **1.0 — Commercial release** — not started.
 
 ## Future capabilities (not scheduled)
 

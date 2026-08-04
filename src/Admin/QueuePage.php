@@ -582,7 +582,7 @@ final class QueuePage implements Page {
 					'checkbox' => true,
 				),
 				array( 'html' => $identity_cell ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built above from esc_url()/esc_html()/esc_attr()-escaped pieces only.
-				array( 'html' => esc_html( $fulfillment->customer_name_snapshot() ) ),
+				array( 'html' => esc_html( CustomerNameDisplay::label( $fulfillment->customer_name_snapshot() ) ) ),
 				array(
 					'html'    => esc_html( (string) $fulfillment->item_count() ),
 					'numeric' => true,
@@ -613,7 +613,7 @@ final class QueuePage implements Page {
 		$detail_url    = admin_url( 'admin.php?page=' . FulfillmentDetailPage::SLUG . '&fulfillment_id=' . $fulfillment->id() );
 
 		echo $this->renderer->drawer_open( $drawer_id, $fulfillment->order_number_snapshot() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		printf( '<p>%s: %s</p>', esc_html__( 'Customer', 'mp-commerce-fulfillment' ), esc_html( $fulfillment->customer_name_snapshot() ) );
+		printf( '<p>%s: %s</p>', esc_html__( 'Customer', 'mp-commerce-fulfillment' ), esc_html( CustomerNameDisplay::label( $fulfillment->customer_name_snapshot() ) ) );
 		printf( '<p>%s: %s</p>', esc_html__( 'Items', 'mp-commerce-fulfillment' ), esc_html( (string) $fulfillment->item_count() ) );
 		printf( '<p>%s: %s</p>', esc_html__( 'State', 'mp-commerce-fulfillment' ), esc_html( $fulfillment->state() ) );
 		echo $this->renderer->drawer_footer( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped

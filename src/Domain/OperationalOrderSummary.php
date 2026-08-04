@@ -1,6 +1,6 @@
 <?php
 /**
- * A lightweight WooCommerce order row for the Orders overview.
+ * A lightweight store order row for the Orders overview.
  *
  * @package MPCommerceFulfillment
  */
@@ -41,7 +41,7 @@ final class OperationalOrderSummary {
 	private string $customer_name;
 
 	/**
-	 * WooCommerce status key without the `wc-` prefix.
+	 * order status key without the `wc-` prefix.
 	 *
 	 * @var string
 	 */
@@ -106,7 +106,7 @@ final class OperationalOrderSummary {
 	}
 
 	/**
-	 * WooCommerce status key without the `wc-` prefix.
+	 * order status key without the `wc-` prefix.
 	 */
 	public function status(): string {
 		return $this->status;

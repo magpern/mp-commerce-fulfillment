@@ -86,9 +86,29 @@ fulfillment load, shipment/package reads, and tracking-number search).
 Timeline pagination moved into M2 rather than being discovered as a problem
 at M8. No index changes were required for the M2 distribution.
 
+## Operator dogfood (release gate, primary for Ops UX)
+
+From Milestone 3 onward, release readiness for warehouse UX is gated by
+**iterative operator dogfooding**, not by Playwright volume.
+
+- **Operational success metric:** the Product Owner can complete every
+  required warehouse scenario without stopping because the next action is
+  unclear.
+- **Primary confidence:** PHPUnit + integration tests + manual dogfood.
+- **Backlog:** every observation is classified in
+  `docs/DOGFOOD_LESSONS.md` (Release blocker / M3 polish / Future
+  enhancement / Out of scope). Release reports summarize only.
+- **Loop:** dogfood → classify → implement approved fixes → dogfood again
+  until zero Release blockers remain, then PO acceptance.
+
 ## Browser (`tests/browser/`, dev/CI only, `npx playwright test`)
 
-Milestone 2 (F22, ADR-0006) adds a fourth tier for real browser behavior
+**Secondary / browser-specific only.** Playwright exists to verify behaviour
+PHPUnit cannot observe (keyboard, focus, a11y, print). It is **not** the
+primary validation mechanism; full Playwright regression is **not** a
+standard release gate. Targeted browser smoke stays minimal.
+
+Milestone 2 (F22, ADR-0006) adds this tier for real browser behavior
 PHPUnit structurally cannot observe: keyboard-only operation, focus
 management, accessibility, and print rendering. Never part of
 `composer test:unit`/`test:integration` — a separate `browser` CI job,

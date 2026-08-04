@@ -67,10 +67,11 @@ final class WorkspaceStageGuidance {
 	 */
 	public static function operator_guard_message( ?string $rejection_code, ?string $rejection_message ): string {
 		$map = array(
-			'all_items_picked' => __( 'Pick all ordered items before marking this fulfillment as picked.', 'mp-commerce-fulfillment' ),
-			'all_items_packed' => __( 'Pack all picked items before marking this fulfillment as packed.', 'mp-commerce-fulfillment' ),
-			'has_shipment'     => __( 'Add a shipment before shipping this fulfillment.', 'mp-commerce-fulfillment' ),
-			'has_tracking'     => __( 'Enter a tracking number before shipping.', 'mp-commerce-fulfillment' ),
+			'all_items_picked'     => __( 'Pick all ordered items before marking this fulfillment as picked.', 'mp-commerce-fulfillment' ),
+			'all_items_packed'     => __( 'Pack all picked items before marking this fulfillment as packed.', 'mp-commerce-fulfillment' ),
+			'package_spec_present' => __( 'Enter package weight and dimensions before marking this fulfillment as packed.', 'mp-commerce-fulfillment' ),
+			'has_shipment'         => __( 'Add a shipment before shipping this fulfillment.', 'mp-commerce-fulfillment' ),
+			'has_tracking'         => __( 'Enter a tracking number before shipping.', 'mp-commerce-fulfillment' ),
 		);
 
 		if ( null !== $rejection_code && isset( $map[ $rejection_code ] ) ) {
@@ -135,7 +136,7 @@ final class WorkspaceStageGuidance {
 			),
 			'packing'     => array(
 				'title'             => __( 'Packing', 'mp-commerce-fulfillment' ),
-				'instruction'       => __( 'Pack every picked item and complete the shipment details.', 'mp-commerce-fulfillment' ),
+				'instruction'       => __( 'Pack every picked item, then enter package weight and dimensions before marking packed.', 'mp-commerce-fulfillment' ),
 				'next_action_label' => __( 'Mark packed', 'mp-commerce-fulfillment' ),
 				'shipment_emphasis' => 'secondary',
 			),

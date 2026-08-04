@@ -13,3 +13,6 @@
 
 # Machine-specific notes (Docker commands, local paths); never committed.
 /CLAUDE.local.md
+
+# M3-F dogfood session files
+.dogfood*

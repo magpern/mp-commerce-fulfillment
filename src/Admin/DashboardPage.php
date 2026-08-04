@@ -177,7 +177,7 @@ final class DashboardPage implements Page {
 				'<li><a href="%s">%s</a> — %s (%s)</li>',
 				esc_url( $workspace_url ),
 				esc_html( $fulfillment->order_number_snapshot() ),
-				esc_html( $fulfillment->customer_name_snapshot() ),
+				esc_html( CustomerNameDisplay::label( $fulfillment->customer_name_snapshot() ) ),
 				esc_html( $age )
 			);
 		}

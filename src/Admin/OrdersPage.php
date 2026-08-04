@@ -20,9 +20,9 @@ use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
 use MPCF\Vendor\Mpds\PageShell\Page;
 
 /**
- * Read-only "Where is my order?" overview. Combines WooCommerce order
+ * Read-only "Where is my order?" overview. Combines store order
  * status with optional MPCF fulfillment state. Never creates fulfillments
- * and never mutates WooCommerce or workflow state.
+ * and never mutates store or workflow state.
  */
 final class OrdersPage implements Page {
 
@@ -108,7 +108,7 @@ final class OrdersPage implements Page {
 		$this->shell->open();
 		$this->shell->render_header( ShellHeader::view_model( self::SLUG ) );
 		$this->shell->open_content( true );
-		$this->shell->open_section_card( __( 'Orders', 'mp-commerce-fulfillment' ), __( 'Operational overview of store orders. WooCommerce remains the system of record for payment and order lifecycle.', 'mp-commerce-fulfillment' ), 'dashicons-clipboard' );
+		$this->shell->open_section_card( __( 'Orders', 'mp-commerce-fulfillment' ), __( 'Operational overview of store orders. The store remains the system of record for payment and order lifecycle.', 'mp-commerce-fulfillment' ), 'dashicons-clipboard' );
 
 		$this->render_filter_bar( $query->filter(), $query->search() );
 		$this->render_table( $result );
@@ -130,9 +130,10 @@ final class OrdersPage implements Page {
 		printf( '<form method="get" action="%s">', esc_url( admin_url( 'admin.php' ) ) );
 		printf( '<input type="hidden" name="page" value="%s">', esc_attr( self::SLUG ) );
 
-		echo $this->renderer->filter_bar_open( array() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $this->renderer->filter_bar_open( array( 'aria-label' => __( 'Orders filters', 'mp-commerce-fulfillment' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->renderer->filter_bar_field( __( 'View', 'mp-commerce-fulfillment' ), $this->filter_control( $filter ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->renderer->filter_bar_search( 's', $search, __( 'Order #, customer, or SKU…', 'mp-commerce-fulfillment' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		printf( '<button type="submit" class="button">%s</button>', esc_html__( 'Filter', 'mp-commerce-fulfillment' ) );
 		echo $this->renderer->filter_bar_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		echo '</form>';
@@ -180,7 +181,7 @@ final class OrdersPage implements Page {
 				array( 'label' => esc_html__( 'Order', 'mp-commerce-fulfillment' ) ),
 				array( 'label' => esc_html__( 'Customer', 'mp-commerce-fulfillment' ) ),
 				array( 'label' => esc_html__( 'Date', 'mp-commerce-fulfillment' ) ),
-				array( 'label' => esc_html__( 'WooCommerce', 'mp-commerce-fulfillment' ) ),
+				array( 'label' => esc_html__( 'Order status', 'mp-commerce-fulfillment' ) ),
 				array( 'label' => esc_html__( 'Fulfillment', 'mp-commerce-fulfillment' ) ),
 				array( 'label' => esc_html__( 'Assignee', 'mp-commerce-fulfillment' ) ),
 				array( 'label' => esc_html__( 'Operational state', 'mp-commerce-fulfillment' ) ),
@@ -225,7 +226,7 @@ final class OrdersPage implements Page {
 						esc_html( $row->order_number() )
 					),
 				),
-				array( 'html' => esc_html( $row->customer_name() ) ),
+				array( 'html' => esc_html( CustomerNameDisplay::label( $row->customer_name() ) ) ),
 				array( 'html' => esc_html( $row->order_date()->format( get_option( 'date_format' ) ) ) ),
 				array( 'html' => $badge ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- ComponentRenderer::status_badge() returns escaped markup.
 				array( 'html' => esc_html( $this->fulfillment_status_label( $row ) ) ),
@@ -265,7 +266,7 @@ final class OrdersPage implements Page {
 	}
 
 	/**
-	 * WooCommerce status display label.
+	 * Order status display label.
 	 *
 	 * @param string $status WC status key.
 	 */

@@ -10,7 +10,7 @@ declare( strict_types=1 );
 namespace MPCF\Domain;
 
 /**
- * Preset filters map to either WooCommerce statuses or fulfillment states;
+ * Preset filters map to either order statuses or fulfillment states;
  * {@see \MPCF\Application\OrderOverviewService} chooses the listing strategy.
  */
 final class OrderOverviewQuery {

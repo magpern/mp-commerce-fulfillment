@@ -215,7 +215,7 @@ final class FulfillmentDetailPage implements Page {
 
 		$this->shell->open_section_card( sprintf( '%s %s', __( 'Fulfillment for order', 'mp-commerce-fulfillment' ), $fulfillment->order_number_snapshot() ) );
 
-		printf( '<p><strong>%s</strong> %s</p>', esc_html__( 'Customer:', 'mp-commerce-fulfillment' ), esc_html( $fulfillment->customer_name_snapshot() ) );
+		printf( '<p><strong>%s</strong> %s</p>', esc_html__( 'Customer:', 'mp-commerce-fulfillment' ), esc_html( CustomerNameDisplay::label( $fulfillment->customer_name_snapshot() ) ) );
 		printf( '<p><strong>%s</strong> %s</p>', esc_html__( 'Items:', 'mp-commerce-fulfillment' ), esc_html( (string) $fulfillment->item_count() ) );
 
 		if ( null !== $state ) {

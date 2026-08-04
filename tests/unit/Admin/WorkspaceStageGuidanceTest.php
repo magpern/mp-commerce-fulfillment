@@ -52,6 +52,13 @@ final class WorkspaceStageGuidanceTest extends TestCase {
 		self::assertSame( 'Begin pick run', $guidance['next_action_label'] );
 	}
 
+	public function test_packing_guidance_mentions_package_weight_and_dimensions(): void {
+		$guidance = WorkspaceStageGuidance::for_state( 'packing', null, StandardWorkflow::definition() );
+
+		self::assertStringContainsString( 'weight', $guidance['instruction'] );
+		self::assertStringContainsString( 'dimensions', $guidance['instruction'] );
+	}
+
 	public function test_operator_guard_message_maps_known_codes(): void {
 		self::assertSame(
 			'Pick all ordered items before marking this fulfillment as picked.',
@@ -60,6 +67,10 @@ final class WorkspaceStageGuidanceTest extends TestCase {
 		self::assertSame(
 			'Enter a tracking number before shipping.',
 			WorkspaceStageGuidance::operator_guard_message( 'has_tracking', 'ignored' )
+		);
+		self::assertSame(
+			'Enter package weight and dimensions before marking this fulfillment as packed.',
+			WorkspaceStageGuidance::operator_guard_message( 'package_spec_present', 'ignored' )
 		);
 	}
 

@@ -219,7 +219,7 @@ All 10 PO acceptance criteria passed:
 | Line-level package allocation | M4 | Simpler UI/UX in M2 (auto-allocate to package 1) |
 | Batch picking | M7 | Depends on scanning semantics (M6) |
 | Pick/shipping labels | M12 | Requires carrier API integration |
-| Stored document renders | M3 | Pulled back from M3, PDF deferred |
+| Stored document renders | M4 | Documents I after Ops UX stabilization |
 | Photo capture | M5 | Scheduled after scanning |
 | Multi-warehouse sharding | M11+ | Post-1.0 architectural scale |
 | Scan semantics | M6 | Foundation in place (scan sink), decoding deferred |
@@ -228,18 +228,19 @@ All 10 PO acceptance criteria passed:
 
 ## Next Steps
 
-✅ **Release complete.** No further action required until M3 planning.
+✅ **Release complete.** M2 closed 2026-08-03.
 
-**M3 Planning** (when approved):
-1. Append Part V to `docs/ARCHITECTURE_PLAN.md`
-2. Reconcile against current codebase state
-3. Define scope for Documents II (pick list, stored renders, PDF port, template override chain)
+**Subsequent milestones (as of M3-F docs reconciliation):**
+1. **M3 Ops UX → `v0.3.0`** (Workspace next-action + Orders + dogfood
+   stabilization) — see `docs/M3_RELEASE_REPORT.md` and
+   `docs/DOGFOOD_LESSONS.md`. Mission Control A/B/C deferred.
+2. **M4 Documents I** — pick list, stored renders, PDF port, template
+   override chain (Documents scope that remained after the M2 packing-slip
+   pull-forward).
 
 **Standing Activities:**
-- Operator dogfeed (P8): validate Packing Workspace with real warehouse
+- Continue recording warehouse observations in `docs/DOGFOOD_LESSONS.md`
 - Monitor CI: Playwright flake detection (quarantine on double-flake)
-- On-call readiness: v0.2.0 in production (P8 gates entry)
-
 ---
 
 ## Appendix: Full Changelog

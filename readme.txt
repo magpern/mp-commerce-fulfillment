@@ -29,6 +29,14 @@ Performance Order Storage (HPOS).
 
 == Changelog ==
 
+= 0.3.0 =
+* Feat: Ops UX — Workspace stage guidance and next-action clarity (M3-D).
+* Feat: Orders read-only overview with Open destinations (M3-E).
+* Fix: Orders Filter submit button; packing package weight/dimensions guidance;
+  empty customer name fallback in admin lists (M3-F dogfood polish).
+* Docs: ROADMAP/Part V — M3 = Ops UX; Documents I moves to M4; dogfood lessons
+  backlog. Mission Control Dashboard/Queue redesign deferred.
+
 = 0.2.2 =
 * Fix: Packing Workspace quantity controls — +/− buttons, direct number input,
   and the "Picked" / "Packed" counter now stay in sync and persist correctly.

@@ -145,6 +145,8 @@ final class CompositionRootTest extends TestCase {
 			'QueuePage',
 			'FulfillmentDetailPage',
 			'WorkspacePage',
+			'OrdersPage',
+			'OrderOverviewService',
 			'Menu',
 			'Assets',
 			'OperatorMode',

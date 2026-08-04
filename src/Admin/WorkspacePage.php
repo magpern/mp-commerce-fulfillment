@@ -605,7 +605,7 @@ final class WorkspacePage implements Page {
 	}
 
 	/**
-	 * Renders the WooCommerce customer note when one is present — full
+	 * Renders the customer note when one is present — full
 	 * checkout instructions in a warning callout beside the checklist.
 	 *
 	 * @param string $customer_note Raw note from the owning order.

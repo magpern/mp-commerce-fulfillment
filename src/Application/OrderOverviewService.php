@@ -20,7 +20,7 @@ use MPCF\Domain\Repository\FulfillmentRepository;
 use MPCF\Domain\SearchQuery;
 
 /**
- * Combines WooCommerce order summaries with optional MPCF fulfillments.
+ * Combines store order summaries with optional MPCF fulfillments.
  * Never creates fulfillments (pending/failed/on-hold/draft stay without
  * rows until intake runs from the normal paid/processing path).
  */
@@ -260,7 +260,7 @@ final class OrderOverviewService {
 	}
 
 	/**
-	 * WooCommerce status keys for an order-led filter preset.
+	 * Store status keys for an order-led filter preset.
 	 *
 	 * @param string $filter Filter key.
 	 * @return list<string> Empty list means any status (except trash).
