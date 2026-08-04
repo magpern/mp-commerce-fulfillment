@@ -79,6 +79,112 @@ final class WooOrderSource implements OrderSource {
 	}
 
 	/**
+	 * Paginated lightweight order rows for the Orders overview.
+	 *
+	 * @param array<int, string> $statuses Status keys without `wc-`; empty = any non-trash status.
+	 * @param int                $page     1-indexed page.
+	 * @param int                $per_page Rows per page.
+	 * @param string             $search   Optional free-text search (order # / customer).
+	 */
+	public function list_summaries( array $statuses, int $page, int $per_page, string $search = '' ): \MPCF\Domain\OperationalOrderListResult {
+		$args = array(
+			'limit'    => max( 1, $per_page ),
+			'page'     => max( 1, $page ),
+			'paginate' => true,
+			'orderby'  => 'date',
+			'order'    => 'DESC',
+			'return'   => 'objects',
+		);
+
+		if ( array() !== $statuses ) {
+			$args['status'] = $statuses;
+		} else {
+			$args['status'] = array_keys( wc_get_order_statuses() );
+		}
+
+		$search = trim( $search );
+
+		if ( '' !== $search ) {
+			$args['s'] = $search;
+		}
+
+		$result = wc_get_orders( $args );
+
+		if ( ! is_object( $result ) || ! isset( $result->orders, $result->total ) ) {
+			return new \MPCF\Domain\OperationalOrderListResult( array(), 0, $page, $per_page );
+		}
+
+		$items = array();
+
+		foreach ( $result->orders as $order ) {
+			if ( ! $order instanceof WC_Order ) {
+				continue;
+			}
+
+			$summary = $this->summary_from_order( $order );
+
+			if ( null !== $summary ) {
+				$items[] = $summary;
+			}
+		}
+
+		return new \MPCF\Domain\OperationalOrderListResult( $items, (int) $result->total, $page, $per_page );
+	}
+
+	/**
+	 * Lightweight order rows for the given ids, preserving input order.
+	 *
+	 * @param array<int, int> $order_ids Order ids.
+	 * @return list<\MPCF\Domain\OperationalOrderSummary>
+	 */
+	public function summaries_by_ids( array $order_ids ): array {
+		$items = array();
+
+		foreach ( $order_ids as $order_id ) {
+			$order_id = (int) $order_id;
+
+			if ( $order_id <= 0 ) {
+				continue;
+			}
+
+			$order = wc_get_order( $order_id );
+
+			if ( ! $order instanceof WC_Order ) {
+				continue;
+			}
+
+			$summary = $this->summary_from_order( $order );
+
+			if ( null !== $summary ) {
+				$items[] = $summary;
+			}
+		}
+
+		return $items;
+	}
+
+	/**
+	 * Builds an operational summary from a WC order object.
+	 *
+	 * @param WC_Order $order Order.
+	 */
+	private function summary_from_order( WC_Order $order ): ?\MPCF\Domain\OperationalOrderSummary {
+		$created = $order->get_date_created();
+
+		if ( null === $created ) {
+			return null;
+		}
+
+		return \MPCF\Domain\OperationalOrderSummary::create(
+			(int) $order->get_id(),
+			(string) $order->get_order_number(),
+			(string) $order->get_formatted_billing_full_name(),
+			(string) $order->get_status(),
+			( new \DateTimeImmutable() )->setTimestamp( $created->getTimestamp() )
+		);
+	}
+
+	/**
 	 * Every line item on an order.
 	 *
 	 * @param WC_Order $order Order to read line items from.

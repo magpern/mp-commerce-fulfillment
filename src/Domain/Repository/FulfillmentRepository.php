@@ -50,6 +50,17 @@ interface FulfillmentRepository {
 	public function find_all_by_order_id( int $order_id ): array;
 
 	/**
+	 * Batch association lookup for the Orders overview: one indexed
+	 * `order_id IN (...)` read, keyed by order id. When multiple
+	 * fulfillments exist for one order, the lowest id wins (same rule as
+	 * {@see find_by_order_id()}).
+	 *
+	 * @param array<int, int> $order_ids Order ids on the current page.
+	 * @return array<int, Fulfillment> Map of order_id => fulfillment.
+	 */
+	public function find_map_by_order_ids( array $order_ids ): array;
+
+	/**
 	 * A server-side paginated, filtered listing — the Queue's and
 	 * Dashboard's only way to list fulfillments, always through indexed
 	 * columns (invariant: no unindexed scan on the Queue's hot path).

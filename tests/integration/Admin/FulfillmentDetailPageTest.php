@@ -183,6 +183,10 @@ final class FulfillmentDetailPageTest extends WP_UnitTestCase {
 				return $this->real->find_all_by_order_id( $order_id );
 			}
 
+			public function find_map_by_order_ids( array $order_ids ): array {
+				return $this->real->find_map_by_order_ids( $order_ids );
+			}
+
 			public function query( \MPCF\Domain\FulfillmentQuery $query ): \MPCF\Domain\FulfillmentQueryResult {
 				return $this->real->query( $query );
 			}

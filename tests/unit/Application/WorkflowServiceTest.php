@@ -282,6 +282,14 @@ final class WorkflowServiceTest extends TestCase {
 				return null === $this->stored ? array() : array( $this->stored );
 			}
 
+			public function find_map_by_order_ids( array $order_ids ): array {
+				if ( null === $this->stored || ! in_array( $this->stored->order_id(), array_map( 'intval', $order_ids ), true ) ) {
+					return array();
+				}
+
+				return array( $this->stored->order_id() => $this->stored );
+			}
+
 			public function query( \MPCF\Domain\FulfillmentQuery $query ): \MPCF\Domain\FulfillmentQueryResult {
 				return new \MPCF\Domain\FulfillmentQueryResult( array(), 0, 1, 20 );
 			}

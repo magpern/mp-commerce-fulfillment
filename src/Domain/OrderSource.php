@@ -34,4 +34,23 @@ interface OrderSource {
 	 * @return list<int>
 	 */
 	public function find_ids_by_status( string $status ): array;
+
+	/**
+	 * Paginated lightweight order rows for the Orders overview.
+	 *
+	 * @param array<int, string> $statuses Status keys without `wc-`; empty = any non-trash status.
+	 * @param int                $page     1-indexed page.
+	 * @param int                $per_page Rows per page.
+	 * @param string             $search   Optional free-text search (order # / customer).
+	 */
+	public function list_summaries( array $statuses, int $page, int $per_page, string $search = '' ): OperationalOrderListResult;
+
+	/**
+	 * Lightweight order rows for the given ids, preserving input order.
+	 * Missing ids are omitted.
+	 *
+	 * @param array<int, int> $order_ids Order ids.
+	 * @return list<OperationalOrderSummary>
+	 */
+	public function summaries_by_ids( array $order_ids ): array;
 }

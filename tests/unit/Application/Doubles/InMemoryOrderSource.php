@@ -47,4 +47,62 @@ final class InMemoryOrderSource implements OrderSource {
 			)
 		);
 	}
+
+	public function list_summaries( array $statuses, int $page, int $per_page, string $search = '' ): \MPCF\Domain\OperationalOrderListResult {
+		$matches = array_values(
+			array_filter(
+				$this->orders,
+				static function ( OrderSnapshot $order ) use ( $statuses, $search ): bool {
+					if ( array() !== $statuses && ! in_array( $order->status(), $statuses, true ) ) {
+						return false;
+					}
+
+					if ( '' === $search ) {
+						return true;
+					}
+
+					return str_contains( $order->order_number(), $search )
+						|| str_contains( strtolower( $order->customer_name() ), strtolower( $search ) );
+				}
+			)
+		);
+
+		$total = count( $matches );
+		$slice = array_slice( $matches, ( $page - 1 ) * $per_page, $per_page );
+		$items = array();
+
+		foreach ( $slice as $order ) {
+			$items[] = \MPCF\Domain\OperationalOrderSummary::create(
+				$order->order_id(),
+				$order->order_number(),
+				$order->customer_name(),
+				$order->status(),
+				new \DateTimeImmutable( '2026-08-01 10:00:00' )
+			);
+		}
+
+		return new \MPCF\Domain\OperationalOrderListResult( $items, $total, $page, $per_page );
+	}
+
+	public function summaries_by_ids( array $order_ids ): array {
+		$items = array();
+
+		foreach ( $order_ids as $order_id ) {
+			$order = $this->find( (int) $order_id );
+
+			if ( null === $order ) {
+				continue;
+			}
+
+			$items[] = \MPCF\Domain\OperationalOrderSummary::create(
+				$order->order_id(),
+				$order->order_number(),
+				$order->customer_name(),
+				$order->status(),
+				new \DateTimeImmutable( '2026-08-01 10:00:00' )
+			);
+		}
+
+		return $items;
+	}
 }

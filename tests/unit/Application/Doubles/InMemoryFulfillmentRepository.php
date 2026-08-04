@@ -62,6 +62,26 @@ final class InMemoryFulfillmentRepository implements FulfillmentRepository {
 		);
 	}
 
+	public function find_map_by_order_ids( array $order_ids ): array {
+		$map = array();
+
+		foreach ( $order_ids as $order_id ) {
+			$order_id = (int) $order_id;
+
+			if ( $order_id <= 0 || isset( $map[ $order_id ] ) ) {
+				continue;
+			}
+
+			$found = $this->find_by_order_id( $order_id );
+
+			if ( null !== $found ) {
+				$map[ $order_id ] = $found;
+			}
+		}
+
+		return $map;
+	}
+
 	public function insert( Fulfillment $fulfillment ): ?int {
 		foreach ( $this->rows as $row ) {
 			// Mirrors the real repository's (order_id, order_source) unique

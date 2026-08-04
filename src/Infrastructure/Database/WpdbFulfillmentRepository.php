@@ -71,6 +71,43 @@ final class WpdbFulfillmentRepository implements FulfillmentRepository {
 	}
 
 	/**
+	 * Batch association lookup keyed by order id.
+	 *
+	 * @param array<int, int> $order_ids Order ids.
+	 * @return array<int, Fulfillment>
+	 */
+	public function find_map_by_order_ids( array $order_ids ): array {
+		$order_ids = array_values( array_unique( array_filter( array_map( 'intval', $order_ids ) ) ) );
+
+		if ( array() === $order_ids ) {
+			return array();
+		}
+
+		global $wpdb;
+
+		$table        = Schema::table( Schema::FULFILLMENTS );
+		$placeholders = implode( ',', array_fill( 0, count( $order_ids ), '%d' ) );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $table is Schema-built; placeholders built from count.
+		$sql = $wpdb->prepare( "SELECT * FROM {$table} WHERE order_id IN ({$placeholders}) ORDER BY id ASC", ...$order_ids );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql is the prepared statement from above.
+		$rows = $wpdb->get_results( $sql, ARRAY_A );
+
+		$map = array();
+
+		foreach ( $rows as $row ) {
+			$order_id = (int) $row['order_id'];
+
+			if ( isset( $map[ $order_id ] ) ) {
+				continue;
+			}
+
+			$map[ $order_id ] = $this->hydrate( $row );
+		}
+
+		return $map;
+	}
+
+	/**
 	 * Inserts a brand-new fulfillment and returns its assigned id, or null if
 	 * the `(order_id, order_source)` uniqueness constraint rejected it (see
 	 * {@see Schema::fulfillments_order_unique_index_ddl()}) — a concurrent
