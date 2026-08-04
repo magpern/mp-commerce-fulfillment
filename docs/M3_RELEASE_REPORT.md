@@ -2,7 +2,7 @@
 
 **Released:** 2026-08-04  
 **Version:** 0.3.0  
-**Status:** ✅ Production Ready (pending tag/publish verification)
+**Status:** ✅ Production Ready
 
 Living operational detail: [`docs/DOGFOOD_LESSONS.md`](DOGFOOD_LESSONS.md).  
 This report summarizes outcomes only; it does not duplicate lesson entries.
@@ -55,6 +55,7 @@ See `DOGFOOD_LESSONS.md` for observation / decision / milestone target.
 - Orders Filter submit button (parity with Queue)
 - Packing stage copy + `package_spec_present` operator guard (PHP + JS)
 - Structural guard allowlists / I6–I8 prose for Orders surface; Mpds MANIFEST hash
+- `bin/release-audit.sh` pipefail false-negative on early zip entries
 
 ---
 
@@ -67,14 +68,19 @@ WP submenu shell cleanup, Documents I → **M4**.
 
 ## Release artifacts
 
-Filled during release verification (see appendix after audit).
-
 | Property | Value |
 |---|---|
 | **Tag** | `v0.3.0` |
+| **Commit** | _(set after tag)_ |
 | **Version parity** | header / `MPCF_VERSION` / Stable tag = `0.3.0` |
-| **Local Build SHA-256** | _(set after build)_ |
+| **Installable ZIP** | `mp-commerce-fulfillment-0.3.0.zip` |
+| **ZIP size** | 329426 bytes |
+| **ZIP entries** | 206 files |
+| **Local Build SHA-256** | `8400c1631277b36df0c819a98a22bc26189a9ad200c6017d5c6025adb60445ba` |
 | **Published ZIP SHA-256** | _(set after GitHub Release)_ |
+| **GitHub Release** | _(set after publish)_ |
+
+**Note:** GitHub may re-archive the ZIP with different timestamps, producing a different published SHA-256. File-level content verification confirms correctness.
 
 ---
 
@@ -84,10 +90,11 @@ Filled during release verification (see appendix after audit).
 - Focused integration (Orders/Workspace/Menu): 39 OK
 - Focused PHPCS clean on M3-F Admin files
 - `bin/make-pot.sh` regenerated for new strings
-- `bin/release-audit.sh` run as part of release sequence
+- `bin/release-audit.sh` **passed** (version parity, docs, zero runtime deps, zip contents, no Node/dev artifacts)
+- Clean-install extract: parity 0.3.0, `php -l` clean, autoload OK, no forbidden paths
 
 ---
 
 ## Release decision
 
-**GO.** PO accepted 2026-08-04. Tag and publish follow successful release audit.
+**GO.** PO accepted 2026-08-04. Release audit passed with zero blockers.
