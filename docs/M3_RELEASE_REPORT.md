@@ -71,14 +71,14 @@ WP submenu shell cleanup, Documents I → **M4**.
 | Property | Value |
 |---|---|
 | **Tag** | `v0.3.0` |
-| **Commit** | _(set after tag)_ |
+| **Commit** | `4921db0` |
 | **Version parity** | header / `MPCF_VERSION` / Stable tag = `0.3.0` |
 | **Installable ZIP** | `mp-commerce-fulfillment-0.3.0.zip` |
-| **ZIP size** | 329426 bytes |
+| **ZIP size** | 329426 bytes (local) / 329455 bytes (GitHub asset) |
 | **ZIP entries** | 206 files |
 | **Local Build SHA-256** | `8400c1631277b36df0c819a98a22bc26189a9ad200c6017d5c6025adb60445ba` |
-| **Published ZIP SHA-256** | _(set after GitHub Release)_ |
-| **GitHub Release** | _(set after publish)_ |
+| **Published ZIP SHA-256** | `17cda0243900519b698f0ec55fba16de776e0f2111bc511e945df7228fde4c30` |
+| **GitHub Release** | https://github.com/magpern/mp-commerce-fulfillment/releases/tag/v0.3.0 |
 
 **Note:** GitHub may re-archive the ZIP with different timestamps, producing a different published SHA-256. File-level content verification confirms correctness.
 
