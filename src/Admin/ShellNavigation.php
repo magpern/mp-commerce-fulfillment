@@ -39,6 +39,12 @@ final class ShellNavigation {
 				'dashicons-list-view',
 				QueuePage::SLUG === $current_slug
 			),
+			new SectionNavItemViewModel(
+				__( 'Orders', 'mp-commerce-fulfillment' ),
+				admin_url( 'admin.php?page=' . OrdersPage::SLUG ),
+				'dashicons-clipboard',
+				OrdersPage::SLUG === $current_slug
+			),
 		);
 	}
 }

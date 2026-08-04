@@ -13,6 +13,7 @@ use MPCF\Admin\Assets;
 use MPCF\Admin\DashboardPage;
 use MPCF\Admin\FulfillmentDetailPage;
 use MPCF\Admin\OperatorMode;
+use MPCF\Admin\OrdersPage;
 use MPCF\Admin\QueuePage;
 use MPCF\Admin\WorkspacePage;
 use MPCF\Api\Rest\AssignmentController;
@@ -31,6 +32,7 @@ use MPCF\Application\EventDispatcher;
 use MPCF\Application\FulfillmentDetailService;
 use MPCF\Application\IntakeService;
 use MPCF\Application\NoteService;
+use MPCF\Application\OrderOverviewService;
 use MPCF\Application\PackingService;
 use MPCF\Application\QueueService;
 use MPCF\Application\ShipmentAutoShipSubscriber;
@@ -363,6 +365,11 @@ final class Plugin {
 
 		$dashboard_page = new DashboardPage( $shell, $renderer, $dashboard, $definition );
 		$queue_page     = new QueuePage( $shell, $renderer, $queue_service, $detail_service, $assignments, $workflow_service, $definition );
+		$orders_page    = new OrdersPage(
+			$shell,
+			$renderer,
+			new OrderOverviewService( new WooOrderSource(), $fulfillments, new WpdbSearchQuery() )
+		);
 		$detail_page    = new FulfillmentDetailPage( $shell, $renderer, $detail_service, $note_service, $workflow_service, $definition );
 		$workspace_page = new WorkspacePage(
 			$shell,
@@ -383,7 +390,7 @@ final class Plugin {
 			__( 'Fulfillment', 'mp-commerce-fulfillment' ),
 			'dashicons-archive',
 			Capabilities::VIEW_QUEUE,
-			array( $dashboard_page, $queue_page )
+			array( $dashboard_page, $queue_page, $orders_page )
 		) )->register();
 
 		$hidden_pages = array( $detail_page, $workspace_page );
