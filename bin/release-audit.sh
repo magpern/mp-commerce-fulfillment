@@ -24,6 +24,36 @@ fail() {
 	FAILURES=$((FAILURES + 1))
 }
 
+# `set -o pipefail` + `grep -q` is unsafe: grep exits early on match, unzip
+# gets SIGPIPE (exit 141), and the pipeline is treated as failure — a false
+# "missing file" for entries that appear early in the zip listing.
+zip_has() {
+	local zip_path="$1"
+	local needle="$2"
+	local matches
+
+	matches="$(unzip -l "$zip_path" | grep -F -- "$needle" || true)"
+	[ -n "$matches" ]
+}
+
+zip_has_regex() {
+	local zip_path="$1"
+	local pattern="$2"
+	local matches
+
+	matches="$(unzip -l "$zip_path" | grep -E -- "$pattern" || true)"
+	[ -n "$matches" ]
+}
+
+zip_has_iregex() {
+	local zip_path="$1"
+	local pattern="$2"
+	local matches
+
+	matches="$(unzip -l "$zip_path" | grep -Ei -- "$pattern" || true)"
+	[ -n "$matches" ]
+}
+
 section "Version parity"
 
 HEADER_VERSION="$(sed -n 's/^ \* Version: //p' mp-commerce-fulfillment.php | tr -d '[:space:]')"
@@ -75,14 +105,14 @@ else
 		pass "built $ZIP_PATH"
 
 		for required in "mp-commerce-fulfillment/mp-commerce-fulfillment.php" "mp-commerce-fulfillment/uninstall.php" "mp-commerce-fulfillment/vendor/autoload.php"; do
-			if unzip -l "$ZIP_PATH" | grep -q "$required"; then
+			if zip_has "$ZIP_PATH" "$required"; then
 				pass "zip contains $required"
 			else
 				fail "zip is missing $required"
 			fi
 		done
 
-		if unzip -l "$ZIP_PATH" | grep -qE "mp-commerce-fulfillment/(vendor/(phpunit|dealerdirect)|tests/)"; then
+		if zip_has_regex "$ZIP_PATH" "mp-commerce-fulfillment/(vendor/(phpunit|dealerdirect)|tests/)"; then
 			fail "zip contains dev-only files (phpunit/tests) — build with --no-dev"
 		else
 			pass "zip contains no dev-only files"
@@ -95,7 +125,7 @@ else
 		# (unlike the dev-only-files check above, whose two paths only
 		# ever appear at the plugin root) — a Node artifact could in
 		# principle end up nested inside assets/ or anywhere else.
-		if unzip -l "$ZIP_PATH" | grep -qEi "(^|/)(package(-lock)?\.json|node_modules/|playwright\.config\.|tests/browser/|\.playwright/|playwright-report/|test-results/)"; then
+		if zip_has_iregex "$ZIP_PATH" "(^|/)(package(-lock)?\.json|node_modules/|playwright\.config\.|tests/browser/|\.playwright/|playwright-report/|test-results/)"; then
 			fail "zip contains a Node/Playwright artifact — see ADR-0006"
 		else
 			pass "zip contains no Node/Playwright artifact"
