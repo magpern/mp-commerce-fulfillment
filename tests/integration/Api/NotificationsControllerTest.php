@@ -50,6 +50,15 @@ final class NotificationsControllerTest extends WP_UnitTestCase {
 		$this->clean_fulfillment_tables();
 		Plugin::activate();
 
+		// Persist strategy before composition-root Settings caches get().
+		$settings = new Settings();
+		$settings->save(
+			array_merge(
+				$settings->get(),
+				array( 'notification_strategy' => NotificationStrategy::MPCF_SHIPPED )
+			)
+		);
+
 		$reflection = new ReflectionClass( Plugin::class );
 		$instance   = $reflection->getProperty( 'instance' );
 		$instance->setAccessible( true );
@@ -64,14 +73,6 @@ final class NotificationsControllerTest extends WP_UnitTestCase {
 
 		$this->fulfillments = new WpdbFulfillmentRepository();
 		$this->items        = new WpdbFulfillmentItemRepository();
-
-		$settings = new Settings();
-		$settings->save(
-			array_merge(
-				$settings->get(),
-				array( 'notification_strategy' => NotificationStrategy::MPCF_SHIPPED )
-			)
-		);
 	}
 
 	/**
