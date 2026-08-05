@@ -1,6 +1,6 @@
 <?php
 /**
- * Tests for the document assembly/render/record orchestrator.
+ * Tests for the document assembly/render/store orchestrator.
  *
  * @package MPCommerceFulfillment
  */
@@ -23,6 +23,8 @@ use MPCF\Domain\OrderSnapshot;
 use MPCF\Domain\Shipping\Package;
 use MPCF\Domain\Shipping\PackageSpec;
 use MPCF\Domain\Shipping\Shipment;
+use MPCF\Infrastructure\Files\ProtectedDocumentStore;
+use MPCF\Settings;
 use MPCF\Tests\Unit\Application\Doubles\FixedClock;
 use MPCF\Tests\Unit\Application\Doubles\InMemoryDocumentRepository;
 use MPCF\Tests\Unit\Application\Doubles\InMemoryEventRepository;
@@ -35,7 +37,7 @@ use MPCF\Tests\Unit\Application\Doubles\InMemoryShipmentRepository;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Tests for the document assembly/render/record orchestrator.
+ * Tests for the document assembly/render/store orchestrator.
  */
 final class DocumentServiceTest extends TestCase {
 
@@ -84,6 +86,11 @@ final class DocumentServiceTest extends TestCase {
 	 */
 	private int $fulfillment_id;
 
+	/**
+	 * @var string
+	 */
+	private string $store_root;
+
 	protected function setUp(): void {
 		remove_all_filters( 'mpcf_document_model' );
 		remove_all_filters( 'mpcf_document_types' );
@@ -96,6 +103,7 @@ final class DocumentServiceTest extends TestCase {
 		$this->packages     = new InMemoryPackageRepository();
 		$this->documents    = new InMemoryDocumentRepository();
 		$this->events       = new InMemoryEventRepository();
+		$this->store_root   = sys_get_temp_dir() . '/mpcf-docsvc-' . uniqid( '', true );
 
 		$shipping = new ShippingService(
 			$this->fulfillments,
@@ -118,7 +126,16 @@ final class DocumentServiceTest extends TestCase {
 			$this->events,
 			new EventDispatcher(),
 			new FixedClock( new DateTimeImmutable( '2026-08-02 10:00:00' ) ),
-			'Acme Store'
+			'Acme Store',
+			null,
+			new Settings(
+				array(
+					'documents_store_name' => 'Acme Store',
+					'documents_address'    => "Warehouse 1\nStockholm",
+					'documents_footer'     => 'Thank you',
+				)
+			),
+			new ProtectedDocumentStore( $this->store_root )
 		);
 
 		$this->fulfillment_id = $this->fulfillments->insert(
@@ -128,7 +145,7 @@ final class DocumentServiceTest extends TestCase {
 		$this->items->insert_all( array( FulfillmentItem::intake( $this->fulfillment_id, 501, 900, 0, 'SKU-1', 'Blue Widget', 2 ) ) );
 
 		$this->orders->seed(
-			OrderSnapshot::create( 1001, 'woocommerce', '#1001', 'Jane Doe', 'processing', array(), array( 'Anna Andersson', 'Storgatan 1' ) )
+			OrderSnapshot::create( 1001, 'woocommerce', '#1001', 'Jane Doe', 'processing', array(), array( 'Anna Andersson', 'Storgatan 1' ), 'Leave at door' )
 		);
 
 		$shipment_id = $this->shipments->insert( Shipment::create( $this->fulfillment_id, new DateTimeImmutable() ) );
@@ -141,6 +158,7 @@ final class DocumentServiceTest extends TestCase {
 		remove_all_filters( 'mpcf_document_model' );
 		remove_all_filters( 'mpcf_document_types' );
 		remove_all_filters( 'mpcf_document_template' );
+		$this->rm_tree( $this->store_root );
 		parent::tearDown();
 	}
 
@@ -163,20 +181,38 @@ final class DocumentServiceTest extends TestCase {
 		self::assertStringContainsString( 'Anna Andersson', (string) $outcome->html() );
 		self::assertStringContainsString( 'Blue Widget', (string) $outcome->html() );
 		self::assertStringContainsString( 'Acme Store', (string) $outcome->html() );
+		self::assertStringContainsString( 'Leave at door', (string) $outcome->html() );
+		self::assertStringContainsString( 'Thank you', (string) $outcome->html() );
 	}
 
-	public function test_render_packing_slip_records_exactly_one_document_and_one_audit_event(): void {
+	public function test_render_packing_slip_records_document_audit_and_stored_path(): void {
 		$outcome = $this->service->render_packing_slip( $this->fulfillment_id, Actor::user( 7, 'Jane' ) );
 
 		self::assertCount( 1, $this->documents->all() );
 		self::assertSame( $outcome->document_id(), $this->documents->all()[0]->id() );
-		self::assertNull( $this->documents->all()[0]->file_path(), 'Render-to-print never stores a file.' );
+		self::assertNotNull( $this->documents->all()[0]->file_path() );
+		self::assertStringContainsString( 'mpcf/documents/', (string) $this->documents->all()[0]->file_path() );
 
 		$timeline = $this->events->timeline_for_fulfillment( $this->fulfillment_id );
 		self::assertCount( 1, $timeline );
 		self::assertSame( 'document.rendered', $timeline[0]['event_type'] );
 		self::assertSame( $outcome->document_id(), $timeline[0]['payload']['document_id'] );
 		self::assertSame( 'html', $timeline[0]['payload']['renderer'] );
+		self::assertTrue( $timeline[0]['payload']['stored'] );
+		self::assertSame( $this->documents->all()[0]->file_path(), $timeline[0]['payload']['file_path'] );
+		self::assertSame( hash( 'sha256', (string) $outcome->html() ), $timeline[0]['payload']['sha256'] );
+		self::assertSame( strlen( (string) $outcome->html() ), $timeline[0]['payload']['bytes'] );
+	}
+
+	public function test_fresh_render_creates_a_new_document_each_time(): void {
+		$this->service->render_packing_slip( $this->fulfillment_id, Actor::system() );
+		$this->service->render_packing_slip( $this->fulfillment_id, Actor::system() );
+
+		self::assertCount( 2, $this->documents->all() );
+		self::assertNotSame(
+			$this->documents->all()[0]->file_path(),
+			$this->documents->all()[1]->file_path()
+		);
 	}
 
 	public function test_render_rejects_unknown_document_type(): void {
@@ -187,18 +223,21 @@ final class DocumentServiceTest extends TestCase {
 		self::assertCount( 0, $this->documents->all() );
 	}
 
-	public function test_render_picking_list_is_registered_but_not_implemented_in_m4a(): void {
+	public function test_render_picking_list_in_eligible_state(): void {
 		$picking_id = $this->fulfillments->insert(
 			Fulfillment::intake( 2002, 'woocommerce', 1, 'standard', 'picking', '#2002', 'A', 1, new DateTimeImmutable() )
 		);
+		$this->items->insert_all( array( FulfillmentItem::intake( $picking_id, 1, 1, 0, 'SKU-P', 'Pick Me', 4 ) ) );
 		$this->orders->seed(
 			OrderSnapshot::create( 2002, 'woocommerce', '#2002', 'A', 'processing', array(), array( 'Line' ) )
 		);
 
 		$outcome = $this->service->render( $picking_id, 'picking_list', array( 'actor' => Actor::system() ) );
 
-		self::assertFalse( $outcome->is_success() );
-		self::assertSame( 'not_implemented', $outcome->failure_code() );
+		self::assertTrue( $outcome->is_success() );
+		self::assertStringContainsString( 'Pick Me', (string) $outcome->html() );
+		self::assertStringContainsString( 'Picking list', (string) $outcome->html() );
+		self::assertNotNull( $this->documents->latest_for_fulfillment_and_type( $picking_id, 'picking_list' ) );
 	}
 
 	public function test_render_rejects_cancelled_stage(): void {
@@ -264,9 +303,11 @@ final class DocumentServiceTest extends TestCase {
 					$model->barcode_payload(),
 					$model->fulfillment_state(),
 					$model->template_version(),
-					$model->branding(),
+					array_merge( $model->branding(), array( 'store_name' => 'Filtered Store' ) ),
 					$model->rendered_at(),
-					$model->rendered_by()
+					$model->rendered_by(),
+					$model->customer_instructions(),
+					$model->renderer_format()
 				);
 			}
 		);
@@ -282,14 +323,53 @@ final class DocumentServiceTest extends TestCase {
 
 		self::assertNotNull( $this->documents->get( (int) $outcome->document_id() ) );
 		self::assertCount( 1, $this->documents->list_for_fulfillment( $this->fulfillment_id ) );
-		$latest = $this->documents->latest_for_fulfillment_and_type( $this->fulfillment_id, 'packing_slip' );
-		self::assertNotNull( $latest );
-		self::assertSame( $outcome->document_id(), $latest->id() );
+		$latest = $this->documents->latest_for_fulfillment_and_type( $this->fulfillment_id, 'picking_list' );
+		self::assertNull( $latest );
+		$latest_slip = $this->documents->latest_for_fulfillment_and_type( $this->fulfillment_id, 'packing_slip' );
+		self::assertNotNull( $latest_slip );
+		self::assertSame( $outcome->document_id(), $latest_slip->id() );
 	}
 
-	public function test_no_file_path_is_written_in_m4a(): void {
-		$this->service->render_packing_slip( $this->fulfillment_id, Actor::system() );
+	public function test_capability_check_can_deny_render(): void {
+		$outcome = $this->service->render(
+			$this->fulfillment_id,
+			'packing_slip',
+			array(
+				'actor' => Actor::system(),
+				'can'   => static fn (): bool => false,
+			)
+		);
 
-		self::assertNull( $this->documents->all()[0]->file_path() );
+		self::assertFalse( $outcome->is_success() );
+		self::assertSame( 'forbidden', $outcome->failure_code() );
+		self::assertCount( 0, $this->documents->all() );
+	}
+
+	public function test_no_pdf_requirement_in_event_payload(): void {
+		$this->service->render_packing_slip( $this->fulfillment_id, Actor::system() );
+		$payload = $this->events->timeline_for_fulfillment( $this->fulfillment_id )[0]['payload'];
+
+		self::assertSame( 'html', $payload['renderer'] );
+		self::assertArrayNotHasKey( 'pdf', $payload );
+	}
+
+	/**
+	 * @param string $path Directory to remove.
+	 */
+	private function rm_tree( string $path ): void {
+		if ( ! is_dir( $path ) ) {
+			return;
+		}
+
+		$iterator = new \RecursiveIteratorIterator(
+			new \RecursiveDirectoryIterator( $path, \FilesystemIterator::SKIP_DOTS ),
+			\RecursiveIteratorIterator::CHILD_FIRST
+		);
+
+		foreach ( $iterator as $file ) {
+			$file->isDir() ? rmdir( $file->getPathname() ) : unlink( $file->getPathname() );
+		}
+
+		rmdir( $path );
 	}
 }

@@ -52,7 +52,7 @@ final class PackingSlipAssemblerTest extends TestCase {
 		$model = PackingSlipAssembler::assemble( $this->fulfillment(), $order, array( $item ), array(), 'Acme Store' );
 
 		self::assertSame(
-			array( array( 'sku' => 'SKU-1', 'name' => 'Blue Widget', 'qty_ordered' => 3 ) ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+			array( array( 'sku' => 'SKU-1', 'name' => 'Blue Widget', 'qty_ordered' => 3, 'qty_packed' => 0 ) ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
 			$model->items()
 		);
 	}

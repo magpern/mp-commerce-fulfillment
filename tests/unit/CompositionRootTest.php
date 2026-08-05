@@ -146,12 +146,14 @@ final class CompositionRootTest extends TestCase {
 			'FulfillmentDetailPage',
 			'WorkspacePage',
 			'OrdersPage',
+			'SettingsPage',
 			'OrderOverviewService',
 			'Menu',
 			'Assets',
 			'OperatorMode',
 			'WorkspaceFlags',
 			'StoreUnits',
+			'ProtectedDocumentStore',
 		);
 		$disallowed = array_values( array_diff( $matches[1], $allowed ) );
 

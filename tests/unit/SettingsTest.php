@@ -119,7 +119,7 @@ final class SettingsTest extends TestCase {
 		self::assertFalse( $defaults['auto_advance_after_ship'] );
 		self::assertSame( '', $defaults['default_carrier_id'] );
 		self::assertFalse( $defaults['require_tracking_before_ship'] );
-		self::assertSame( 4, Settings::SCHEMA_VERSION );
+		self::assertSame( 5, Settings::SCHEMA_VERSION );
 	}
 
 	public function test_sanitize_coerces_auto_advance_after_ship_truthy_and_falsy_values(): void {
