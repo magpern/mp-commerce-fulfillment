@@ -81,6 +81,8 @@ final class DocumentTypeRegistry {
 		 * Integrators may add or amend definitions. Malformed entries are
 		 * dropped; unknown shapes never reach DocumentService.
 		 *
+		 * @since 0.4.0
+		 *
 		 * @param array<string, array<string, mixed>|DocumentType> $types Bundled definitions keyed by id.
 		 */
 		$filtered = apply_filters( 'mpcf_document_types', $raw );
@@ -116,6 +118,8 @@ final class DocumentTypeRegistry {
 	}
 
 	/**
+	 * Normalizes one registry map entry into a DocumentType.
+	 *
 	 * @param mixed $key   Array key from the filtered map.
 	 * @param mixed $entry Definition array or DocumentType.
 	 */
