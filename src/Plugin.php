@@ -21,12 +21,16 @@ use MPCF\Admin\WorkspacePage;
 use MPCF\Application\DocumentHistoryService;
 use MPCF\Application\DocumentService;
 use MPCF\Application\Notifications\NotificationConfigurationService;
+use MPCF\Application\Notifications\NotificationDispatcher;
+use MPCF\Application\Notifications\NotificationFactory;
+use MPCF\Application\Notifications\NotificationService;
 use MPCF\Api\Rest\AssignmentController;
 use MPCF\Api\Rest\CarriersController;
 use MPCF\Api\Rest\DocumentsController;
 use MPCF\Api\Rest\FulfillmentsController;
 use MPCF\Api\Rest\ItemsController;
 use MPCF\Api\Rest\NotesController;
+use MPCF\Api\Rest\NotificationsController;
 use MPCF\Api\Rest\PackagesController;
 use MPCF\Api\Rest\RestApi;
 use MPCF\Api\Rest\ShipmentsController;
@@ -52,6 +56,9 @@ use MPCF\Domain\Workflow\WorkflowDefinition;
 use MPCF\Engine\GuardRegistry;
 use MPCF\Engine\WorkflowEngine;
 use MPCF\Infrastructure\Carriers\BundledCarrierRegistry;
+use MPCF\Infrastructure\Notifications\EmailChannel;
+use MPCF\Woo\TrackingEmailExtension;
+use MPCF\Woo\WooCustomerEmailLookup;
 use MPCF\Infrastructure\Database\Migrator;
 use MPCF\Infrastructure\Database\WpdbDocumentRepository;
 use MPCF\Infrastructure\Database\WpdbEventRepository;
@@ -269,6 +276,22 @@ final class Plugin {
 		// every transition dispatched through it, admin-initiated included.
 		$dispatcher->subscribe( 'fulfillment.state_changed', new StatusBridge( $fulfillments, $settings ) );
 
+		$carriers             = new BundledCarrierRegistry();
+		$notification_config  = new NotificationConfigurationService( $settings, $carriers );
+		$notification_service = new NotificationService(
+			$notification_config,
+			new NotificationFactory( $notification_config, $carriers, new WooCustomerEmailLookup() ),
+			new EmailChannel(),
+			$fulfillments,
+			$shipments,
+			$packages,
+			$events,
+			$dispatcher,
+			$clock
+		);
+		$dispatcher->subscribe( 'shipment.shipped', new NotificationDispatcher( $notification_service ) );
+		( new TrackingEmailExtension( $notification_config, $fulfillments, $shipments, $packages, $carriers ) )->register();
+
 		( new RefundObserver( $fulfillments, $items, $orders, $workflow_service, $settings ) )->register();
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -325,7 +348,8 @@ final class Plugin {
 				new AssignmentController( new AssignmentService( $fulfillments, $events, $dispatcher, $clock ) ),
 				new ShipmentsController( $shipping_service, $workflow_service, $detail_service ),
 				new PackagesController( $shipping_service, $workflow_service, $detail_service ),
-				new CarriersController( new BundledCarrierRegistry() ),
+				new CarriersController( $carriers ),
+				new NotificationsController( $notification_service ),
 				new DocumentsController( $document_service, $document_history, $workflow_service, $detail_service ),
 			)
 		) )->register();
