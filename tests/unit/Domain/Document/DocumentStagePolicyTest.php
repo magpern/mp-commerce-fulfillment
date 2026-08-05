@@ -112,7 +112,7 @@ final class DocumentStagePolicyTest extends TestCase {
 	 * @param string|null $return_to Interrupted state when in exception.
 	 */
 	private function fulfillment_in( string $state, ?string $return_to = null ): Fulfillment {
-		$data = Fulfillment::intake( 1, 'woocommerce', 1, 'standard', 'queued', '#1', 'A', 1, new DateTimeImmutable() )->to_array();
+		$data                    = Fulfillment::intake( 1, 'woocommerce', 1, 'standard', 'queued', '#1', 'A', 1, new DateTimeImmutable() )->to_array();
 		$data['id']              = 1;
 		$data['state']           = $state;
 		$data['return_to_state'] = $return_to;

@@ -69,8 +69,11 @@ final class DocumentsControllerTest extends WP_UnitTestCase {
 	private function seed_fulfillment_with_shipping_address(): int {
 		$order       = $this->create_paid_order_with_shipping_address();
 		$fulfillment = $this->fulfillments->find_by_order_id( $order->get_id() );
+		// Packing slip stage policy (M4-A) requires packing+ states.
+		$fulfillment->apply_transition( 'packing', null, new \DateTimeImmutable() );
+		$this->fulfillments->save( $fulfillment );
 
-		return $fulfillment->id();
+		return (int) $fulfillment->id();
 	}
 
 	public function test_render_produces_html_and_records_a_document(): void {
