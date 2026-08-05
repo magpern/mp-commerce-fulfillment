@@ -9,19 +9,19 @@ declare( strict_types=1 );
 
 namespace MPCF\Domain\Document;
 
+use DateTimeImmutable;
+
 /**
  * Architecture Plan §10: "Assembly != rendering." An `Engine\DocumentAssembler\*`
- * produces one of these from `(Fulfillment, OrderSnapshot, items, packages,
- * Settings)` — fully unit-testable, no HTML. A `Documents\*Renderer`
- * consumes it. Line items and package summaries are plain assembled-array
- * shapes (the same "read-model projection" pattern
- * `Application\FulfillmentDetailView`'s timeline already uses), not
- * persisted entities — this model is never saved, only rendered.
+ * produces one of these from fulfillment/order/item/package/branding snapshots
+ * — fully unit-testable, no HTML. A `Documents\*Renderer` consumes it.
  *
- * The barcode payload is a Code 128 payload string (the order number) from
- * the milestone the first document type ships (§10), so a slip is
- * scannable the day M6 lands, even though M2 prints it as plain text
- * (rendering it as an actual barcode image is deferred to M6).
+ * M4 contract: this model IS the render-time snapshot. Historical documents
+ * must never depend on later fulfillment, order, branding, or template
+ * changes. M4-A establishes the fields; M4-B persists the canonical HTML
+ * artifact (and may serialize this model alongside it). Fresh prints always
+ * assemble a new model; historical reprints must not reassemble under the
+ * same document id (M4-D / `source_document_id` seam).
  */
 final class DocumentModel {
 
@@ -61,7 +61,7 @@ final class DocumentModel {
 	private array $ship_to_lines;
 
 	/**
-	 * Store name, from settings/site identity.
+	 * Store name, from settings/site identity (branding snapshot field).
 	 *
 	 * @var string
 	 */
@@ -89,17 +89,57 @@ final class DocumentModel {
 	private string $barcode_payload;
 
 	/**
+	 * Fulfillment workflow state captured at assemble time.
+	 *
+	 * @var string
+	 */
+	private string $fulfillment_state;
+
+	/**
+	 * Explicit template version (from the document-type definition).
+	 *
+	 * @var string
+	 */
+	private string $template_version;
+
+	/**
+	 * Branding snapshot placeholder (M4-B fills address/footer/logo).
+	 *
+	 * @var array<string, mixed>
+	 */
+	private array $branding;
+
+	/**
+	 * Render timestamp when known (set by DocumentService before render).
+	 *
+	 * @var DateTimeImmutable|null
+	 */
+	private ?DateTimeImmutable $rendered_at;
+
+	/**
+	 * Operator user id when known (0 = system).
+	 *
+	 * @var int
+	 */
+	private int $rendered_by;
+
+	/**
 	 * Assembles a document model.
 	 *
-	 * @param string                           $doc_type        Document type registry key.
-	 * @param int                              $fulfillment_id  The fulfillment this document describes.
-	 * @param string                           $order_number    Order number.
-	 * @param string                           $customer_name   Customer display name.
-	 * @param array<int, string>               $ship_to_lines   Ship-to address, as display lines.
-	 * @param string                           $store_name      Store name.
-	 * @param array<int, array<string, mixed>> $items     Line items.
-	 * @param array<int, array<string, mixed>> $packages  Package summaries.
-	 * @param string                           $barcode_payload Code 128 barcode payload.
+	 * @param string                           $doc_type          Document type registry key.
+	 * @param int                              $fulfillment_id    The fulfillment this document describes.
+	 * @param string                           $order_number      Order number.
+	 * @param string                           $customer_name     Customer display name.
+	 * @param array<int, string>               $ship_to_lines     Ship-to address, as display lines.
+	 * @param string                           $store_name        Store name.
+	 * @param array<int, array<string, mixed>> $items             Line items.
+	 * @param array<int, array<string, mixed>> $packages          Package summaries.
+	 * @param string                           $barcode_payload   Code 128 barcode payload.
+	 * @param string                           $fulfillment_state Fulfillment state snapshot.
+	 * @param string                           $template_version  Template version.
+	 * @param array<string, mixed>             $branding          Branding snapshot placeholder.
+	 * @param DateTimeImmutable|null           $rendered_at       Render timestamp.
+	 * @param int                              $rendered_by       Operator user id.
 	 */
 	public function __construct(
 		string $doc_type,
@@ -110,17 +150,67 @@ final class DocumentModel {
 		string $store_name,
 		array $items,
 		array $packages,
-		string $barcode_payload
+		string $barcode_payload,
+		string $fulfillment_state = '',
+		string $template_version = '1',
+		array $branding = array(),
+		?DateTimeImmutable $rendered_at = null,
+		int $rendered_by = 0
 	) {
-		$this->doc_type        = $doc_type;
-		$this->fulfillment_id  = $fulfillment_id;
-		$this->order_number    = $order_number;
-		$this->customer_name   = $customer_name;
-		$this->ship_to_lines   = $ship_to_lines;
-		$this->store_name      = $store_name;
-		$this->items           = $items;
-		$this->packages        = $packages;
-		$this->barcode_payload = $barcode_payload;
+		$this->doc_type          = $doc_type;
+		$this->fulfillment_id    = $fulfillment_id;
+		$this->order_number      = $order_number;
+		$this->customer_name     = $customer_name;
+		$this->ship_to_lines     = $ship_to_lines;
+		$this->store_name        = $store_name;
+		$this->items             = $items;
+		$this->packages          = $packages;
+		$this->barcode_payload   = $barcode_payload;
+		$this->fulfillment_state = $fulfillment_state;
+		$this->template_version  = $template_version;
+		$this->branding          = $branding;
+		$this->rendered_at       = $rendered_at;
+		$this->rendered_by       = $rendered_by;
+	}
+
+	/**
+	 * Returns a copy with render-time meta filled by DocumentService.
+	 *
+	 * @param string               $template_version Explicit template version.
+	 * @param string               $fulfillment_state Fulfillment state snapshot.
+	 * @param DateTimeImmutable    $rendered_at       Render timestamp.
+	 * @param int                  $rendered_by       Operator user id.
+	 * @param array<string, mixed> $branding        Branding snapshot (optional merge).
+	 */
+	public function with_render_meta(
+		string $template_version,
+		string $fulfillment_state,
+		DateTimeImmutable $rendered_at,
+		int $rendered_by,
+		array $branding = array()
+	): self {
+		$merged_branding = array_merge(
+			array( 'store_name' => $this->store_name ),
+			$this->branding,
+			$branding
+		);
+
+		return new self(
+			$this->doc_type,
+			$this->fulfillment_id,
+			$this->order_number,
+			$this->customer_name,
+			$this->ship_to_lines,
+			$this->store_name,
+			$this->items,
+			$this->packages,
+			$this->barcode_payload,
+			$fulfillment_state,
+			$template_version,
+			$merged_branding,
+			$rendered_at,
+			$rendered_by
+		);
 	}
 
 	/**
@@ -190,5 +280,42 @@ final class DocumentModel {
 	 */
 	public function barcode_payload(): string {
 		return $this->barcode_payload;
+	}
+
+	/**
+	 * Fulfillment workflow state captured at assemble/render time.
+	 */
+	public function fulfillment_state(): string {
+		return $this->fulfillment_state;
+	}
+
+	/**
+	 * Explicit template version.
+	 */
+	public function template_version(): string {
+		return $this->template_version;
+	}
+
+	/**
+	 * Branding snapshot placeholder.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function branding(): array {
+		return $this->branding;
+	}
+
+	/**
+	 * Render timestamp when known.
+	 */
+	public function rendered_at(): ?DateTimeImmutable {
+		return $this->rendered_at;
+	}
+
+	/**
+	 * Operator user id when known.
+	 */
+	public function rendered_by(): int {
+		return $this->rendered_by;
 	}
 }

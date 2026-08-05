@@ -17,8 +17,12 @@ use MPCF\Domain\Document\DocumentModel;
  * assembly already happened in `Engine\DocumentAssembler\*` (§10:
  * "assembly != rendering"). The bundled template file receives `$model`
  * in scope and nothing else — it renders from that object's getters only.
+ *
+ * HTML is the canonical rendered representation (M4). Implements the
+ * format-neutral {@see DocumentRendererInterface} so PDF/thermal renderers
+ * can be added later without renaming the orchestrator contract.
  */
-final class HtmlRenderer {
+final class HtmlRenderer implements DocumentRendererInterface {
 
 	/**
 	 * Resolves a document type to its template file.
