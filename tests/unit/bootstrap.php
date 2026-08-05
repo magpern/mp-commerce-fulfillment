@@ -28,6 +28,8 @@ require_once __DIR__ . '/Application/Doubles/InMemoryShipmentRepository.php';
 require_once __DIR__ . '/Application/Doubles/InMemoryPackageRepository.php';
 require_once __DIR__ . '/Application/Doubles/InMemoryPackageItemRepository.php';
 require_once __DIR__ . '/Application/Doubles/InMemoryDocumentRepository.php';
+require_once __DIR__ . '/Application/Notifications/RecordingEmailChannel.php';
+require_once __DIR__ . '/Application/Notifications/StubCustomerEmailLookup.php';
 
 if ( ! defined( 'MPCF_VERSION' ) ) {
 	define( 'MPCF_VERSION', '0.0.0-test' );
