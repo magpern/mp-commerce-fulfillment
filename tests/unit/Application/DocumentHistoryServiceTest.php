@@ -242,7 +242,7 @@ final class DocumentHistoryServiceTest extends TestCase {
 		$bulk = $this->history->bulk_print_picking_lists(
 			$ids,
 			Actor::user( 1, 'Op' ),
-			static fn( string $cap ): bool => true
+			static fn( string $cap ): bool => true // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Capability gate signature.
 		);
 
 		self::assertArrayHasKey( $this->packed_id, $bulk['failed'], 'Packed stage cannot print picking list.' );

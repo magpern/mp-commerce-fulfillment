@@ -23,26 +23,36 @@ use WP_REST_Server;
 final class DocumentsController extends AbstractRestController {
 
 	/**
+	 * Document render / storage service.
+	 *
 	 * @var DocumentService
 	 */
 	private DocumentService $documents;
 
 	/**
+	 * Document history / stream / reprint service.
+	 *
 	 * @var DocumentHistoryService
 	 */
 	private DocumentHistoryService $history;
 
 	/**
+	 * Workflow service for transition envelopes.
+	 *
 	 * @var WorkflowService
 	 */
 	private WorkflowService $workflow;
 
 	/**
+	 * Fulfillment detail service for envelopes.
+	 *
 	 * @var FulfillmentDetailService
 	 */
 	private FulfillmentDetailService $detail;
 
 	/**
+	 * Builds the controller.
+	 *
 	 * @param DocumentService          $documents Fresh render orchestrator.
 	 * @param DocumentHistoryService   $history   History / stream / reprint.
 	 * @param WorkflowService          $workflow  Transitions envelope.
@@ -146,10 +156,10 @@ final class DocumentsController extends AbstractRestController {
 	 * Serves stored document HTML as raw bytes with the correct MIME
 	 * (bypasses JSON encoding for the content route only).
 	 *
-	 * @param bool             $served  Whether the request has already been served.
+	 * @param bool              $served  Whether the request has already been served.
 	 * @param \WP_HTTP_Response $result Result to send.
-	 * @param WP_REST_Request  $request Request.
-	 * @param WP_REST_Server   $server  Server.
+	 * @param WP_REST_Request   $request Request.
+	 * @param WP_REST_Server    $server  Server.
 	 */
 	public function maybe_serve_raw_document_html( $served, $result, $request, $server ): bool { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Signature fixed by rest_pre_serve_request.
 		if ( true === $served || ! $result instanceof \WP_REST_Response ) {
@@ -166,9 +176,10 @@ final class DocumentsController extends AbstractRestController {
 			return false;
 		}
 
-		$mime     = isset( $data['mime'] ) && is_string( $data['mime'] ) ? $data['mime'] : 'text/html; charset=UTF-8';
-		$filename = isset( $data['filename'] ) && is_string( $data['filename'] ) ? $data['filename'] : 'document.html';
-		$filename = preg_replace( '/[^a-zA-Z0-9._-]/', '', $filename ) ?: 'document.html';
+		$mime      = isset( $data['mime'] ) && is_string( $data['mime'] ) ? $data['mime'] : 'text/html; charset=UTF-8';
+		$filename  = isset( $data['filename'] ) && is_string( $data['filename'] ) ? $data['filename'] : 'document.html';
+		$sanitized = preg_replace( '/[^a-zA-Z0-9._-]/', '', $filename );
+		$filename  = ( is_string( $sanitized ) && '' !== $sanitized ) ? $sanitized : 'document.html';
 
 		header( 'Content-Type: ' . $mime );
 		header( 'Content-Disposition: inline; filename="' . $filename . '"' );
@@ -230,14 +241,17 @@ final class DocumentsController extends AbstractRestController {
 	 * @param WP_REST_Request $request Request.
 	 */
 	public function list_documents( WP_REST_Request $request ) {
+		$limit  = $request->get_param( 'limit' );
+		$offset = $request->get_param( 'offset' );
+
 		$result = $this->history->search(
 			array(
 				'doc_type'  => (string) $request->get_param( 'doc_type' ),
 				'search'    => (string) $request->get_param( 'search' ),
 				'date_from' => (string) $request->get_param( 'date_from' ),
 				'date_to'   => (string) $request->get_param( 'date_to' ),
-				'limit'     => (int) ( $request->get_param( 'limit' ) ?: 50 ),
-				'offset'    => (int) ( $request->get_param( 'offset' ) ?: 0 ),
+				'limit'     => null !== $limit && '' !== $limit ? (int) $limit : 50,
+				'offset'    => null !== $offset && '' !== $offset ? (int) $offset : 0,
 			)
 		);
 
@@ -282,12 +296,12 @@ final class DocumentsController extends AbstractRestController {
 
 		return $this->respond(
 			array(
-				'html'                => $result['html'],
-				'document_id'         => (int) $result['record']->id(),
-				'source_document_id'  => (int) $result['record']->id(),
-				'document_type'       => $result['record']->doc_type(),
-				'template_version'    => $result['record']->template_version(),
-				'mime'                => $result['mime'],
+				'html'               => $result['html'],
+				'document_id'        => (int) $result['record']->id(),
+				'source_document_id' => (int) $result['record']->id(),
+				'document_type'      => $result['record']->doc_type(),
+				'template_version'   => $result['record']->template_version(),
+				'mime'               => $result['mime'],
 			)
 		);
 	}
