@@ -114,6 +114,95 @@ final class WpdbDocumentRepository implements DocumentRepository {
 	}
 
 	/**
+	 * Searches document history with optional filters.
+	 *
+	 * @param array<string, mixed> $filters Search filters.
+	 * @return array{items: list<array<string, mixed>>, total: int}
+	 */
+	public function search( array $filters ): array {
+		global $wpdb;
+
+		$docs = Schema::table( Schema::DOCUMENTS );
+		$fuls = Schema::table( Schema::FULFILLMENTS );
+
+		$where  = array( '1=1' );
+		$params = array();
+
+		$doc_type = isset( $filters['doc_type'] ) ? sanitize_key( (string) $filters['doc_type'] ) : '';
+		if ( '' !== $doc_type ) {
+			$where[]  = 'd.doc_type = %s';
+			$params[] = $doc_type;
+		}
+
+		$date_from = isset( $filters['date_from'] ) ? (string) $filters['date_from'] : '';
+		if ( '' !== $date_from && 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date_from ) ) {
+			$where[]  = 'd.created_at >= %s';
+			$params[] = $date_from . ' 00:00:00';
+		}
+
+		$date_to = isset( $filters['date_to'] ) ? (string) $filters['date_to'] : '';
+		if ( '' !== $date_to && 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date_to ) ) {
+			$where[]  = 'd.created_at <= %s';
+			$params[] = $date_to . ' 23:59:59';
+		}
+
+		$search = isset( $filters['search'] ) ? trim( (string) $filters['search'] ) : '';
+		if ( '' !== $search ) {
+			if ( ctype_digit( $search ) ) {
+				$where[]  = '(d.fulfillment_id = %d OR f.order_id = %d OR f.order_number_snapshot LIKE %s)';
+				$params[] = (int) $search;
+				$params[] = (int) $search;
+				$params[] = '%' . $wpdb->esc_like( $search ) . '%';
+			} else {
+				$where[]  = 'f.order_number_snapshot LIKE %s';
+				$params[] = '%' . $wpdb->esc_like( $search ) . '%';
+			}
+		}
+
+		$where_sql = implode( ' AND ', $where );
+		$limit     = isset( $filters['limit'] ) ? max( 1, min( 100, (int) $filters['limit'] ) ) : 50;
+		$offset    = isset( $filters['offset'] ) ? max( 0, (int) $filters['offset'] ) : 0;
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are fixed schema literals.
+		$count_sql = "SELECT COUNT(*) FROM {$docs} d INNER JOIN {$fuls} f ON f.id = d.fulfillment_id WHERE {$where_sql}";
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Placeholders prepared below.
+		$total = (int) ( array() === $params ? $wpdb->get_var( $count_sql ) : $wpdb->get_var( $wpdb->prepare( $count_sql, $params ) ) );
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are fixed schema literals.
+		$list_sql    = "SELECT d.*, f.order_number_snapshot, f.order_id FROM {$docs} d INNER JOIN {$fuls} f ON f.id = d.fulfillment_id WHERE {$where_sql} ORDER BY d.created_at DESC, d.id DESC LIMIT %d OFFSET %d";
+		$list_params = array_merge( $params, array( $limit, $offset ) );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Placeholders prepared below.
+		$rows = $wpdb->get_results( $wpdb->prepare( $list_sql, $list_params ), ARRAY_A );
+
+		$items = array();
+		if ( is_array( $rows ) ) {
+			foreach ( $rows as $row ) {
+				if ( ! is_array( $row ) ) {
+					continue;
+				}
+				$record  = $this->hydrate( $row );
+				$items[] = array(
+					'id'               => (int) $record->id(),
+					'fulfillment_id'   => $record->fulfillment_id(),
+					'order_id'         => (int) ( $row['order_id'] ?? 0 ),
+					'order_number'     => (string) ( $row['order_number_snapshot'] ?? '' ),
+					'doc_type'         => $record->doc_type(),
+					'template_version' => $record->template_version(),
+					'file_path'        => $record->file_path(),
+					'stored'           => null !== $record->file_path(),
+					'rendered_by'      => $record->rendered_by(),
+					'created_at'       => $record->created_at()->format( 'c' ),
+				);
+			}
+		}
+
+		return array(
+			'items' => $items,
+			'total' => $total,
+		);
+	}
+
+	/**
 	 * Hydrates a database row into a DocumentRecord.
 	 *
 	 * @param array<string, mixed> $row Database row.

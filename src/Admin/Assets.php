@@ -21,7 +21,7 @@ final class Assets {
 	/**
 	 * Every admin page slug this plugin owns.
 	 */
-	private const SCREEN_SLUGS = array( 'mpcf-dashboard', 'mpcf-queue', 'mpcf-orders', 'mpcf-settings', 'mpcf-fulfillment-detail', 'mpcf-workspace' );
+	private const SCREEN_SLUGS = array( 'mpcf-dashboard', 'mpcf-queue', 'mpcf-orders', 'mpcf-documents', 'mpcf-settings', 'mpcf-fulfillment-detail', 'mpcf-workspace' );
 
 	/**
 	 * Registers hooks.
@@ -57,6 +57,18 @@ final class Assets {
 		wp_enqueue_script( 'mpcf-mpds-data-table-keynav', MPCF_PLUGIN_URL . 'assets/mpds/js/data-table-keynav.js', array(), MPCF_VERSION, true );
 		wp_enqueue_script( 'mpcf-mpds-drawer', MPCF_PLUGIN_URL . 'assets/mpds/js/drawer.js', array(), MPCF_VERSION, true );
 		wp_enqueue_script( 'mpcf-mpds-modal', MPCF_PLUGIN_URL . 'assets/mpds/js/modal.js', array(), MPCF_VERSION, true );
+
+		if ( self::is_documents_screen() ) {
+			wp_enqueue_script( 'wp-api-request' );
+			wp_add_inline_script(
+				'wp-api-request',
+				sprintf(
+					'window.mpcfWorkspace = window.mpcfWorkspace || { restUrl: %s, nonce: %s };',
+					wp_json_encode( rest_url( 'mpcf/v1/' ) ),
+					wp_json_encode( wp_create_nonce( 'wp_rest' ) )
+				)
+			);
+		}
 
 		if ( self::is_workspace_screen() ) {
 			$this->enqueue_workspace_assets();
@@ -116,6 +128,15 @@ final class Assets {
 				wp_json_encode( wp_create_nonce( 'wp_rest' ) )
 			)
 		);
+	}
+
+	/**
+	 * Whether the current admin request is the Documents history screen.
+	 */
+	private static function is_documents_screen(): bool {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen detection, no state change.
+
+		return 'mpcf-documents' === $page;
 	}
 
 	/**

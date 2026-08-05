@@ -11,12 +11,15 @@ namespace MPCF;
 
 use MPCF\Admin\Assets;
 use MPCF\Admin\DashboardPage;
+use MPCF\Admin\DocumentsPage;
 use MPCF\Admin\FulfillmentDetailPage;
 use MPCF\Admin\OperatorMode;
 use MPCF\Admin\OrdersPage;
 use MPCF\Admin\QueuePage;
 use MPCF\Admin\SettingsPage;
 use MPCF\Admin\WorkspacePage;
+use MPCF\Application\DocumentHistoryService;
+use MPCF\Application\DocumentService;
 use MPCF\Api\Rest\AssignmentController;
 use MPCF\Api\Rest\CarriersController;
 use MPCF\Api\Rest\DocumentsController;
@@ -28,7 +31,6 @@ use MPCF\Api\Rest\RestApi;
 use MPCF\Api\Rest\ShipmentsController;
 use MPCF\Application\AssignmentService;
 use MPCF\Application\DashboardService;
-use MPCF\Application\DocumentService;
 use MPCF\Application\EventDispatcher;
 use MPCF\Application\FulfillmentDetailService;
 use MPCF\Application\IntakeService;
@@ -280,20 +282,30 @@ final class Plugin {
 		$notes_repository = new WpdbNoteRepository();
 		$detail_service   = new FulfillmentDetailService( $fulfillments, $items, $events, $notes_repository );
 
+		$document_repo    = new WpdbDocumentRepository();
+		$document_store   = new ProtectedDocumentStore();
 		$document_service = new DocumentService(
 			$fulfillments,
 			$items,
 			$orders,
 			$shipping_service,
 			new HtmlRenderer( new TemplateRegistry() ),
-			new WpdbDocumentRepository(),
+			$document_repo,
 			$events,
 			$dispatcher,
 			$clock,
 			(string) get_bloginfo( 'name' ),
 			null,
 			$settings,
-			new ProtectedDocumentStore()
+			$document_store
+		);
+		$document_history = new DocumentHistoryService(
+			$document_repo,
+			$document_store,
+			$events,
+			$dispatcher,
+			$clock,
+			$document_service
 		);
 
 		( new RestApi(
@@ -313,7 +325,7 @@ final class Plugin {
 				new ShipmentsController( $shipping_service, $workflow_service, $detail_service ),
 				new PackagesController( $shipping_service, $workflow_service, $detail_service ),
 				new CarriersController( new BundledCarrierRegistry() ),
-				new DocumentsController( $document_service, $workflow_service, $detail_service ),
+				new DocumentsController( $document_service, $document_history, $workflow_service, $detail_service ),
 			)
 		) )->register();
 	}
@@ -367,15 +379,41 @@ final class Plugin {
 		$dashboard        = new DashboardService( $fulfillments, $events, $clock );
 		$shipping_service = new ShippingService( $fulfillments, $items, $shipments, $packages, new WpdbPackageItemRepository(), $events, $dispatcher, $clock );
 		$carriers         = new BundledCarrierRegistry();
+		$document_repo    = new WpdbDocumentRepository();
+		$document_store   = new ProtectedDocumentStore();
+		$document_service = new DocumentService(
+			$fulfillments,
+			$items,
+			new WooOrderSource(),
+			$shipping_service,
+			new HtmlRenderer( new TemplateRegistry() ),
+			$document_repo,
+			$events,
+			$dispatcher,
+			$clock,
+			(string) get_bloginfo( 'name' ),
+			null,
+			$settings,
+			$document_store
+		);
+		$document_history = new DocumentHistoryService(
+			$document_repo,
+			$document_store,
+			$events,
+			$dispatcher,
+			$clock,
+			$document_service
+		);
 
 		$dashboard_page = new DashboardPage( $shell, $renderer, $dashboard, $definition );
-		$queue_page     = new QueuePage( $shell, $renderer, $queue_service, $detail_service, $assignments, $workflow_service, $definition );
+		$queue_page     = new QueuePage( $shell, $renderer, $queue_service, $detail_service, $assignments, $workflow_service, $definition, $document_history );
 		$orders_page    = new OrdersPage(
 			$shell,
 			$renderer,
 			new OrderOverviewService( new WooOrderSource(), $fulfillments, new WpdbSearchQuery() )
 		);
 		$settings_page  = new SettingsPage( $shell, $renderer, $settings );
+		$documents_page = new DocumentsPage( $shell, $document_history );
 		$detail_page    = new FulfillmentDetailPage( $shell, $renderer, $detail_service, $note_service, $workflow_service, $definition );
 		$workspace_page = new WorkspacePage(
 			$shell,
@@ -389,7 +427,7 @@ final class Plugin {
 			new WooOrderSource(),
 			$definition,
 			new StoreUnits(),
-			new WpdbDocumentRepository()
+			$document_repo
 		);
 
 		( new Menu(
@@ -397,7 +435,7 @@ final class Plugin {
 			__( 'Fulfillment', 'mp-commerce-fulfillment' ),
 			'dashicons-archive',
 			Capabilities::VIEW_QUEUE,
-			array( $dashboard_page, $queue_page, $orders_page, $settings_page )
+			array( $dashboard_page, $queue_page, $orders_page, $documents_page, $settings_page )
 		) )->register();
 
 		$hidden_pages = array( $detail_page, $workspace_page );
