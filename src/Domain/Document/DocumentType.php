@@ -109,16 +109,16 @@ final class DocumentType {
 	/**
 	 * Assembles a document type. Use {@see define()} or {@see create()}.
 	 *
-	 * @param string        $id               Registry key.
-	 * @param string        $label            Display label.
-	 * @param string        $assembler        Assembler identifier.
-	 * @param string        $template_key     Template key.
-	 * @param string        $renderer         Renderer key.
-	 * @param string        $paper_size       Paper size hint.
-	 * @param string        $capability       Capability required to render it.
-	 * @param list<string>  $allowed_states   Stage-policy working states.
-	 * @param string        $storage_policy   Storage policy.
-	 * @param string        $template_version Explicit template version.
+	 * @param string   $id               Registry key.
+	 * @param string   $label            Display label.
+	 * @param string   $assembler        Assembler identifier.
+	 * @param string   $template_key     Template key.
+	 * @param string   $renderer         Renderer key.
+	 * @param string   $paper_size       Paper size hint.
+	 * @param string   $capability       Capability required to render it.
+	 * @param string[] $allowed_states   Stage-policy working states.
+	 * @param string   $storage_policy   Storage policy.
+	 * @param string   $template_version Explicit template version.
 	 */
 	private function __construct(
 		string $id,

@@ -56,7 +56,10 @@ final class PackingSlipAssembler {
 			$store_name,
 			array_map( array( self::class, 'item_line' ), $items ),
 			array_map( array( self::class, 'package_summary' ), $packages ),
-			$fulfillment->order_number_snapshot()
+			$fulfillment->order_number_snapshot(),
+			$fulfillment->state(),
+			'1',
+			array( 'store_name' => $store_name )
 		);
 	}
 
