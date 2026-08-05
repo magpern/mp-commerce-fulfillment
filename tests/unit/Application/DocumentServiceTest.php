@@ -15,6 +15,7 @@ use MPCF\Application\EventDispatcher;
 use MPCF\Application\ShippingService;
 use MPCF\Documents\HtmlRenderer;
 use MPCF\Documents\TemplateRegistry;
+use MPCF\Domain\Document\DocumentModel;
 use MPCF\Domain\Event\Actor;
 use MPCF\Domain\Fulfillment;
 use MPCF\Domain\FulfillmentItem;
@@ -84,6 +85,10 @@ final class DocumentServiceTest extends TestCase {
 	private int $fulfillment_id;
 
 	protected function setUp(): void {
+		remove_all_filters( 'mpcf_document_model' );
+		remove_all_filters( 'mpcf_document_types' );
+		remove_all_filters( 'mpcf_document_template' );
+
 		$this->fulfillments = new InMemoryFulfillmentRepository();
 		$this->items        = new InMemoryFulfillmentItemRepository();
 		$this->orders       = new InMemoryOrderSource();
@@ -132,6 +137,24 @@ final class DocumentServiceTest extends TestCase {
 		$this->packages->insert( $package );
 	}
 
+	protected function tearDown(): void {
+		remove_all_filters( 'mpcf_document_model' );
+		remove_all_filters( 'mpcf_document_types' );
+		remove_all_filters( 'mpcf_document_template' );
+		parent::tearDown();
+	}
+
+	public function test_render_packing_slip_wrapper_delegates_to_render(): void {
+		$via_wrapper = $this->service->render_packing_slip( $this->fulfillment_id, Actor::user( 7, 'Jane' ) );
+		$via_render  = $this->service->render( $this->fulfillment_id, 'packing_slip', array( 'actor' => Actor::user( 8, 'Bob' ) ) );
+
+		self::assertTrue( $via_wrapper->is_success() );
+		self::assertTrue( $via_render->is_success() );
+		self::assertStringContainsString( '#1001', (string) $via_wrapper->html() );
+		self::assertStringContainsString( '#1001', (string) $via_render->html() );
+		self::assertCount( 2, $this->documents->all() );
+	}
+
 	public function test_render_packing_slip_produces_html_containing_the_assembled_data(): void {
 		$outcome = $this->service->render_packing_slip( $this->fulfillment_id, Actor::user( 7, 'Jane' ) );
 
@@ -153,6 +176,43 @@ final class DocumentServiceTest extends TestCase {
 		self::assertCount( 1, $timeline );
 		self::assertSame( 'document.rendered', $timeline[0]['event_type'] );
 		self::assertSame( $outcome->document_id(), $timeline[0]['payload']['document_id'] );
+		self::assertSame( 'html', $timeline[0]['payload']['renderer'] );
+	}
+
+	public function test_render_rejects_unknown_document_type(): void {
+		$outcome = $this->service->render( $this->fulfillment_id, 'delivery_note', array( 'actor' => Actor::system() ) );
+
+		self::assertFalse( $outcome->is_success() );
+		self::assertSame( 'unknown_document_type', $outcome->failure_code() );
+		self::assertCount( 0, $this->documents->all() );
+	}
+
+	public function test_render_picking_list_is_registered_but_not_implemented_in_m4a(): void {
+		$picking_id = $this->fulfillments->insert(
+			Fulfillment::intake( 2002, 'woocommerce', 1, 'standard', 'picking', '#2002', 'A', 1, new DateTimeImmutable() )
+		);
+		$this->orders->seed(
+			OrderSnapshot::create( 2002, 'woocommerce', '#2002', 'A', 'processing', array(), array( 'Line' ) )
+		);
+
+		$outcome = $this->service->render( $picking_id, 'picking_list', array( 'actor' => Actor::system() ) );
+
+		self::assertFalse( $outcome->is_success() );
+		self::assertSame( 'not_implemented', $outcome->failure_code() );
+	}
+
+	public function test_render_rejects_cancelled_stage(): void {
+		$cancelled_id = $this->fulfillments->insert(
+			Fulfillment::intake( 3003, 'woocommerce', 1, 'standard', 'cancelled', '#3003', 'A', 1, new DateTimeImmutable() )
+		);
+		$this->orders->seed(
+			OrderSnapshot::create( 3003, 'woocommerce', '#3003', 'A', 'cancelled', array(), array( 'Line' ) )
+		);
+
+		$outcome = $this->service->render_packing_slip( $cancelled_id, Actor::system() );
+
+		self::assertFalse( $outcome->is_success() );
+		self::assertSame( 'stage_not_allowed', $outcome->failure_code() );
 	}
 
 	public function test_render_packing_slip_fails_for_an_unknown_fulfillment(): void {
@@ -172,5 +232,64 @@ final class DocumentServiceTest extends TestCase {
 		self::assertFalse( $outcome->is_success() );
 		self::assertSame( 'not_found', $outcome->failure_code() );
 		self::assertCount( 0, $this->documents->all() );
+	}
+
+	public function test_model_filter_must_return_document_model(): void {
+		add_filter(
+			'mpcf_document_model',
+			static function () {
+				return 'not-a-model';
+			}
+		);
+
+		$outcome = $this->service->render_packing_slip( $this->fulfillment_id, Actor::system() );
+
+		self::assertFalse( $outcome->is_success() );
+		self::assertSame( 'invalid_payload', $outcome->failure_code() );
+	}
+
+	public function test_model_filter_may_amend_fields_without_changing_doc_type(): void {
+		add_filter(
+			'mpcf_document_model',
+			static function ( DocumentModel $model ): DocumentModel {
+				return new DocumentModel(
+					$model->doc_type(),
+					$model->fulfillment_id(),
+					$model->order_number(),
+					$model->customer_name(),
+					$model->ship_to_lines(),
+					'Filtered Store',
+					$model->items(),
+					$model->packages(),
+					$model->barcode_payload(),
+					$model->fulfillment_state(),
+					$model->template_version(),
+					$model->branding(),
+					$model->rendered_at(),
+					$model->rendered_by()
+				);
+			}
+		);
+
+		$outcome = $this->service->render_packing_slip( $this->fulfillment_id, Actor::system() );
+
+		self::assertTrue( $outcome->is_success() );
+		self::assertStringContainsString( 'Filtered Store', (string) $outcome->html() );
+	}
+
+	public function test_repository_reads_after_render(): void {
+		$outcome = $this->service->render_packing_slip( $this->fulfillment_id, Actor::user( 7, 'Jane' ) );
+
+		self::assertNotNull( $this->documents->get( (int) $outcome->document_id() ) );
+		self::assertCount( 1, $this->documents->list_for_fulfillment( $this->fulfillment_id ) );
+		$latest = $this->documents->latest_for_fulfillment_and_type( $this->fulfillment_id, 'packing_slip' );
+		self::assertNotNull( $latest );
+		self::assertSame( $outcome->document_id(), $latest->id() );
+	}
+
+	public function test_no_file_path_is_written_in_m4a(): void {
+		$this->service->render_packing_slip( $this->fulfillment_id, Actor::system() );
+
+		self::assertNull( $this->documents->all()[0]->file_path() );
 	}
 }

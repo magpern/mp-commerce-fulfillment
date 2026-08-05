@@ -19,29 +19,48 @@ use RecursiveIteratorIterator;
  * "Documents printed" must be a reliable audit fact (§10) — that only
  * holds if nothing outside `DocumentService` can render a document
  * without going through its assemble → render → record → audit sequence.
- * The scan looks for the class name `HtmlRenderer` itself, not a call
- * token like `->render(` — that generic a token already collides with an
- * unrelated `render()` method elsewhere in `src/` (the MPDS page shell's
- * navigation renderer), so the class name is the only unambiguous marker.
+ *
+ * M4-A: scan for `HtmlRenderer` and `DocumentRendererInterface` usage.
+ * Controllers/admin must not reference either; only DocumentService
+ * orchestrates rendering. Plugin may construct HtmlRenderer for injection.
  */
 final class DocumentPipelineGuardTest extends TestCase {
 
 	/**
-	 * Files allowed to reference `HtmlRenderer`: the orchestrator that
-	 * calls it, the composition root that constructs it to inject, and
-	 * the class's own definition file (which necessarily names itself).
+	 * Files allowed to reference HtmlRenderer / DocumentRendererInterface.
 	 *
 	 * @var list<string>
 	 */
-	private const ALLOWED_FILES = array(
+	private const ALLOWED_HTML_RENDERER = array(
 		'Application/DocumentService.php',
 		'Documents/HtmlRenderer.php',
+		'Documents/DocumentRendererInterface.php',
 	);
 
-	private const MARKER = 'HtmlRenderer';
+	/**
+	 * @var list<string>
+	 */
+	private const ALLOWED_RENDERER_INTERFACE = array(
+		'Application/DocumentService.php',
+		'Documents/HtmlRenderer.php',
+		'Documents/DocumentRendererInterface.php',
+	);
 
 	public function test_only_documentservice_references_htmlrenderer_within_src(): void {
-		self::assertSame( array(), $this->scan( dirname( __DIR__, 2 ) . '/src' ) );
+		self::assertSame( array(), $this->scan( dirname( __DIR__, 2 ) . '/src', 'HtmlRenderer', self::ALLOWED_HTML_RENDERER ) );
+	}
+
+	public function test_only_documentservice_and_implementations_reference_renderer_interface(): void {
+		self::assertSame(
+			array(),
+			$this->scan( dirname( __DIR__, 2 ) . '/src', 'DocumentRendererInterface', self::ALLOWED_RENDERER_INTERFACE )
+		);
+	}
+
+	public function test_htmlrenderer_implements_document_renderer_interface(): void {
+		self::assertTrue(
+			is_a( \MPCF\Documents\HtmlRenderer::class, \MPCF\Documents\DocumentRendererInterface::class, true )
+		);
 	}
 
 	public function test_the_scan_itself_catches_a_second_caller(): void {
@@ -54,7 +73,7 @@ final class DocumentPipelineGuardTest extends TestCase {
 			"<?php\nnamespace MPCF\\Admin;\nuse MPCF\\Documents\\HtmlRenderer;\nfinal class Tainted {\n\tpublic function render( HtmlRenderer \$renderer ): void {\n\t}\n}\n"
 		);
 
-		$violations = $this->scan( $fixture_root );
+		$violations = $this->scan( $fixture_root, 'HtmlRenderer', self::ALLOWED_HTML_RENDERER );
 
 		$this->remove_directory( $fixture_root );
 
@@ -62,9 +81,14 @@ final class DocumentPipelineGuardTest extends TestCase {
 	}
 
 	/**
-	 * @return list<string>
+	 * Scans PHP files under a root for a forbidden marker.
+	 *
+	 * @param string   $src_root Source root to scan.
+	 * @param string   $marker   Forbidden substring.
+	 * @param string[] $allowed  Relative paths under src/ that may contain the marker.
+	 * @return string[]
 	 */
-	private function scan( string $src_root ): array {
+	private function scan( string $src_root, string $marker, array $allowed ): array {
 		if ( ! is_dir( $src_root ) ) {
 			return array();
 		}
@@ -79,14 +103,14 @@ final class DocumentPipelineGuardTest extends TestCase {
 
 			$relative = ltrim( str_replace( $src_root, '', $file->getPathname() ), '/' );
 
-			if ( 'Plugin.php' === $relative || in_array( $relative, self::ALLOWED_FILES, true ) ) {
+			if ( 'Plugin.php' === $relative || in_array( $relative, $allowed, true ) ) {
 				continue;
 			}
 
 			$contents = (string) file_get_contents( $file->getPathname() );
 
-			if ( str_contains( $contents, self::MARKER ) ) {
-				$violations[] = $file->getPathname() . ' references HtmlRenderer outside DocumentService.';
+			if ( str_contains( $contents, $marker ) ) {
+				$violations[] = $file->getPathname() . " references {$marker} outside DocumentService.";
 			}
 		}
 

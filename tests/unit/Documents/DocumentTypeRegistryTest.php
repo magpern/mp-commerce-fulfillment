@@ -52,7 +52,10 @@ final class DocumentTypeRegistryTest extends TestCase {
 		add_filter(
 			'mpcf_document_types',
 			static function ( array $types ): array {
-				$types['broken'] = array( 'id' => '!!!', 'label' => '' );
+				$types['broken'] = array(
+					'id'    => '!!!',
+					'label' => '',
+				);
 
 				return $types;
 			}
