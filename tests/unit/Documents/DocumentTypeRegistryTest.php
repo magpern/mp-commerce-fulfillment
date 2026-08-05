@@ -38,8 +38,8 @@ final class DocumentTypeRegistryTest extends TestCase {
 		self::assertTrue( $type->is_valid() );
 		self::assertSame( 'packing_slip', $type->assembler() );
 		self::assertSame( DocumentType::RENDERER_HTML, $type->renderer() );
-		self::assertSame( DocumentType::STORAGE_PRINT, $type->storage_policy() );
-		self::assertSame( '1', $type->template_version() );
+		self::assertSame( DocumentType::STORAGE_STORE, $type->storage_policy() );
+		self::assertSame( '2', $type->template_version() );
 		self::assertSame( DocumentTypeRegistry::PACKING_SLIP_STATES, $type->allowed_states() );
 	}
 

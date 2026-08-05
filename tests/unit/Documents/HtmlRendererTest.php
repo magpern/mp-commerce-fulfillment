@@ -53,4 +53,11 @@ final class HtmlRendererTest extends TestCase {
 
 		self::assertNull( ( new HtmlRenderer( new TemplateRegistry() ) )->render( $model ) );
 	}
+
+	public function test_renderer_exposes_html_format_metadata(): void {
+		$renderer = new HtmlRenderer( new TemplateRegistry() );
+
+		self::assertSame( 'html', $renderer->format() );
+		self::assertSame( 'text/html; charset=UTF-8', $renderer->mime_type() );
+	}
 }

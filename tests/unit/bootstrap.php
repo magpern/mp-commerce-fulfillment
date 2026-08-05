@@ -214,6 +214,26 @@ if ( ! function_exists( 'get_bloginfo' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_upload_dir' ) ) {
+	/**
+	 * Minimal uploads stub for unit tests (ProtectedDocumentStore).
+	 *
+	 * @return array{path:string,url:string,subdir:string,basedir:string,baseurl:string,error:false}
+	 */
+	function wp_upload_dir() { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+		$basedir = sys_get_temp_dir() . '/mpcf-unit-uploads';
+
+		return array(
+			'path'    => $basedir,
+			'url'     => 'http://example.test/uploads',
+			'subdir'  => '',
+			'basedir' => $basedir,
+			'baseurl' => 'http://example.test/uploads',
+			'error'   => false,
+		);
+	}
+}
+
 if ( ! function_exists( 'plugin_basename' ) ) {
 	function plugin_basename( $file ) { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 		return basename( (string) $file );

@@ -90,6 +90,39 @@ final class TemplateRegistryTest extends TestCase {
 		self::assertStringEndsWith( 'templates/documents/packing-slip.php', $path );
 	}
 
+	public function test_resolve_finds_the_bundled_picking_list_template(): void {
+		$path = ( new TemplateRegistry() )->resolve( 'picking_list' );
+
+		self::assertNotNull( $path );
+		self::assertStringEndsWith( 'templates/documents/picking-list.php', $path );
+	}
+
+	public function test_bundled_template_version_uses_registry_version(): void {
+		self::assertSame( '2', ( new TemplateRegistry() )->template_version( 'packing_slip', '2' ) );
+	}
+
+	public function test_override_template_version_is_content_hash_not_mtime(): void {
+		$tmpdir = sys_get_temp_dir() . '/mpcf-doc-tpl-ver-' . uniqid();
+		mkdir( $tmpdir );
+		$custom = $tmpdir . '/custom.php';
+		file_put_contents( $custom, "<?php echo 'v';\n" );
+
+		add_filter(
+			'mpcf_document_template',
+			static function () use ( $custom ) {
+				return $custom;
+			}
+		);
+
+		$version = ( new TemplateRegistry() )->template_version( 'packing_slip', '2' );
+		$hash    = substr( (string) hash_file( 'sha256', $custom ), 0, 12 );
+
+		self::assertSame( 'override-' . $hash, $version );
+
+		unlink( $custom );
+		rmdir( $tmpdir );
+	}
+
 	public function test_theme_traversal_is_rejected(): void {
 		$theme_docs = sys_get_temp_dir() . '/mpcf-theme-docs-' . uniqid();
 		mkdir( $theme_docs, 0777, true );
