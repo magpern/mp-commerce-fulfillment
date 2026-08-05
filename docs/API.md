@@ -340,22 +340,46 @@ includes `source_document_id`). Does **not** create a new document row.
 ### `GET /carriers`
 
 ```json
-{ "carriers": [ { "id": "postnord", "label": "PostNord" }, { "id": "other", "label": "Other" } ] }
+{
+  "carriers": [
+    {
+      "id": "postnord",
+      "label": "PostNord",
+      "tracking_url_template": "https://tracking.postnord.com/en/?id={tracking}",
+      "tracking_number_pattern": "^[A-Za-z0-9]{8,35}$",
+      "phone_required": false
+    },
+    {
+      "id": "other",
+      "label": "Other",
+      "tracking_url_template": null,
+      "tracking_number_pattern": null,
+      "phone_required": false
+    }
+  ]
+}
 ```
 
-`other` always exists and accepts a free-text carrier label plus a manual
-tracking URL — no merchant is blocked on a carrier this bundled set does
-not recognize (§IV.6). The real EU-skewed registry (format hints,
-phone-required flags, an `mpcf_carriers` filter) is Milestone 4's job.
+Additive fields (`tracking_url_template`, `tracking_number_pattern`,
+`phone_required`) were added in M5-A; `id` and `label` remain for
+backward compatibility. Bundled set is EU-skewed (PostNord, DHL, Bring,
+DPD, GLS, UPS, DB Schenker, Budbee, Instabox) plus `other`. `other`
+always exists and accepts a free-text carrier label plus a manual
+tracking URL — no merchant is blocked on an unbundled carrier (§11).
+Integrators extend the set via the `mpcf_carriers` filter (see
+`docs/HOOKS.md`). Tracking URLs are resolved by `TrackingUrlResolver`
+(default: template expansion) — not a live carrier API.
 
 ## What is not exposed, and why
 
 - **No batch-picking engine routes** (M8). Queue bulk picking-list print is
   an admin form action (cap 25), not a REST batch domain.
 - **No PDF download routes** — canonical stored format is HTML; PDF remains deferred.
-- **No `mpcf_workflows`/`mpcf_carriers` filter routes** — the workflow
-  definition and the real carrier registry shape are still evolving;
-  freezing an API surface around them now would be premature (§16.2).
+- **No `mpcf_workflows` filter routes** — the workflow definition is still
+  evolving; freezing an API surface around it now would be premature (§16.2).
+- **No carrier API / label / live-tracking routes** — M13.
+- **No notification send routes** — customer communication ships in later
+  M5 slices; ship remains the side-effect trigger.
 - **No scoped API keys** — an Application Password authenticates as its
   full user account today; a credential limited to specific capabilities
   is a post-1.0 idea (§IV.13).

@@ -2179,3 +2179,33 @@ Zero release blockers from dogfood round 1 on `dev.biopentra.eu` (WP-CLI service
 ## VI.8 Explicitly not in M4 (→ later)
 
 PDF renderer implementation; Mission Control redesign; M5 tracking/notifications; silent/print-server printing; M8 batch-picking engine.
+
+---
+
+# Part VII — M5 Tracking & notifications (Customer Communication)
+
+**Milestone purpose:** Customer Communication — complete the outbound
+communication layer after ship. Tracking **capture** already exists from
+M2; M5 does not invent shipping. Labels, customs, rates, and live carrier
+APIs remain **M13**.
+
+## VII.1 M5-A delivered (Carrier Registry Foundation)
+
+| Concern | Implementation |
+|---|---|
+| Immutable carrier VO | `Domain\Shipping\Carrier` — private ctor, `define()` / `is_valid()` / `to_array()`, no setters |
+| Bundled EU set | PostNord, DHL, Bring, DPD, GLS, UPS, DB Schenker, Budbee, Instabox + `other` |
+| Public filter | `mpcf_carriers` on `Infrastructure\Carriers\BundledCarrierRegistry` |
+| Validation | Reject + log + continue (DocumentTypeRegistry resilience); `other` always restored |
+| URL resolution | `Domain\TrackingUrlResolver` + `TemplateTrackingUrlResolver` (template expand only) |
+| REST | `GET /mpcf/v1/carriers` additive metadata (`tracking_url_template`, `tracking_number_pattern`, `phone_required`) |
+| Immutability | Registry definitions never mutated at runtime; Settings deferred to later M5 |
+| Schema | No new tables |
+
+## VII.2 Explicitly not in M5-A (→ later M5 / M13)
+
+Notification / NotificationFactory / Dispatcher / NotificationStrategy;
+TrackingEmailExtension; Settings Shipping & notifications card; customer
+emails; Workspace warn-only UX polish; carrier APIs / labels / PDF /
+receiving / inventory / Mission Control.
+
