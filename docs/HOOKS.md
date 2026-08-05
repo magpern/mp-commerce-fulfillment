@@ -100,6 +100,13 @@ preferences (default carrier, notification strategy) belong in Settings
 `TrackingUrlResolver` (default `TemplateTrackingUrlResolver`) expands
 `{tracking}` templates; it is not a live carrier API and is not hooked.
 
+## M5-B notification configuration
+
+M5-B adds no public WordPress hooks. Merchant notification preferences
+are settings-backed (`mpcf_settings` schema v6) and read through
+`Application\Notifications\NotificationConfigurationService` for M5-C.
+Avoid speculative filters until a second consumer needs them.
+
 All other v1.0 extension surfaces (`mpcf_workflows`, `mpcf_event` +
 per-type actions, `mpcf_intake_should_create`) remain documented in
 `docs/ARCHITECTURE_PLAN.md` §16.2 as future milestones.

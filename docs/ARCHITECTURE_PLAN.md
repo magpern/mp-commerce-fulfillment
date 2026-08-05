@@ -2209,3 +2209,22 @@ TrackingEmailExtension; Settings Shipping & notifications card; customer
 emails; Workspace warn-only UX polish; carrier APIs / labels / PDF /
 receiving / inventory / Mission Control.
 
+## VII.3 M5-B delivered (Notification Configuration)
+
+| Concern | Implementation |
+|---|---|
+| NotificationStrategy | `Domain\Notification\NotificationStrategy` — `COMPLETED_EMAIL` / `MPCF_SHIPPED` / `BOTH` / `DISABLED` immutable enum (`COMPLETED_EMAIL` is the approved completed-order email strategy; Domain avoids confined store-platform tokens) |
+| Configuration | `Application\Notifications\NotificationConfiguration` (immutable) + `NotificationConfigurationService` |
+| Settings keys | schema v6: strategy, sender, reply-to, tracking footer, subject, introduction, signature; reuses `default_carrier_id` |
+| Carrier default | Registry-validated via configuration service; empty/unknown → `other` (Settings stays pure — no registry dependency) |
+| Admin UI | Settings **Notifications** card (MPDS); sticky save bar; capability `mpcf_manage_settings` |
+| Public API for M5-C | `NotificationConfigurationService::get()` / `strategy()` / `default_carrier_id()` |
+| Hooks | None added (avoid speculative hooks) |
+| Schema | No new tables |
+
+## VII.4 Explicitly not in M5-B (→ M5-C+)
+
+Notification / NotificationFactory / Dispatcher / EmailChannel /
+TrackingEmailExtension; shipment event handlers; customer emails;
+notification REST endpoints; carrier APIs; preview/test-send UI.
+
