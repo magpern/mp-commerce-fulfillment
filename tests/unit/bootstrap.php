@@ -162,14 +162,7 @@ if ( ! function_exists( 'add_filter' ) ) {
 }
 
 if ( ! function_exists( 'apply_filters' ) ) {
-	/**
-	 * Minimal apply_filters for unit tests.
-	 *
-	 * @param string $hook_name Hook name.
-	 * @param mixed  $value     Value to filter.
-	 * @param mixed  ...$args   Additional args.
-	 * @return mixed
-	 */
+	// phpcs:ignore WooCommerce.Commenting.CommentHooks.MissingSinceComment -- Test stub of a WordPress core function, not a plugin hook.
 	function apply_filters( $hook_name, $value, ...$args ) { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 		$hook = (string) $hook_name;
 
