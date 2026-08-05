@@ -49,8 +49,8 @@ final class DocumentTypeRegistry {
 				'paper_size'       => 'A4',
 				'capability'       => Capabilities::RENDER_DOCUMENTS,
 				'allowed_states'   => self::PACKING_SLIP_STATES,
-				'storage_policy'   => DocumentType::STORAGE_PRINT,
-				'template_version' => '1',
+				'storage_policy'   => DocumentType::STORAGE_STORE,
+				'template_version' => '2',
 			),
 			'picking_list' => array(
 				'id'               => 'picking_list',
@@ -61,7 +61,7 @@ final class DocumentTypeRegistry {
 				'paper_size'       => 'A4',
 				'capability'       => Capabilities::RENDER_DOCUMENTS,
 				'allowed_states'   => self::PICKING_LIST_STATES,
-				'storage_policy'   => DocumentType::STORAGE_PRINT,
+				'storage_policy'   => DocumentType::STORAGE_STORE,
 				'template_version' => '1',
 			),
 		);

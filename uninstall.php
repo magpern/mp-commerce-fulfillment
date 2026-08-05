@@ -61,3 +61,27 @@ foreach ( \MPCF\PersistedKeys::option_keys() as $mpcf_option ) {
 foreach ( \MPCF\PersistedKeys::user_meta_keys() as $mpcf_user_meta_key ) {
 	delete_metadata( 'user', 0, $mpcf_user_meta_key, '', true );
 }
+
+// ADR-0004 protected upload tree (M4-B documents). Safe no-op when absent.
+if ( function_exists( 'wp_upload_dir' ) ) {
+	$mpcf_uploads = wp_upload_dir();
+	if ( empty( $mpcf_uploads['error'] ) && ! empty( $mpcf_uploads['basedir'] ) ) {
+		foreach ( \MPCF\PersistedKeys::upload_directories() as $mpcf_upload_dir ) {
+			$mpcf_path = rtrim( (string) $mpcf_uploads['basedir'], '/\\' ) . '/' . $mpcf_upload_dir;
+			if ( is_dir( $mpcf_path ) ) {
+				$mpcf_iterator = new RecursiveIteratorIterator(
+					new RecursiveDirectoryIterator( $mpcf_path, FilesystemIterator::SKIP_DOTS ),
+					RecursiveIteratorIterator::CHILD_FIRST
+				);
+				foreach ( $mpcf_iterator as $mpcf_file ) {
+					if ( $mpcf_file->isDir() ) {
+						rmdir( $mpcf_file->getPathname() ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Uninstall cleanup of plugin-owned protected tree.
+					} else {
+						unlink( $mpcf_file->getPathname() ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Uninstall cleanup of plugin-owned protected tree.
+					}
+				}
+				rmdir( $mpcf_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Uninstall cleanup of plugin-owned protected tree.
+			}
+		}
+	}
+}

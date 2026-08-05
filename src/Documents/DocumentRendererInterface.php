@@ -25,4 +25,14 @@ interface DocumentRendererInterface {
 	 * @param DocumentModel $model Assembled render-time document data.
 	 */
 	public function render( DocumentModel $model ): ?string;
+
+	/**
+	 * Stable format key for storage/audit (`html`, future `pdf`, …).
+	 */
+	public function format(): string;
+
+	/**
+	 * MIME type of successful {@see render()} output.
+	 */
+	public function mime_type(): string;
 }

@@ -57,6 +57,20 @@ final class HtmlRenderer implements DocumentRendererInterface {
 	}
 
 	/**
+	 * Canonical format key.
+	 */
+	public function format(): string {
+		return 'html';
+	}
+
+	/**
+	 * MIME type of rendered HTML.
+	 */
+	public function mime_type(): string {
+		return 'text/html; charset=UTF-8';
+	}
+
+	/**
 	 * Isolates the `include`'s local scope to exactly `$template`/`$model`
 	 * — the template file never sees this class's own properties.
 	 *

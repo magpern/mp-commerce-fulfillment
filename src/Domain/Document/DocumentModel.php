@@ -18,10 +18,12 @@ use DateTimeImmutable;
  *
  * M4 contract: this model IS the render-time snapshot. Historical documents
  * must never depend on later fulfillment, order, branding, or template
- * changes. M4-A establishes the fields; M4-B persists the canonical HTML
- * artifact (and may serialize this model alongside it). Fresh prints always
- * assemble a new model; historical reprints must not reassemble under the
- * same document id (M4-D / `source_document_id` seam).
+ * changes. M4-B persists the canonical HTML artifact; the model fields are
+ * embedded in that HTML. Fresh prints always assemble a new model;
+ * historical reprints must not reassemble under the same document id
+ * (M4-D / `source_document_id` seam).
+ *
+ * Immutable after construction — `with_render_meta()` returns a new instance.
  */
 final class DocumentModel {
 
@@ -68,7 +70,7 @@ final class DocumentModel {
 	private string $store_name;
 
 	/**
-	 * Line items: each `array{sku:string,name:string,qty_ordered:int}`.
+	 * Line items (shape varies by document type).
 	 *
 	 * @var list<array<string, mixed>>
 	 */
@@ -96,14 +98,14 @@ final class DocumentModel {
 	private string $fulfillment_state;
 
 	/**
-	 * Explicit template version (from the document-type definition).
+	 * Explicit template version (from the document-type definition or override hash).
 	 *
 	 * @var string
 	 */
 	private string $template_version;
 
 	/**
-	 * Branding snapshot placeholder (M4-B fills address/footer/logo).
+	 * Branding snapshot (store name, address, footer, logo data URI).
 	 *
 	 * @var array<string, mixed>
 	 */
@@ -124,22 +126,38 @@ final class DocumentModel {
 	private int $rendered_by;
 
 	/**
+	 * Customer checkout instructions, when operationally relevant.
+	 *
+	 * @var string
+	 */
+	private string $customer_instructions;
+
+	/**
+	 * Renderer format key captured at render time (`html` today).
+	 *
+	 * @var string
+	 */
+	private string $renderer_format;
+
+	/**
 	 * Assembles a document model.
 	 *
-	 * @param string                           $doc_type          Document type registry key.
-	 * @param int                              $fulfillment_id    The fulfillment this document describes.
-	 * @param string                           $order_number      Order number.
-	 * @param string                           $customer_name     Customer display name.
-	 * @param array<int, string>               $ship_to_lines     Ship-to address, as display lines.
-	 * @param string                           $store_name        Store name.
-	 * @param array<int, array<string, mixed>> $items             Line items.
-	 * @param array<int, array<string, mixed>> $packages          Package summaries.
-	 * @param string                           $barcode_payload   Code 128 barcode payload.
-	 * @param string                           $fulfillment_state Fulfillment state snapshot.
-	 * @param string                           $template_version  Template version.
-	 * @param array<string, mixed>             $branding          Branding snapshot placeholder.
-	 * @param DateTimeImmutable|null           $rendered_at       Render timestamp.
-	 * @param int                              $rendered_by       Operator user id.
+	 * @param string                           $doc_type              Document type registry key.
+	 * @param int                              $fulfillment_id        The fulfillment this document describes.
+	 * @param string                           $order_number          Order number.
+	 * @param string                           $customer_name         Customer display name.
+	 * @param array<int, string>               $ship_to_lines         Ship-to address, as display lines.
+	 * @param string                           $store_name            Store name.
+	 * @param array<int, array<string, mixed>> $items                 Line items.
+	 * @param array<int, array<string, mixed>> $packages              Package summaries.
+	 * @param string                           $barcode_payload       Code 128 barcode payload.
+	 * @param string                           $fulfillment_state     Fulfillment state snapshot.
+	 * @param string                           $template_version      Template version.
+	 * @param array<string, mixed>             $branding              Branding snapshot.
+	 * @param DateTimeImmutable|null           $rendered_at           Render timestamp.
+	 * @param int                              $rendered_by           Operator user id.
+	 * @param string                           $customer_instructions Customer note / instructions.
+	 * @param string                           $renderer_format       Renderer format key.
 	 */
 	public function __construct(
 		string $doc_type,
@@ -155,39 +173,45 @@ final class DocumentModel {
 		string $template_version = '1',
 		array $branding = array(),
 		?DateTimeImmutable $rendered_at = null,
-		int $rendered_by = 0
+		int $rendered_by = 0,
+		string $customer_instructions = '',
+		string $renderer_format = 'html'
 	) {
-		$this->doc_type          = $doc_type;
-		$this->fulfillment_id    = $fulfillment_id;
-		$this->order_number      = $order_number;
-		$this->customer_name     = $customer_name;
-		$this->ship_to_lines     = $ship_to_lines;
-		$this->store_name        = $store_name;
-		$this->items             = $items;
-		$this->packages          = $packages;
-		$this->barcode_payload   = $barcode_payload;
-		$this->fulfillment_state = $fulfillment_state;
-		$this->template_version  = $template_version;
-		$this->branding          = $branding;
-		$this->rendered_at       = $rendered_at;
-		$this->rendered_by       = $rendered_by;
+		$this->doc_type              = $doc_type;
+		$this->fulfillment_id        = $fulfillment_id;
+		$this->order_number          = $order_number;
+		$this->customer_name         = $customer_name;
+		$this->ship_to_lines         = $ship_to_lines;
+		$this->store_name            = $store_name;
+		$this->items                 = $items;
+		$this->packages              = $packages;
+		$this->barcode_payload       = $barcode_payload;
+		$this->fulfillment_state     = $fulfillment_state;
+		$this->template_version      = $template_version;
+		$this->branding              = $branding;
+		$this->rendered_at           = $rendered_at;
+		$this->rendered_by           = $rendered_by;
+		$this->customer_instructions = $customer_instructions;
+		$this->renderer_format       = $renderer_format;
 	}
 
 	/**
 	 * Returns a copy with render-time meta filled by DocumentService.
 	 *
-	 * @param string               $template_version Explicit template version.
+	 * @param string               $template_version  Explicit template version.
 	 * @param string               $fulfillment_state Fulfillment state snapshot.
 	 * @param DateTimeImmutable    $rendered_at       Render timestamp.
 	 * @param int                  $rendered_by       Operator user id.
-	 * @param array<string, mixed> $branding        Branding snapshot (optional merge).
+	 * @param array<string, mixed> $branding          Branding snapshot (optional merge).
+	 * @param string               $renderer_format   Renderer format key.
 	 */
 	public function with_render_meta(
 		string $template_version,
 		string $fulfillment_state,
 		DateTimeImmutable $rendered_at,
 		int $rendered_by,
-		array $branding = array()
+		array $branding = array(),
+		string $renderer_format = 'html'
 	): self {
 		$merged_branding = array_merge(
 			array( 'store_name' => $this->store_name ),
@@ -195,13 +219,17 @@ final class DocumentModel {
 			$branding
 		);
 
+		$store_name = isset( $merged_branding['store_name'] ) && is_string( $merged_branding['store_name'] ) && '' !== $merged_branding['store_name']
+			? $merged_branding['store_name']
+			: $this->store_name;
+
 		return new self(
 			$this->doc_type,
 			$this->fulfillment_id,
 			$this->order_number,
 			$this->customer_name,
 			$this->ship_to_lines,
-			$this->store_name,
+			$store_name,
 			$this->items,
 			$this->packages,
 			$this->barcode_payload,
@@ -209,7 +237,9 @@ final class DocumentModel {
 			$template_version,
 			$merged_branding,
 			$rendered_at,
-			$rendered_by
+			$rendered_by,
+			$this->customer_instructions,
+			$renderer_format
 		);
 	}
 
@@ -297,7 +327,7 @@ final class DocumentModel {
 	}
 
 	/**
-	 * Branding snapshot placeholder.
+	 * Branding snapshot.
 	 *
 	 * @return array<string, mixed>
 	 */
@@ -317,5 +347,19 @@ final class DocumentModel {
 	 */
 	public function rendered_by(): int {
 		return $this->rendered_by;
+	}
+
+	/**
+	 * Customer checkout instructions when present.
+	 */
+	public function customer_instructions(): string {
+		return $this->customer_instructions;
+	}
+
+	/**
+	 * Renderer format key (`html` today).
+	 */
+	public function renderer_format(): string {
+		return $this->renderer_format;
 	}
 }

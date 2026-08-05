@@ -17,6 +17,13 @@ if ( ! isset( $model ) || ! $model instanceof \MPCF\Domain\Document\DocumentMode
 }
 
 $mpcf_slip_css_path = __DIR__ . '/packing-slip.css';
+$mpcf_branding      = $model->branding();
+$mpcf_address       = isset( $mpcf_branding['address_lines'] ) && is_array( $mpcf_branding['address_lines'] )
+	? $mpcf_branding['address_lines']
+	: array();
+$mpcf_footer        = isset( $mpcf_branding['footer'] ) ? (string) $mpcf_branding['footer'] : '';
+$mpcf_logo          = isset( $mpcf_branding['logo_data_uri'] ) ? (string) $mpcf_branding['logo_data_uri'] : '';
+$mpcf_rendered_at   = $model->rendered_at();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -29,7 +36,19 @@ $mpcf_slip_css_path = __DIR__ . '/packing-slip.css';
 </head>
 <body>
 	<header class="mpcf-slip-header">
-		<div class="mpcf-slip-store"><?php echo esc_html( $model->store_name() ); ?></div>
+		<div class="mpcf-slip-brand">
+			<?php if ( '' !== $mpcf_logo && str_starts_with( $mpcf_logo, 'data:image/' ) ) : ?>
+				<img class="mpcf-slip-logo" src="<?php echo esc_attr( $mpcf_logo ); ?>" alt="">
+			<?php endif; ?>
+			<div class="mpcf-slip-store"><?php echo esc_html( $model->store_name() ); ?></div>
+			<?php if ( array() !== $mpcf_address ) : ?>
+				<address class="mpcf-slip-address">
+					<?php foreach ( $mpcf_address as $mpcf_line ) : ?>
+						<?php echo esc_html( (string) $mpcf_line ); ?><br>
+					<?php endforeach; ?>
+				</address>
+			<?php endif; ?>
+		</div>
 		<div>
 			<div class="mpcf-slip-title"><?php esc_html_e( 'Packing slip', 'mp-commerce-fulfillment' ); ?></div>
 			<div class="mpcf-slip-order-number">
@@ -41,6 +60,36 @@ $mpcf_slip_css_path = __DIR__ . '/packing-slip.css';
 				);
 				?>
 			</div>
+			<div class="mpcf-slip-meta">
+				<?php
+				printf(
+					/* translators: 1: fulfillment id, 2: fulfillment state */
+					esc_html__( 'Fulfillment #%1$d · %2$s', 'mp-commerce-fulfillment' ),
+					$model->fulfillment_id(),
+					esc_html( $model->fulfillment_state() )
+				);
+				?>
+			</div>
+			<?php if ( null !== $mpcf_rendered_at ) : ?>
+				<div class="mpcf-slip-meta">
+					<?php
+					printf(
+						/* translators: %s: render timestamp */
+						esc_html__( 'Rendered %s', 'mp-commerce-fulfillment' ),
+						esc_html( $mpcf_rendered_at->format( 'Y-m-d H:i' ) )
+					);
+					?>
+				</div>
+			<?php endif; ?>
+			<div class="mpcf-slip-meta">
+				<?php
+				printf(
+					/* translators: %s: template version */
+					esc_html__( 'Template %s', 'mp-commerce-fulfillment' ),
+					esc_html( $model->template_version() )
+				);
+				?>
+			</div>
 		</div>
 	</header>
 
@@ -48,6 +97,7 @@ $mpcf_slip_css_path = __DIR__ . '/packing-slip.css';
 		<div class="mpcf-slip-ship-to">
 			<h2><?php esc_html_e( 'Ship to', 'mp-commerce-fulfillment' ); ?></h2>
 			<address>
+				<strong><?php echo esc_html( $model->customer_name() ); ?></strong><br>
 				<?php foreach ( $model->ship_to_lines() as $mpcf_line ) : ?>
 					<?php echo esc_html( $mpcf_line ); ?><br>
 				<?php endforeach; ?>
@@ -55,12 +105,20 @@ $mpcf_slip_css_path = __DIR__ . '/packing-slip.css';
 		</div>
 	</div>
 
+	<?php if ( '' !== $model->customer_instructions() ) : ?>
+		<div class="mpcf-slip-instructions">
+			<h2><?php esc_html_e( 'Customer instructions', 'mp-commerce-fulfillment' ); ?></h2>
+			<p><?php echo esc_html( $model->customer_instructions() ); ?></p>
+		</div>
+	<?php endif; ?>
+
 	<table class="mpcf-slip-items">
 		<thead>
 			<tr>
 				<th><?php esc_html_e( 'SKU', 'mp-commerce-fulfillment' ); ?></th>
 				<th><?php esc_html_e( 'Item', 'mp-commerce-fulfillment' ); ?></th>
-				<th class="mpcf-slip-qty"><?php esc_html_e( 'Qty', 'mp-commerce-fulfillment' ); ?></th>
+				<th class="mpcf-slip-qty"><?php esc_html_e( 'Ordered', 'mp-commerce-fulfillment' ); ?></th>
+				<th class="mpcf-slip-qty"><?php esc_html_e( 'Packed', 'mp-commerce-fulfillment' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -69,6 +127,7 @@ $mpcf_slip_css_path = __DIR__ . '/packing-slip.css';
 					<td><?php echo esc_html( (string) $mpcf_item['sku'] ); ?></td>
 					<td><?php echo esc_html( (string) $mpcf_item['name'] ); ?></td>
 					<td class="mpcf-slip-qty"><?php echo esc_html( (string) $mpcf_item['qty_ordered'] ); ?></td>
+					<td class="mpcf-slip-qty"><?php echo esc_html( (string) ( $mpcf_item['qty_packed'] ?? 0 ) ); ?></td>
 				</tr>
 			<?php endforeach; ?>
 		</tbody>
@@ -104,5 +163,9 @@ $mpcf_slip_css_path = __DIR__ . '/packing-slip.css';
 	<div class="mpcf-slip-barcode">
 		<div class="mpcf-slip-barcode-payload"><?php echo esc_html( $model->barcode_payload() ); ?></div>
 	</div>
+
+	<?php if ( '' !== $mpcf_footer ) : ?>
+		<footer class="mpcf-slip-footer"><?php echo esc_html( $mpcf_footer ); ?></footer>
+	<?php endif; ?>
 </body>
 </html>

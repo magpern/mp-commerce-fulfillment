@@ -82,6 +82,37 @@ final class TemplateRegistry {
 	}
 
 	/**
+	 * Deterministic template version for storage/audit.
+	 *
+	 * Bundled templates use the registry's explicit version. Theme or filter
+	 * overrides use `override-` plus a content SHA-256 prefix — never mtime.
+	 *
+	 * @param string $doc_type         Document type key.
+	 * @param string $bundled_version  Version from the document-type definition.
+	 */
+	public function template_version( string $doc_type, string $bundled_version ): string {
+		$path = $this->resolve( $doc_type );
+
+		if ( null === $path ) {
+			return $bundled_version;
+		}
+
+		$bundled_dir = realpath( dirname( MPCF_PLUGIN_FILE ) . '/templates/documents' );
+
+		if ( false !== $bundled_dir && str_starts_with( $path, $bundled_dir . DIRECTORY_SEPARATOR ) ) {
+			return $bundled_version;
+		}
+
+		$hash = hash_file( 'sha256', $path );
+
+		if ( ! is_string( $hash ) || '' === $hash ) {
+			$hash = hash( 'sha256', $path );
+		}
+
+		return 'override-' . substr( $hash, 0, 12 );
+	}
+
+	/**
 	 * Theme override candidate when a theme documents root is available.
 	 *
 	 * @param string $filename Hyphenated template filename including .php.

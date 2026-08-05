@@ -15,6 +15,7 @@ use MPCF\Admin\FulfillmentDetailPage;
 use MPCF\Admin\OperatorMode;
 use MPCF\Admin\OrdersPage;
 use MPCF\Admin\QueuePage;
+use MPCF\Admin\SettingsPage;
 use MPCF\Admin\WorkspacePage;
 use MPCF\Api\Rest\AssignmentController;
 use MPCF\Api\Rest\CarriersController;
@@ -42,6 +43,7 @@ use MPCF\Application\WorkflowService;
 use MPCF\Cli\BackfillCommand;
 use MPCF\Documents\HtmlRenderer;
 use MPCF\Documents\TemplateRegistry;
+use MPCF\Infrastructure\Files\ProtectedDocumentStore;
 use MPCF\Domain\Workflow\StandardWorkflow;
 use MPCF\Domain\Workflow\WorkflowDefinition;
 use MPCF\Engine\GuardRegistry;
@@ -288,7 +290,10 @@ final class Plugin {
 			$events,
 			$dispatcher,
 			$clock,
-			get_bloginfo( 'name' )
+			(string) get_bloginfo( 'name' ),
+			null,
+			$settings,
+			new ProtectedDocumentStore()
 		);
 
 		( new RestApi(
@@ -370,6 +375,7 @@ final class Plugin {
 			$renderer,
 			new OrderOverviewService( new WooOrderSource(), $fulfillments, new WpdbSearchQuery() )
 		);
+		$settings_page  = new SettingsPage( $shell, $renderer, $settings );
 		$detail_page    = new FulfillmentDetailPage( $shell, $renderer, $detail_service, $note_service, $workflow_service, $definition );
 		$workspace_page = new WorkspacePage(
 			$shell,
@@ -390,7 +396,7 @@ final class Plugin {
 			__( 'Fulfillment', 'mp-commerce-fulfillment' ),
 			'dashicons-archive',
 			Capabilities::VIEW_QUEUE,
-			array( $dashboard_page, $queue_page, $orders_page )
+			array( $dashboard_page, $queue_page, $orders_page, $settings_page )
 		) )->register();
 
 		$hidden_pages = array( $detail_page, $workspace_page );

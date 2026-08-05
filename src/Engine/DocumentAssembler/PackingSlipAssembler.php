@@ -24,11 +24,9 @@ use MPCF\Domain\Shipping\Package;
  * `order_number`/`customer_name` come from `$fulfillment`'s own snapshot
  * fields, not `$order` — stable even if the order is later renamed or its
  * customer name changes, matching why the snapshot exists at all. Only
- * `ship_to_lines` comes from `$order`: a ship-to address is not one of the
- * fields `Fulfillment::intake()` persists, so a live read is the only
- * source for it. `$store_name` is plain data the caller resolves (from
- * site identity) — this class never touches a WordPress function to get
- * it itself (invariant I6).
+ * `ship_to_lines` and customer instructions come from `$order`: those are
+ * not intake-snapshotted. `$store_name` / `$branding` are plain data the
+ * caller resolves — this class never touches a WordPress function (I6).
  */
 final class PackingSlipAssembler {
 
@@ -38,15 +36,34 @@ final class PackingSlipAssembler {
 	public const DOC_TYPE = 'packing_slip';
 
 	/**
+	 * Bundled packing-slip template version for M4-B enhancements.
+	 */
+	public const TEMPLATE_VERSION = '2';
+
+	/**
 	 * Assembles a packing slip's document model.
 	 *
 	 * @param Fulfillment                 $fulfillment Fulfillment being packed.
-	 * @param OrderSnapshot               $order       A live read of the owning order — used only for its address.
+	 * @param OrderSnapshot               $order       A live read of the owning order — address + customer note.
 	 * @param array<int, FulfillmentItem> $items       The fulfillment's own line-item snapshots.
 	 * @param array<int, Package>         $packages    The fulfillment's packages (via its shipments).
-	 * @param string                      $store_name  Store display name.
+	 * @param string                      $store_name  Store display name (also in branding).
+	 * @param array<string, mixed>        $branding    Branding snapshot from {@see \MPCF\Documents\BrandingSnapshot}.
+	 * @param string                      $template_version Explicit template version.
 	 */
-	public static function assemble( Fulfillment $fulfillment, OrderSnapshot $order, array $items, array $packages, string $store_name ): DocumentModel {
+	public static function assemble(
+		Fulfillment $fulfillment,
+		OrderSnapshot $order,
+		array $items,
+		array $packages,
+		string $store_name,
+		array $branding = array(),
+		string $template_version = self::TEMPLATE_VERSION
+	): DocumentModel {
+		if ( array() === $branding ) {
+			$branding = array( 'store_name' => $store_name );
+		}
+
 		return new DocumentModel(
 			self::DOC_TYPE,
 			(int) $fulfillment->id(),
@@ -58,8 +75,11 @@ final class PackingSlipAssembler {
 			array_map( array( self::class, 'package_summary' ), $packages ),
 			$fulfillment->order_number_snapshot(),
 			$fulfillment->state(),
-			'1',
-			array( 'store_name' => $store_name )
+			$template_version,
+			$branding,
+			null,
+			0,
+			$order->customer_note()
 		);
 	}
 
@@ -67,13 +87,14 @@ final class PackingSlipAssembler {
 	 * One line item's document-model shape.
 	 *
 	 * @param FulfillmentItem $item Item to summarize.
-	 * @return array{sku: string, name: string, qty_ordered: int}
+	 * @return array{sku: string, name: string, qty_ordered: int, qty_packed: int}
 	 */
 	private static function item_line( FulfillmentItem $item ): array {
 		return array(
 			'sku'         => $item->sku_snapshot(),
 			'name'        => $item->name_snapshot(),
 			'qty_ordered' => $item->qty_ordered(),
+			'qty_packed'  => $item->qty_packed(),
 		);
 	}
 

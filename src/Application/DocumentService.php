@@ -1,6 +1,6 @@
 <?php
 /**
- * Orchestrates document assembly, rendering, and the audit record.
+ * Orchestrates document assembly, rendering, storage, and the audit record.
  *
  * @package MPCommerceFulfillment
  */
@@ -10,8 +10,10 @@ declare( strict_types=1 );
 namespace MPCF\Application;
 
 use DateTimeImmutable;
+use MPCF\Documents\BrandingSnapshot;
 use MPCF\Documents\DocumentRendererInterface;
 use MPCF\Documents\DocumentTypeRegistry;
+use MPCF\Documents\TemplateRegistry;
 use MPCF\Domain\Clock;
 use MPCF\Domain\Document\DocumentModel;
 use MPCF\Domain\Document\DocumentRecord;
@@ -26,11 +28,24 @@ use MPCF\Domain\Repository\EventRepository;
 use MPCF\Domain\Repository\FulfillmentItemRepository;
 use MPCF\Domain\Repository\FulfillmentRepository;
 use MPCF\Engine\DocumentAssembler\PackingSlipAssembler;
+use MPCF\Engine\DocumentAssembler\PickingListAssembler;
+use MPCF\Infrastructure\Files\ProtectedDocumentStore;
+use MPCF\Settings;
+use Throwable;
 
 /**
- * Architecture Plan §10 / M4-A: the only orchestrator of assemble → render →
- * record → audit. Extends the M2 packing-slip pipeline — does not replace it.
- * {@see DocumentPipelineGuardTest} asserts no other class calls a renderer.
+ * Architecture Plan §10 / M4: the only orchestrator of assemble → render →
+ * store → record → audit. Extends the M2 packing-slip pipeline — does not
+ * replace it. {@see DocumentPipelineGuardTest} asserts no other class calls
+ * a renderer.
+ *
+ * Filesystem and database writes are not one atomic transaction. Compensation:
+ * - render failure → no DB row, no artifact
+ * - storage failure → no DB row, no artifact, no success event
+ * - DB insert failure after file write → delete orphan artifact
+ * - audit event failure after successful insert → document row + file remain
+ *   (append-only; matches M2/M4-A; `stored=true` only appears when file + row
+ *   both succeeded)
  */
 final class DocumentService {
 
@@ -98,11 +113,11 @@ final class DocumentService {
 	private Clock $clock;
 
 	/**
-	 * Store display name — plain data resolved by the composition root.
+	 * Blog/site name fallback when branding store name is empty.
 	 *
 	 * @var string
 	 */
-	private string $store_name;
+	private string $blog_name_fallback;
 
 	/**
 	 * Document-type registry.
@@ -112,19 +127,43 @@ final class DocumentService {
 	private DocumentTypeRegistry $types;
 
 	/**
+	 * Plugin settings (branding).
+	 *
+	 * @var Settings
+	 */
+	private Settings $settings;
+
+	/**
+	 * Protected HTML storage.
+	 *
+	 * @var ProtectedDocumentStore
+	 */
+	private ProtectedDocumentStore $store;
+
+	/**
+	 * Template resolution (version determination).
+	 *
+	 * @var TemplateRegistry
+	 */
+	private TemplateRegistry $templates;
+
+	/**
 	 * Builds the service.
 	 *
-	 * @param FulfillmentRepository     $fulfillments Fulfillment lookup.
-	 * @param FulfillmentItemRepository $items        Line item snapshots.
-	 * @param OrderSource               $orders       Owning order reads.
-	 * @param ShippingService           $shipping     Package reads.
-	 * @param DocumentRendererInterface $renderer     Format-neutral renderer.
-	 * @param DocumentRepository        $documents    Document record persistence.
-	 * @param EventRepository           $events       Audit log persistence.
-	 * @param EventDispatcher           $dispatcher   In-process event dispatch.
-	 * @param Clock                     $clock        Source of "now".
-	 * @param string                    $store_name   Store display name.
-	 * @param DocumentTypeRegistry|null $types        Document-type registry.
+	 * @param FulfillmentRepository       $fulfillments       Fulfillment lookup.
+	 * @param FulfillmentItemRepository   $items              Line item snapshots.
+	 * @param OrderSource                 $orders             Owning order reads.
+	 * @param ShippingService             $shipping           Package reads.
+	 * @param DocumentRendererInterface   $renderer           Format-neutral renderer.
+	 * @param DocumentRepository          $documents          Document record persistence.
+	 * @param EventRepository             $events             Audit log persistence.
+	 * @param EventDispatcher             $dispatcher         In-process event dispatch.
+	 * @param Clock                       $clock              Source of "now".
+	 * @param string                      $blog_name_fallback Site name fallback.
+	 * @param DocumentTypeRegistry|null   $types              Document-type registry.
+	 * @param Settings|null               $settings           Plugin settings.
+	 * @param ProtectedDocumentStore|null $store             Protected HTML store.
+	 * @param TemplateRegistry|null       $templates          Template registry.
 	 */
 	public function __construct(
 		FulfillmentRepository $fulfillments,
@@ -136,20 +175,26 @@ final class DocumentService {
 		EventRepository $events,
 		EventDispatcher $dispatcher,
 		Clock $clock,
-		string $store_name,
-		?DocumentTypeRegistry $types = null
+		string $blog_name_fallback,
+		?DocumentTypeRegistry $types = null,
+		?Settings $settings = null,
+		?ProtectedDocumentStore $store = null,
+		?TemplateRegistry $templates = null
 	) {
-		$this->fulfillments = $fulfillments;
-		$this->items        = $items;
-		$this->orders       = $orders;
-		$this->shipping     = $shipping;
-		$this->renderer     = $renderer;
-		$this->documents    = $documents;
-		$this->events       = $events;
-		$this->dispatcher   = $dispatcher;
-		$this->clock        = $clock;
-		$this->store_name   = $store_name;
-		$this->types        = $types ?? new DocumentTypeRegistry();
+		$this->fulfillments       = $fulfillments;
+		$this->items              = $items;
+		$this->orders             = $orders;
+		$this->shipping           = $shipping;
+		$this->renderer           = $renderer;
+		$this->documents          = $documents;
+		$this->events             = $events;
+		$this->dispatcher         = $dispatcher;
+		$this->clock              = $clock;
+		$this->blog_name_fallback = $blog_name_fallback;
+		$this->types              = $types ?? new DocumentTypeRegistry();
+		$this->settings           = $settings ?? new Settings( array() );
+		$this->store              = $store ?? new ProtectedDocumentStore( sys_get_temp_dir() . '/mpcf-docs-' . getmypid() );
+		$this->templates          = $templates ?? new TemplateRegistry();
 	}
 
 	/**
@@ -170,7 +215,7 @@ final class DocumentService {
 	}
 
 	/**
-	 * Assembles, renders, and records one document for a fulfillment.
+	 * Assembles, renders, stores, and records one document for a fulfillment.
 	 *
 	 * Options:
 	 * - `actor` (Actor, required for audit; defaults to system)
@@ -221,25 +266,29 @@ final class DocumentService {
 			return DocumentOutcome::failed( 'not_found', 'The owning order no longer exists.' );
 		}
 
-		$model = $this->assemble( $type, $fulfillment, $order );
+		$branding = BrandingSnapshot::capture( $this->settings, $this->blog_name_fallback );
+		$model    = $this->assemble( $type, $fulfillment, $order, $branding );
 
 		if ( $model instanceof DocumentOutcome ) {
 			return $model;
 		}
 
-		$now   = $this->clock->now();
-		$model = $model->with_render_meta(
-			$type->template_version(),
+		$now              = $this->clock->now();
+		$template_version = $this->templates->template_version( $type->id(), $type->template_version() );
+		$model            = $model->with_render_meta(
+			$template_version,
 			$fulfillment->state(),
 			$now,
 			(int) ( $actor->id() ?? 0 ),
-			array( 'store_name' => $this->store_name )
+			$branding,
+			$this->renderer->format()
 		);
 
 		/**
 		 * Filters the assembled document model before rendering.
 		 *
-		 * Must return a {@see DocumentModel}. Invalid returns are rejected.
+		 * Must return a {@see DocumentModel}. Invalid returns are rejected;
+		 * the filtered model is then treated as frozen for this render.
 		 *
 		 * @since 0.4.0
 		 *
@@ -266,20 +315,59 @@ final class DocumentService {
 			);
 		}
 
-		// M4-A: storage_policy remains print (file_path NULL). Protected HTML
-		// storage is M4-B. Fresh render always inserts a new immutable row —
-		// historical reprint with source_document_id is M4-D.
-		$document_id = $this->documents->insert(
-			DocumentRecord::create(
-				$fulfillment_id,
-				$filtered->doc_type(),
-				$type->template_version(),
-				null,
-				(int) ( $actor->id() ?? 0 ),
-				$now
-			)
-		);
+		$file_path = null;
+		$stored    = false;
+		$bytes     = strlen( $html );
+		$sha256    = hash( 'sha256', $html );
+		$mime      = $this->renderer->mime_type();
 
+		if ( DocumentType::STORAGE_STORE === $type->storage_policy() ) {
+			try {
+				$result    = $this->store->write( $fulfillment_id, $filtered->doc_type(), $html, $now );
+				$file_path = $result->relative_path();
+				$bytes     = $result->byte_size();
+				$sha256    = $result->sha256();
+				$mime      = $result->mime_type();
+				$stored    = true;
+			} catch ( Throwable $e ) {
+				return DocumentOutcome::failed(
+					'storage_failed',
+					'Unable to store the rendered document: ' . $e->getMessage()
+				);
+			}
+		}
+
+		try {
+			$document_id = $this->documents->insert(
+				DocumentRecord::create(
+					$fulfillment_id,
+					$filtered->doc_type(),
+					$template_version,
+					$file_path,
+					(int) ( $actor->id() ?? 0 ),
+					$now
+				)
+			);
+		} catch ( Throwable $e ) {
+			if ( $stored && null !== $file_path ) {
+				$this->store->delete_relative( $file_path );
+			}
+
+			return DocumentOutcome::failed(
+				'persistence_failed',
+				'Unable to record the document: ' . $e->getMessage()
+			);
+		}
+
+		if ( $document_id <= 0 ) {
+			if ( $stored && null !== $file_path ) {
+				$this->store->delete_relative( $file_path );
+			}
+
+			return DocumentOutcome::failed( 'persistence_failed', 'Unable to record the document.' );
+		}
+
+		// Never claim stored=true unless file write and metadata persistence both succeeded.
 		$this->record_event(
 			$fulfillment_id,
 			'document.rendered',
@@ -288,8 +376,14 @@ final class DocumentService {
 			array(
 				'document_id'      => $document_id,
 				'doc_type'         => $filtered->doc_type(),
-				'template_version' => $type->template_version(),
-				'renderer'         => $type->renderer(),
+				'template_version' => $template_version,
+				'renderer'         => $this->renderer->format(),
+				'renderer_format'  => $filtered->renderer_format(),
+				'stored'           => $stored,
+				'file_path'        => $file_path,
+				'mime'             => $mime,
+				'bytes'            => $bytes,
+				'sha256'           => $sha256,
 			)
 		);
 
@@ -302,9 +396,12 @@ final class DocumentService {
 	 * @param DocumentType               $type        Document type.
 	 * @param Fulfillment                $fulfillment Fulfillment.
 	 * @param \MPCF\Domain\OrderSnapshot $order       Owning order snapshot.
+	 * @param array<string, mixed>       $branding    Branding snapshot.
 	 * @return DocumentModel|DocumentOutcome
 	 */
-	private function assemble( DocumentType $type, Fulfillment $fulfillment, $order ) {
+	private function assemble( DocumentType $type, Fulfillment $fulfillment, $order, array $branding ) {
+		$store_name = isset( $branding['store_name'] ) ? (string) $branding['store_name'] : $this->blog_name_fallback;
+
 		switch ( $type->assembler() ) {
 			case PackingSlipAssembler::DOC_TYPE:
 				$packages = array();
@@ -318,14 +415,19 @@ final class DocumentService {
 					$order,
 					$this->items->find_for_fulfillment( (int) $fulfillment->id() ),
 					$packages,
-					$this->store_name
+					$store_name,
+					$branding,
+					$type->template_version()
 				);
 
-			case 'picking_list':
-				// Type is registered in M4-A; assembler/template land in M4-B.
-				return DocumentOutcome::failed(
-					'not_implemented',
-					'Picking list rendering ships in M4-B.'
+			case PickingListAssembler::DOC_TYPE:
+				return PickingListAssembler::assemble(
+					$fulfillment,
+					$order,
+					$this->items->find_for_fulfillment( (int) $fulfillment->id() ),
+					$store_name,
+					$branding,
+					$type->template_version()
 				);
 
 			default:
