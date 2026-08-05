@@ -34,6 +34,41 @@ final class InMemoryDocumentRepository implements DocumentRepository {
 		return $id;
 	}
 
+	public function get( int $document_id ): ?DocumentRecord {
+		return $this->rows[ $document_id ] ?? null;
+	}
+
+	public function list_for_fulfillment( int $fulfillment_id ): array {
+		$matches = array();
+
+		foreach ( $this->rows as $row ) {
+			if ( $row->fulfillment_id() === $fulfillment_id ) {
+				$matches[] = $row;
+			}
+		}
+
+		usort(
+			$matches,
+			static function ( DocumentRecord $a, DocumentRecord $b ): int {
+				$cmp = $b->created_at() <=> $a->created_at();
+
+				return 0 !== $cmp ? $cmp : ( (int) $b->id() <=> (int) $a->id() );
+			}
+		);
+
+		return $matches;
+	}
+
+	public function latest_for_fulfillment_and_type( int $fulfillment_id, string $doc_type ): ?DocumentRecord {
+		foreach ( $this->list_for_fulfillment( $fulfillment_id ) as $row ) {
+			if ( $row->doc_type() === $doc_type ) {
+				return $row;
+			}
+		}
+
+		return null;
+	}
+
 	/**
 	 * Test helper: every record inserted, in insertion order.
 	 *
