@@ -4,7 +4,7 @@ Tags: woocommerce, fulfillment, warehouse, shipping, picking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.3.0
+Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,12 @@ Performance Order Storage (HPOS).
 3. WooCommerce 8.2+ must be installed and active.
 
 == Changelog ==
+
+= 0.4.0 =
+* Feat: Documents I — packing slip + picking list with branding and protected HTML storage (M4).
+* Feat: Workspace state-aware document actions and typed REST render (`doc_type`).
+* Feat: Documents history, exact historical reprint, and capped Queue bulk picking-list print (25).
+* Docs: Part VI outcomes, API/history routes, print S2 evidence; Mission Control still deferred.
 
 = 0.3.0 =
 * Feat: Ops UX — Workspace stage guidance and next-action clarity (M3-D).

@@ -2,7 +2,7 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Commerce Fulfillment 0.3.0\n"
+"Project-Id-Version: Commerce Fulfillment 0.4.0\n"
 "Report-Msgid-Bugs-To: https://github.com/magpern/mp-commerce-fulfillment/issues\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -70,8 +70,8 @@ msgid "No open fulfillments."
 msgstr ""
 
 #: src/Admin/DashboardPage.php:142
-#: src/Admin/QueuePage.php:408
-#: src/Admin/QueuePage.php:565
+#: src/Admin/QueuePage.php:500
+#: src/Admin/QueuePage.php:669
 msgid "Unassigned"
 msgstr ""
 
@@ -94,7 +94,7 @@ msgstr ""
 #: src/Admin/DashboardPage.php:199
 #: src/Admin/OrdersPage.php:189
 #: src/Admin/OrdersPage.php:206
-#: src/Admin/QueuePage.php:383
+#: src/Admin/QueuePage.php:475
 msgid "Open"
 msgstr ""
 
@@ -110,16 +110,130 @@ msgstr ""
 msgid "Shipped today"
 msgstr ""
 
+#: src/Admin/DocumentsPage.php:50
+#: src/Admin/DocumentsPage.php:54
+#: src/Admin/ShellNavigation.php:52
+#: src/Admin/WorkspacePage.php:803
+msgid "Documents"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:80
+msgid "Document history"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:80
+msgid "Immutable outbound documents. Reprint streams the original stored artifact."
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:86
+#: src/Admin/DocumentsPage.php:117
+msgid "Type"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:88
+#: src/Admin/OrdersPage.php:149
+#: src/Admin/QueuePage.php:476
+msgid "All"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:89
+#: src/Documents/DocumentEventLabels.php:56
+#: templates/documents/picking-list.php:30
+#: templates/documents/picking-list.php:51
+msgid "Picking list"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:90
+#: src/Documents/DocumentEventLabels.php:54
+#: templates/documents/packing-slip.php:32
+#: templates/documents/packing-slip.php:53
+msgid "Packing slip"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:95
+msgid "Order / fulfillment"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:100
+msgid "From"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:105
+msgid "To"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:108
+#: src/Admin/OrdersPage.php:136
+#: src/Admin/QueuePage.php:462
+msgid "Filter"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:112
+msgid "No documents match these filters."
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:115
+msgid "ID"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:116
+#: src/Admin/OrdersPage.php:181
+#: src/Admin/QueuePage.php:553
+msgid "Order"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:118
+msgid "Rendered"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:119
+msgid "By"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:120
+msgid "Template"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:121
+msgid "Stored"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:122
+msgid "Actions"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:137
+msgid "Yes"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:137
+msgid "No"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:142
+msgid "Workspace"
+msgstr ""
+
+#: src/Admin/DocumentsPage.php:149
+msgid "Reprint"
+msgstr ""
+
+#. translators: %d: total matching documents
+#: src/Admin/DocumentsPage.php:161
+#, php-format
+msgid "%d document(s) matched."
+msgstr ""
+
 #: src/Admin/FulfillmentDetailPage.php:139
 #: src/Admin/FulfillmentDetailPage.php:146
 #: src/Admin/FulfillmentDetailPage.php:172
 #: src/Admin/FulfillmentDetailPage.php:185
-#: src/Admin/QueuePage.php:621
+#: src/Admin/QueuePage.php:725
 msgid "Fulfillment Detail"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:173
-#: src/Admin/WorkspacePage.php:234
+#: src/Admin/WorkspacePage.php:247
 msgid "No fulfillment selected"
 msgstr ""
 
@@ -152,7 +266,7 @@ msgid "State:"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:227
-#: src/Admin/WorkspacePage.php:558
+#: src/Admin/WorkspacePage.php:571
 msgid "View order"
 msgstr ""
 
@@ -175,12 +289,12 @@ msgid "Audit trail"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:339
-#: src/Admin/WorkspacePage.php:761
+#: src/Admin/WorkspacePage.php:773
 msgid "System"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:340
-#: src/Admin/WorkspacePage.php:762
+#: src/Admin/WorkspacePage.php:774
 msgid "ago"
 msgstr ""
 
@@ -188,51 +302,51 @@ msgstr ""
 msgid "Audit trail pagination"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:404
+#: src/Admin/FulfillmentDetailPage.php:410
 msgid "Fulfillment created from order."
 msgstr ""
 
 #. translators: 1: origin state, 2: destination state, 3: optional reason
-#: src/Admin/FulfillmentDetailPage.php:412
+#: src/Admin/FulfillmentDetailPage.php:418
 #, php-format
 msgid "Moved from \"%1$s\" to \"%2$s\".%3$s"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:432
-#: src/Admin/WorkspacePage.php:973
+#: src/Admin/FulfillmentDetailPage.php:438
+#: src/Admin/WorkspacePage.php:1079
 msgid "Notes"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:436
-#: src/Admin/WorkspacePage.php:977
+#: src/Admin/FulfillmentDetailPage.php:442
+#: src/Admin/WorkspacePage.php:1083
 msgid "pinned"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:440
-#: src/Admin/WorkspacePage.php:981
+#: src/Admin/FulfillmentDetailPage.php:446
+#: src/Admin/WorkspacePage.php:1087
 msgid "Unknown"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:449
-#: src/Admin/WorkspacePage.php:992
+#: src/Admin/FulfillmentDetailPage.php:455
+#: src/Admin/WorkspacePage.php:1098
 msgid "Add note"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:471
-#: src/Admin/QueuePage.php:273
+#: src/Admin/FulfillmentDetailPage.php:477
+#: src/Admin/QueuePage.php:327
 msgid "Fulfillment not found."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:478
-#: src/Admin/QueuePage.php:280
+#: src/Admin/FulfillmentDetailPage.php:484
+#: src/Admin/QueuePage.php:334
 msgid "You are not allowed to make this change."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:496
+#: src/Admin/FulfillmentDetailPage.php:502
 msgid "You are not allowed to add notes."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:500
+#: src/Admin/FulfillmentDetailPage.php:506
 msgid "A note cannot be empty."
 msgstr ""
 
@@ -258,16 +372,6 @@ msgstr ""
 
 #: src/Admin/OrdersPage.php:135
 msgid "Order #, customer, or SKU…"
-msgstr ""
-
-#: src/Admin/OrdersPage.php:136
-#: src/Admin/QueuePage.php:370
-msgid "Filter"
-msgstr ""
-
-#: src/Admin/OrdersPage.php:149
-#: src/Admin/QueuePage.php:384
-msgid "All"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:150
@@ -301,14 +405,9 @@ msgstr ""
 msgid "Cancelled"
 msgstr ""
 
-#: src/Admin/OrdersPage.php:181
-#: src/Admin/QueuePage.php:461
-msgid "Order"
-msgstr ""
-
 #: src/Admin/OrdersPage.php:182
-#: src/Admin/QueuePage.php:462
-#: src/Admin/QueuePage.php:616
+#: src/Admin/QueuePage.php:554
+#: src/Admin/QueuePage.php:720
 msgid "Customer"
 msgstr ""
 
@@ -321,13 +420,13 @@ msgid "Order status"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:185
-#: src/Plugin.php:396
+#: src/Plugin.php:435
 msgid "Fulfillment"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:186
-#: src/Admin/QueuePage.php:367
-#: src/Admin/QueuePage.php:467
+#: src/Admin/QueuePage.php:459
+#: src/Admin/QueuePage.php:559
 msgid "Assignee"
 msgstr ""
 
@@ -336,8 +435,8 @@ msgid "Operational state"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:188
-#: src/Admin/WorkspacePage.php:371
-#: src/Admin/WorkspacePage.php:377
+#: src/Admin/WorkspacePage.php:384
+#: src/Admin/WorkspacePage.php:390
 msgid "Next action"
 msgstr ""
 
@@ -346,12 +445,12 @@ msgid "No orders match these filters."
 msgstr ""
 
 #: src/Admin/OrdersPage.php:205
-#: src/Admin/QueuePage.php:492
+#: src/Admin/QueuePage.php:584
 msgid "Navigate"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:207
-#: src/Admin/QueuePage.php:494
+#: src/Admin/QueuePage.php:586
 msgid "Search"
 msgstr ""
 
@@ -377,7 +476,7 @@ msgid "Picking"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:296
-#: src/Admin/WorkspacePage.php:658
+#: src/Admin/WorkspacePage.php:671
 #: src/Admin/WorkspaceStageGuidance.php:132
 #: src/Application/OrdersNextAction.php:101
 #: templates/documents/picking-list.php:109
@@ -391,7 +490,7 @@ msgid "Packing"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:298
-#: src/Admin/WorkspacePage.php:658
+#: src/Admin/WorkspacePage.php:671
 #: src/Admin/WorkspaceStageGuidance.php:144
 #: src/Application/OrdersNextAction.php:103
 #: templates/documents/packing-slip.php:121
@@ -399,7 +498,7 @@ msgid "Packed"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:299
-#: src/Admin/WorkspacePage.php:440
+#: src/Admin/WorkspacePage.php:453
 #: src/Admin/WorkspaceStageGuidance.php:150
 #: src/Application/OrdersNextAction.php:104
 msgid "Shipped"
@@ -429,34 +528,38 @@ msgstr ""
 msgid "Backordered"
 msgstr ""
 
-#: src/Admin/QueuePage.php:147
+#: src/Admin/QueuePage.php:158
 msgid "Fulfillment Queue"
 msgstr ""
 
-#: src/Admin/QueuePage.php:154
+#: src/Admin/QueuePage.php:165
 #: src/Admin/ShellNavigation.php:37
 msgid "Queue"
 msgstr ""
 
-#: src/Admin/QueuePage.php:194
-#: src/Admin/QueuePage.php:469
+#: src/Admin/QueuePage.php:205
+#: src/Admin/QueuePage.php:561
 msgid "Fulfillments"
 msgstr ""
 
-#: src/Admin/QueuePage.php:245
+#: src/Admin/QueuePage.php:263
+msgid "You are not allowed to render documents."
+msgstr ""
+
+#: src/Admin/QueuePage.php:299
 msgid "You are not allowed to assign fulfillments."
 msgstr ""
 
-#: src/Admin/QueuePage.php:251
+#: src/Admin/QueuePage.php:305
 msgid "No assignee was selected."
 msgstr ""
 
-#: src/Admin/QueuePage.php:256
+#: src/Admin/QueuePage.php:310
 msgid "Could not assign — it may have been changed by someone else."
 msgstr ""
 
 #. translators: %d: number of fulfillments updated
-#: src/Admin/QueuePage.php:333
+#: src/Admin/QueuePage.php:388
 #, php-format
 msgid "%d fulfillment updated."
 msgid_plural "%d fulfillments updated."
@@ -464,89 +567,101 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: succeeded count, 2: failed count
-#: src/Admin/QueuePage.php:344
+#: src/Admin/QueuePage.php:396
 #, php-format
 msgid "%1$d fulfillment(s) updated; %2$d could not be updated."
 msgstr ""
 
-#: src/Admin/QueuePage.php:365
+#. translators: 1: fulfillment id, 2: failure reason
+#: src/Admin/QueuePage.php:411
+#, php-format
+msgid "Fulfillment #%1$d: %2$s"
+msgstr ""
+
+#: src/Admin/QueuePage.php:457
 msgid "Queue filters"
 msgstr ""
 
-#: src/Admin/QueuePage.php:366
-#: src/Admin/QueuePage.php:464
-#: src/Admin/QueuePage.php:618
-#: src/Admin/WorkspacePage.php:362
+#: src/Admin/QueuePage.php:458
+#: src/Admin/QueuePage.php:556
+#: src/Admin/QueuePage.php:722
+#: src/Admin/WorkspacePage.php:375
 msgid "State"
 msgstr ""
 
-#: src/Admin/QueuePage.php:368
-#: src/Admin/QueuePage.php:465
+#: src/Admin/QueuePage.php:460
+#: src/Admin/QueuePage.php:557
 msgid "Age"
 msgstr ""
 
-#: src/Admin/QueuePage.php:369
+#: src/Admin/QueuePage.php:461
 msgid "Search order #, customer, or SKU…"
 msgstr ""
 
-#: src/Admin/QueuePage.php:407
+#: src/Admin/QueuePage.php:499
 msgid "Any"
 msgstr ""
 
-#: src/Admin/QueuePage.php:426
+#: src/Admin/QueuePage.php:518
 msgid "Any age"
 msgstr ""
 
 #. translators: %s: age threshold, e.g. "4h"
-#: src/Admin/QueuePage.php:434
+#: src/Admin/QueuePage.php:526
 #, php-format
 msgid "Older than %s"
 msgstr ""
 
-#: src/Admin/QueuePage.php:458
+#: src/Admin/QueuePage.php:550
 msgid "Select all"
 msgstr ""
 
-#: src/Admin/QueuePage.php:463
-#: src/Admin/QueuePage.php:617
+#: src/Admin/QueuePage.php:555
+#: src/Admin/QueuePage.php:721
 msgid "Items"
 msgstr ""
 
-#: src/Admin/QueuePage.php:466
+#: src/Admin/QueuePage.php:558
 msgid "Priority"
 msgstr ""
 
-#: src/Admin/QueuePage.php:484
+#: src/Admin/QueuePage.php:576
 msgid "No fulfillments match these filters."
 msgstr ""
 
-#: src/Admin/QueuePage.php:493
-#: src/Admin/QueuePage.php:620
+#: src/Admin/QueuePage.php:585
+#: src/Admin/QueuePage.php:724
 msgid "Open in Workspace"
 msgstr ""
 
-#: src/Admin/QueuePage.php:520
+#: src/Admin/QueuePage.php:612
 msgid "Bulk actions…"
 msgstr ""
 
-#: src/Admin/QueuePage.php:521
+#: src/Admin/QueuePage.php:613
 msgid "Assign to…"
 msgstr ""
 
-#: src/Admin/QueuePage.php:522
+#: src/Admin/QueuePage.php:614
 msgid "Advance to state…"
 msgstr ""
 
-#: src/Admin/QueuePage.php:541
+#. translators: %d: bulk cap
+#: src/Admin/QueuePage.php:621
+#, php-format
+msgid "Print picking lists (max %d)…"
+msgstr ""
+
+#: src/Admin/QueuePage.php:645
 msgid "Apply"
 msgstr ""
 
-#: src/Admin/QueuePage.php:574
-#: src/Admin/QueuePage.php:575
+#: src/Admin/QueuePage.php:678
+#: src/Admin/QueuePage.php:679
 msgid "Preview"
 msgstr ""
 
-#: src/Admin/QueuePage.php:639
+#: src/Admin/QueuePage.php:743
 msgid "Queue pagination"
 msgstr ""
 
@@ -555,7 +670,7 @@ msgid "Fulfillment Settings"
 msgstr ""
 
 #: src/Admin/SettingsPage.php:81
-#: src/Admin/ShellNavigation.php:52
+#: src/Admin/ShellNavigation.php:61
 msgid "Settings"
 msgstr ""
 
@@ -611,26 +726,26 @@ msgstr ""
 msgid "Fulfillment sections"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:195
-#: src/Admin/WorkspacePage.php:202
+#: src/Admin/WorkspacePage.php:208
+#: src/Admin/WorkspacePage.php:215
 msgid "Packing Workspace"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:235
+#: src/Admin/WorkspacePage.php:248
 msgid "Open a fulfillment from the Queue to start packing."
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:407
+#: src/Admin/WorkspacePage.php:420
 msgid "This fulfillment has been shipped. No further warehouse action is required on this order."
 msgstr ""
 
 #. translators: %s: tracking number
-#: src/Admin/WorkspacePage.php:411
+#: src/Admin/WorkspacePage.php:424
 #, php-format
 msgid "This fulfillment has been shipped. Tracking: %s"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:426
+#: src/Admin/WorkspacePage.php:439
 #: src/Admin/WorkspaceStageGuidance.php:152
 #: src/Admin/WorkspaceStageGuidance.php:158
 #: src/Admin/WorkspaceStageGuidance.php:164
@@ -638,274 +753,293 @@ msgstr ""
 msgid "Next order"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:435
+#: src/Admin/WorkspacePage.php:448
 msgid "Back to Queue"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:471
-#: src/Admin/WorkspacePage.php:1019
+#: src/Admin/WorkspacePage.php:484
+#: src/Admin/WorkspacePage.php:1125
 msgid "Keyboard shortcuts"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:491
+#: src/Admin/WorkspacePage.php:504
 msgid "Primary action"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:492
+#: src/Admin/WorkspacePage.php:505
 msgid "Move item focus down / up"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:493
+#: src/Admin/WorkspacePage.php:506
 msgid "Increment focused line"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:494
+#: src/Admin/WorkspacePage.php:507
 msgid "Decrement focused line"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:495
+#: src/Admin/WorkspacePage.php:508
 msgid "Complete focused line"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:496
+#: src/Admin/WorkspacePage.php:509
 msgid "Complete all lines"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:497
+#: src/Admin/WorkspacePage.php:510
 msgid "Toggle collapse-completed"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:498
+#: src/Admin/WorkspacePage.php:511
 msgid "Focus the scan sink"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:499
+#: src/Admin/WorkspacePage.php:512
 msgid "Focus tracking number"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:500
+#: src/Admin/WorkspacePage.php:513
 msgid "Focus package 1 weight"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:501
+#: src/Admin/WorkspacePage.php:514
 msgid "Focus new-note field"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:502
+#: src/Admin/WorkspacePage.php:515
 msgid "Open the Problem dialog"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:503
-#: src/Admin/WorkspacePage.php:745
-msgid "Print packing slip"
+#: src/Admin/WorkspacePage.php:516
+msgid "Print primary document (picking list or packing slip)"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:504
+#: src/Admin/WorkspacePage.php:517
 msgid "Previous / next fulfillment in the queue"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:505
+#: src/Admin/WorkspacePage.php:518
 msgid "This shortcut sheet"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:506
+#: src/Admin/WorkspacePage.php:519
 msgid "Close dialog, or return to scan sink"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:525
+#: src/Admin/WorkspacePage.php:538
 msgid "another operator"
 msgstr ""
 
 #. translators: %s: assignee display name
-#: src/Admin/WorkspacePage.php:531
+#: src/Admin/WorkspacePage.php:544
 #, php-format
 msgid "Assigned to %s"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:534
+#: src/Admin/WorkspacePage.php:547
 msgid "You can take over without losing any work already saved."
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:535
+#: src/Admin/WorkspacePage.php:548
 msgid "Take over"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:562
+#: src/Admin/WorkspacePage.php:575
 #: templates/documents/packing-slip.php:98
 msgid "Ship to"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:621
+#: src/Admin/WorkspacePage.php:634
 #: templates/documents/packing-slip.php:110
 #: templates/documents/picking-list.php:96
 msgid "Customer instructions"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:646
+#: src/Admin/WorkspacePage.php:659
 msgid "Start picking to enable quantity recording. Ordered amounts are shown below for reference."
 msgstr ""
 
 #. translators: %d: ordered qty
-#: src/Admin/WorkspacePage.php:661
-#: src/Admin/WorkspacePage.php:683
+#: src/Admin/WorkspacePage.php:674
+#: src/Admin/WorkspacePage.php:696
 #, php-format
 msgid "Ordered: %d"
 msgstr ""
 
 #. translators: 1: Picked or Packed label, 2: current qty
-#: src/Admin/WorkspacePage.php:662
+#: src/Admin/WorkspacePage.php:675
 #, php-format
 msgid "%1$s: %2$d"
 msgstr ""
 
 #. translators: %d: remaining qty
 #. translators: %d: remaining
-#: src/Admin/WorkspacePage.php:663
-#: src/Admin/WorkspacePage.php:685
+#: src/Admin/WorkspacePage.php:676
+#: src/Admin/WorkspacePage.php:698
 #, php-format
 msgid "Remaining: %d"
 msgstr ""
 
 #. translators: %s: item name
-#: src/Admin/WorkspacePage.php:675
+#: src/Admin/WorkspacePage.php:688
 #, php-format
 msgid "Quantity for %s"
 msgstr ""
 
 #. translators: %d: picked qty
-#: src/Admin/WorkspacePage.php:684
+#: src/Admin/WorkspacePage.php:697
 #, php-format
 msgid "Picked: %d"
 msgstr ""
 
 #. translators: 1: picked 2: ordered
-#: src/Admin/WorkspacePage.php:690
+#: src/Admin/WorkspacePage.php:703
 #, php-format
 msgid "Picked: %1$d / %2$d"
 msgstr ""
 
 #. translators: 1: packed 2: ordered
-#: src/Admin/WorkspacePage.php:691
+#: src/Admin/WorkspacePage.php:704
 #, php-format
 msgid "Packed: %1$d / %2$d"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:720
+#: src/Admin/WorkspacePage.php:733
 msgid "Complete all"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:725
+#: src/Admin/WorkspacePage.php:738
 msgid "Collapse completed"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:728
+#: src/Admin/WorkspacePage.php:741
 msgid "Barcode scanner input"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:744
-msgid "Documents"
-msgstr ""
-
-#: src/Admin/WorkspacePage.php:752
+#: src/Admin/WorkspacePage.php:764
 msgid "Timeline"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:777
+#: src/Admin/WorkspacePage.php:791
 msgid "View full audit trail"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:797
+#: src/Admin/WorkspacePage.php:809
+msgid "No printable document is available in this stage."
+msgstr ""
+
+#. translators: %s: document type label
+#: src/Admin/WorkspacePage.php:827
+#, php-format
+msgid "Print %s"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:865
+msgid "Not printed yet"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:870
+msgid "system"
+msgstr ""
+
+#. translators: 1: datetime, 2: user id or "system", 3: template version
+#: src/Admin/WorkspacePage.php:874
+#, php-format
+msgid "Last printed %1$s by %2$s (template %3$s)"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:903
 msgid "Shipment and packages"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:799
+#: src/Admin/WorkspacePage.php:905
 msgid "(later stage)"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:828
+#: src/Admin/WorkspacePage.php:934
 msgid "Enter a carrier or tracking number to create a shipment."
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:830
-#: src/Admin/WorkspacePage.php:831
-#: src/Admin/WorkspacePage.php:879
-#: src/Admin/WorkspacePage.php:880
+#: src/Admin/WorkspacePage.php:936
+#: src/Admin/WorkspacePage.php:937
+#: src/Admin/WorkspacePage.php:985
+#: src/Admin/WorkspacePage.php:986
 msgid "Carrier"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:832
+#: src/Admin/WorkspacePage.php:938
 msgid "— Select —"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:840
-#: src/Admin/WorkspacePage.php:841
-#: src/Admin/WorkspacePage.php:842
-#: src/Admin/WorkspacePage.php:893
-#: src/Admin/WorkspacePage.php:895
+#: src/Admin/WorkspacePage.php:946
+#: src/Admin/WorkspacePage.php:947
+#: src/Admin/WorkspacePage.php:948
+#: src/Admin/WorkspacePage.php:999
+#: src/Admin/WorkspacePage.php:1001
 msgid "Tracking number"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:845
-#: src/Admin/WorkspacePage.php:898
+#: src/Admin/WorkspacePage.php:951
+#: src/Admin/WorkspacePage.php:1004
 #: templates/documents/packing-slip.php:138
 msgid "Packages"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:854
-#: src/Admin/WorkspacePage.php:913
+#: src/Admin/WorkspacePage.php:960
+#: src/Admin/WorkspacePage.php:1019
 msgid "Add package"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:936
+#: src/Admin/WorkspacePage.php:1042
 msgid "Weight"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:940
+#: src/Admin/WorkspacePage.php:1046
 msgid "Length"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:944
+#: src/Admin/WorkspacePage.php:1050
 msgid "Width"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:948
+#: src/Admin/WorkspacePage.php:1054
 msgid "Height"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:959
-#: src/Admin/WorkspacePage.php:960
+#: src/Admin/WorkspacePage.php:1065
+#: src/Admin/WorkspacePage.php:1066
 msgid "Colli tracking number"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:989
+#: src/Admin/WorkspacePage.php:1095
 msgid "Add a note…"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:990
+#: src/Admin/WorkspacePage.php:1096
 msgid "Add a note"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1020
+#: src/Admin/WorkspacePage.php:1126
 msgid "? Shortcuts"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1112
+#: src/Admin/WorkspacePage.php:1218
 msgid "← Previous"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1120
+#: src/Admin/WorkspacePage.php:1226
 msgid "Next →"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1156
+#: src/Admin/WorkspacePage.php:1262
 msgid "Reason required"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1158
+#: src/Admin/WorkspacePage.php:1264
 msgid "This action is recorded on the audit trail. Add a reason:"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1159
+#: src/Admin/WorkspacePage.php:1265
 msgid "Confirm"
 msgstr ""
 
@@ -1081,6 +1215,22 @@ msgstr ""
 msgid "Warehouse Lead"
 msgstr ""
 
+#. translators: %s: document type label
+#: src/Documents/DocumentEventLabels.php:30
+#, php-format
+msgid "%s printed."
+msgstr ""
+
+#. translators: %s: document type label
+#: src/Documents/DocumentEventLabels.php:38
+#, php-format
+msgid "%s reprinted."
+msgstr ""
+
+#: src/Documents/DocumentEventLabels.php:58
+msgid "Document"
+msgstr ""
+
 #: src/Woo/WorkspaceFlags.php:97
 msgid "Customer note"
 msgstr ""
@@ -1091,11 +1241,6 @@ msgstr ""
 
 #: src/Woo/WorkspaceFlags.php:111
 msgid "Repeat problem customer"
-msgstr ""
-
-#: templates/documents/packing-slip.php:32
-#: templates/documents/packing-slip.php:53
-msgid "Packing slip"
 msgstr ""
 
 #. translators: %s: order number
@@ -1145,11 +1290,6 @@ msgstr ""
 #: templates/documents/packing-slip.php:145
 #, php-format
 msgid "Package %1$d"
-msgstr ""
-
-#: templates/documents/picking-list.php:30
-#: templates/documents/picking-list.php:51
-msgid "Picking list"
 msgstr ""
 
 #: templates/documents/picking-list.php:106
