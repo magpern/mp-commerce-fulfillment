@@ -387,7 +387,20 @@ final class DocumentService {
 			)
 		);
 
-		return DocumentOutcome::succeeded( $html, $document_id );
+		return DocumentOutcome::succeeded(
+			$html,
+			$document_id,
+			array(
+				'document_type'    => $filtered->doc_type(),
+				'template_version' => $template_version,
+				'stored'           => $stored,
+				'file_path'        => $file_path,
+				'mime'             => $mime,
+				'bytes'            => $bytes,
+				'sha256'           => $sha256,
+				'file_available'   => $stored && null !== $file_path,
+			)
+		);
 	}
 
 	/**

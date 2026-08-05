@@ -17,11 +17,14 @@ use MPCF\Application\NoteService;
 use MPCF\Application\ShippingService;
 use MPCF\Application\WorkflowService;
 use MPCF\Capabilities;
+use MPCF\Documents\DocumentEventLabels;
+use MPCF\Documents\DocumentPrintContext;
 use MPCF\Domain\CarrierRegistry;
 use MPCF\Domain\Event\Actor;
 use MPCF\Domain\Fulfillment;
 use MPCF\Domain\OrderSnapshot;
 use MPCF\Domain\OrderSource;
+use MPCF\Domain\Repository\DocumentRepository;
 use MPCF\Domain\Shipping\Package;
 use MPCF\Domain\Shipping\Shipment;
 use MPCF\Domain\Workflow\State;
@@ -141,6 +144,13 @@ final class WorkspacePage implements Page {
 	private StoreUnits $units;
 
 	/**
+	 * Document generation records (last-printed status).
+	 *
+	 * @var DocumentRepository
+	 */
+	private DocumentRepository $documents;
+
+	/**
 	 * Builds the page.
 	 *
 	 * @param AdminPageShell           $shell       Page-shell chrome renderer.
@@ -154,6 +164,7 @@ final class WorkspacePage implements Page {
 	 * @param OrderSource              $orders      A live read of the owning order, for its ship-to address.
 	 * @param WorkflowDefinition       $definition  The governing workflow.
 	 * @param StoreUnits               $units       The store's configured weight/dimension display units.
+	 * @param DocumentRepository       $documents   Document generation records.
 	 */
 	public function __construct(
 		AdminPageShell $shell,
@@ -166,7 +177,8 @@ final class WorkspacePage implements Page {
 		AssignmentService $assignments,
 		OrderSource $orders,
 		WorkflowDefinition $definition,
-		StoreUnits $units
+		StoreUnits $units,
+		DocumentRepository $documents
 	) {
 		$this->shell       = $shell;
 		$this->renderer    = $renderer;
@@ -179,6 +191,7 @@ final class WorkspacePage implements Page {
 		$this->orders      = $orders;
 		$this->definition  = $definition;
 		$this->units       = $units;
+		$this->documents   = $documents;
 	}
 
 	/**
@@ -500,7 +513,7 @@ final class WorkspacePage implements Page {
 			array( 'w', __( 'Focus package 1 weight', 'mp-commerce-fulfillment' ) ),
 			array( 'n', __( 'Focus new-note field', 'mp-commerce-fulfillment' ) ),
 			array( 'p', __( 'Open the Problem dialog', 'mp-commerce-fulfillment' ) ),
-			array( 'Shift + P', __( 'Print packing slip', 'mp-commerce-fulfillment' ) ),
+			array( 'Shift + P', __( 'Print primary document (picking list or packing slip)', 'mp-commerce-fulfillment' ) ),
 			array( '[ / ]', __( 'Previous / next fulfillment in the queue', 'mp-commerce-fulfillment' ) ),
 			array( '?', __( 'This shortcut sheet', 'mp-commerce-fulfillment' ) ),
 			array( 'Esc', __( 'Close dialog, or return to scan sink', 'mp-commerce-fulfillment' ) ),
@@ -741,8 +754,7 @@ final class WorkspacePage implements Page {
 		}
 
 		if ( current_user_can( Capabilities::RENDER_DOCUMENTS ) ) {
-			echo '<h3>' . esc_html__( 'Documents', 'mp-commerce-fulfillment' ) . '</h3>';
-			printf( '<button type="button" class="button" data-mpcf-print-packing-slip>%s</button>', esc_html__( 'Print packing slip', 'mp-commerce-fulfillment' ) );
+			$this->render_documents_section( $fulfillment );
 		}
 
 		if ( current_user_can( Capabilities::ADD_NOTES ) ) {
@@ -760,12 +772,14 @@ final class WorkspacePage implements Page {
 		foreach ( $this->detail->get_recent_timeline( $fulfillment->id(), 5 ) as $event ) {
 			$actor = '' !== (string) $event['actor_label_snapshot'] ? (string) $event['actor_label_snapshot'] : __( 'System', 'mp-commerce-fulfillment' );
 			$when  = human_time_diff( strtotime( (string) $event['created_at'] ) ) . ' ' . __( 'ago', 'mp-commerce-fulfillment' );
+			$label = DocumentEventLabels::describe( (string) $event['event_type'], (array) ( $event['payload'] ?? array() ) );
+			$body  = null !== $label ? $label : (string) $event['event_type'];
 
 			echo $this->renderer->timeline_item( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				'dashicons-clock',
 				$actor, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				$when, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				'<p>' . esc_html( (string) $event['event_type'] ) . '</p>'
+				'<p>' . esc_html( $body ) . '</p>'
 			);
 		}
 
@@ -776,6 +790,98 @@ final class WorkspacePage implements Page {
 			esc_url( admin_url( 'admin.php?page=' . FulfillmentDetailPage::SLUG . '&fulfillment_id=' . $fulfillment->id() ) ),
 			esc_html__( 'View full audit trail', 'mp-commerce-fulfillment' )
 		);
+	}
+
+	/**
+	 * Bounded Documents action group: picking list + packing slip, stage-gated
+	 * via {@see DocumentPrintContext} / {@see \MPCF\Domain\Document\DocumentStagePolicy}.
+	 *
+	 * @param Fulfillment $fulfillment Fulfillment being worked.
+	 */
+	private function render_documents_section( Fulfillment $fulfillment ): void {
+		echo '<div class="mpcf-workspace__documents" data-mpcf-documents>';
+		echo '<h3>' . esc_html__( 'Documents', 'mp-commerce-fulfillment' ) . '</h3>';
+
+		$primary = DocumentPrintContext::primary_doc_type( $fulfillment );
+
+		if ( null === $primary ) {
+			echo '<p class="description" data-mpcf-documents-denied>';
+			echo esc_html__( 'No printable document is available in this stage.', 'mp-commerce-fulfillment' );
+			echo '</p>';
+		}
+
+		echo '<div class="mpcf-workspace__document-actions">';
+
+		foreach ( DocumentPrintContext::actions( $fulfillment ) as $action ) {
+			$attrs = sprintf(
+				'type="button" class="button%s" data-mpcf-print-document="%s"%s%s%s',
+				$action['primary'] ? ' button-primary' : '',
+				esc_attr( $action['id'] ),
+				$action['primary'] ? ' data-mpcf-print-primary' : '',
+				$action['allowed'] ? '' : ' disabled',
+				$action['allowed'] ? '' : ' title="' . esc_attr( $action['message'] ) . '" data-mpcf-denied-reason="' . esc_attr( $action['message'] ) . '"'
+			);
+
+			$label = sprintf(
+				/* translators: %s: document type label */
+				__( 'Print %s', 'mp-commerce-fulfillment' ),
+				$action['label']
+			);
+
+			printf( '<button %s>%s</button> ', $attrs, esc_html( $label ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $attrs built with esc_attr above.
+
+			if ( ! $action['allowed'] && '' !== $action['message'] ) {
+				printf(
+					'<p class="description mpcf-workspace__document-denied" data-mpcf-doc-denied="%s">%s</p>',
+					esc_attr( $action['id'] ),
+					esc_html( $action['message'] )
+				);
+			}
+		}
+
+		echo '</div>';
+
+		$this->render_last_printed_status( (int) $fulfillment->id() );
+
+		echo '</div>';
+	}
+
+	/**
+	 * Latest printed document status per type.
+	 *
+	 * @param int $fulfillment_id Fulfillment id.
+	 */
+	private function render_last_printed_status( int $fulfillment_id ): void {
+		echo '<ul class="mpcf-workspace__document-status" data-mpcf-document-status>';
+
+		foreach ( array( 'picking_list', 'packing_slip' ) as $doc_type ) {
+			$latest = $this->documents->latest_for_fulfillment_and_type( $fulfillment_id, $doc_type );
+			$label  = DocumentEventLabels::type_label( $doc_type );
+
+			echo '<li data-mpcf-doc-status="' . esc_attr( $doc_type ) . '">';
+			echo '<strong>' . esc_html( $label ) . ':</strong> ';
+
+			if ( null === $latest ) {
+				echo esc_html__( 'Not printed yet', 'mp-commerce-fulfillment' );
+			} else {
+				$when = $latest->created_at()->format( 'Y-m-d H:i' );
+				$by   = $latest->rendered_by() > 0
+					? (string) $latest->rendered_by()
+					: __( 'system', 'mp-commerce-fulfillment' );
+
+				printf(
+					/* translators: 1: datetime, 2: user id or "system", 3: template version */
+					esc_html__( 'Last printed %1$s by %2$s (template %3$s)', 'mp-commerce-fulfillment' ),
+					esc_html( $when ),
+					esc_html( $by ),
+					esc_html( $latest->template_version() )
+				);
+			}
+
+			echo '</li>';
+		}
+
+		echo '</ul>';
 	}
 
 	/**

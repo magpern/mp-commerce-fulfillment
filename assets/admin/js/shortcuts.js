@@ -39,6 +39,7 @@
  */
 
 import { incrementRow, decrementRow, completeRow, completeAllRows, toggleCollapseCompleted } from './packing.js';
+import { printPrimaryDocument } from './documents.js';
 
 function isFormField( element ) {
 	if ( ! element || -1 === [ 'INPUT', 'TEXTAREA', 'SELECT' ].indexOf( element.tagName ) ) {
@@ -254,7 +255,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 
 			case 'P':
 				event.preventDefault();
-				click( '[data-mpcf-print-packing-slip]' );
+				printPrimaryDocument();
 				break;
 
 			case '[':

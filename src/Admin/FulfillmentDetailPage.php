@@ -400,6 +400,12 @@ final class FulfillmentDetailPage implements Page {
 	 * @param array<string, mixed> $payload    Event payload.
 	 */
 	private function describe_event( string $event_type, array $payload ): string {
+		$document_label = \MPCF\Documents\DocumentEventLabels::describe( $event_type, $payload );
+
+		if ( null !== $document_label ) {
+			return $document_label;
+		}
+
 		if ( 'fulfillment.created' === $event_type ) {
 			return __( 'Fulfillment created from order.', 'mp-commerce-fulfillment' );
 		}
