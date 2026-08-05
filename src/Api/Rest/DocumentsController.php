@@ -17,12 +17,10 @@ use WP_REST_Request;
 use WP_REST_Server;
 
 /**
- * `POST /fulfillments/{id}/documents/render` — reuses {@see DocumentService}
- * exactly as a future workspace "Print packing slip" action will
- * (invariant I11). There is no stored file to link to (every Milestone 2
- * render is render-to-print, §10), so the response carries the rendered
- * HTML itself for the caller to load into a same-origin iframe and print
- * (§IV.8) — never a second round trip to fetch it.
+ * `POST /fulfillments/{id}/documents/render` — thin controller over
+ * {@see DocumentService}. Accepts optional `doc_type` (defaults to
+ * packing_slip for M2 compatibility). Returns rendered HTML for browser
+ * printing plus storage metadata (M4-B/C).
  */
 final class DocumentsController extends AbstractRestController {
 
@@ -73,10 +71,16 @@ final class DocumentsController extends AbstractRestController {
 					'callback'            => array( $this, 'render' ),
 					'permission_callback' => $this->require_capability( Capabilities::RENDER_DOCUMENTS ),
 					'args'                => array(
-						'id' => array(
+						'id'       => array(
 							'type'              => 'integer',
 							'required'          => true,
 							'validate_callback' => static fn( $value ): bool => is_numeric( $value ) && (int) $value > 0,
+						),
+						'doc_type' => array(
+							'type'              => 'string',
+							'required'          => false,
+							'default'           => 'packing_slip',
+							'sanitize_callback' => 'sanitize_key',
 						),
 					),
 				),
@@ -91,8 +95,20 @@ final class DocumentsController extends AbstractRestController {
 	 */
 	public function render( WP_REST_Request $request ) {
 		$fulfillment_id = (int) $request->get_param( 'id' );
+		$doc_type       = (string) $request->get_param( 'doc_type' );
 
-		$outcome = $this->documents->render_packing_slip( $fulfillment_id, self::current_actor() );
+		if ( '' === $doc_type ) {
+			$doc_type = 'packing_slip';
+		}
+
+		$outcome = $this->documents->render(
+			$fulfillment_id,
+			$doc_type,
+			array(
+				'actor' => self::current_actor(),
+				'can'   => static fn( string $capability ): bool => current_user_can( $capability ),
+			)
+		);
 
 		if ( ! $outcome->is_success() ) {
 			return self::failure_error( (string) $outcome->failure_code(), (string) $outcome->failure_message() );
@@ -100,13 +116,18 @@ final class DocumentsController extends AbstractRestController {
 
 		$view        = $this->detail->get( $fulfillment_id );
 		$transitions = $this->workflow->available_transitions( $fulfillment_id, 'current_user_can' );
+		$meta        = $outcome->meta();
 
 		return $this->respond(
 			array(
-				'html'        => $outcome->html(),
-				'document_id' => $outcome->document_id(),
-				'fulfillment' => null !== $view ? self::fulfillment_resource( $view->fulfillment() ) : null,
-				'transitions' => self::transitions_resource( $transitions ),
+				'html'             => $outcome->html(),
+				'document_id'      => $outcome->document_id(),
+				'document_type'    => (string) ( $meta['document_type'] ?? $doc_type ),
+				'template_version' => (string) ( $meta['template_version'] ?? '' ),
+				'stored'           => (bool) ( $meta['stored'] ?? false ),
+				'file_available'   => (bool) ( $meta['file_available'] ?? false ),
+				'fulfillment'      => null !== $view ? self::fulfillment_resource( $view->fulfillment() ) : null,
+				'transitions'      => self::transitions_resource( $transitions ),
 			),
 			201
 		);

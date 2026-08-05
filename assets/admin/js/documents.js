@@ -1,35 +1,35 @@
 /**
- * Packing-slip printing for the Packing Workspace.
+ * Document printing for the Packing Workspace (M4-C).
  *
- * Vanilla ES module, no build step (ADR-0003/ADR-0006). Architecture Plan
- * §10.8: browser printing is the only mechanism M2 ships — this renders
- * into a hidden same-origin iframe and calls `window.print()`, never a new
- * tab (which would need closing) and never navigating the workspace away
- * from itself.
+ * Vanilla ES module, no build step (ADR-0003/ADR-0006). Browser printing
+ * remains the only mechanism — hidden same-origin iframe + window.print().
  */
 
 import { api } from './api.js';
+
+var printInFlight = false;
 
 function workspace() {
 	return window.MpcfWorkspace;
 }
 
-function notifyError( error ) {
+function notify( message, variant ) {
 	document.dispatchEvent(
 		new CustomEvent( 'data-mpcf-toast', {
 			detail: {
-				message: error.message,
-				variant: 'error'
+				message: message,
+				variant: variant || 'error'
 			}
 		} )
 	);
 }
 
+function notifyError( error ) {
+	notify( error.message || 'Document print failed', 'error' );
+}
+
 /**
- * Renders the given HTML into a hidden iframe and prints it. The iframe
- * is removed a minute later — long enough to outlive any print dialog,
- * short enough that repeated prints in one session do not accumulate
- * hidden iframes indefinitely.
+ * Renders HTML into a hidden iframe and prints it.
  *
  * @param {string} html
  */
@@ -43,10 +43,6 @@ function printHtml( html ) {
 	iframe.style.height = '0';
 	iframe.style.border = '0';
 
-	// Set srcdoc and the load handler before inserting into the DOM.
-	// Appending an empty iframe fires `load` for about:blank; assigning
-	// srcdoc afterward fires a second `load` — which opened an empty print
-	// dialog before the packing slip was ready.
 	iframe.srcdoc = html;
 	iframe.addEventListener(
 		'load',
@@ -66,27 +62,123 @@ function printHtml( html ) {
 	}, 60000 );
 }
 
-document.addEventListener( 'DOMContentLoaded', function () {
-	var button = document.querySelector( '[data-mpcf-print-packing-slip]' );
+/**
+ * Refreshes last-printed status for one type from a successful render response.
+ *
+ * @param {string} docType
+ * @param {object} result
+ */
+function refreshStatus( docType, result ) {
+	var item = document.querySelector( '[data-mpcf-doc-status="' + docType + '"]' );
 
-	if ( ! button ) {
+	if ( ! item ) {
 		return;
 	}
 
-	button.addEventListener( 'click', function () {
-		var ws = workspace();
+	var version = result.template_version || '';
+	var label = item.querySelector( 'strong' );
+	var strong = label ? label.outerHTML + ' ' : '';
+	var now = new Date();
+	var stamp =
+		now.getFullYear() +
+		'-' +
+		String( now.getMonth() + 1 ).padStart( 2, '0' ) +
+		'-' +
+		String( now.getDate() ).padStart( 2, '0' ) +
+		' ' +
+		String( now.getHours() ).padStart( 2, '0' ) +
+		':' +
+		String( now.getMinutes() ).padStart( 2, '0' );
 
-		api.renderDocument( ws.store.getFulfillmentId() )
-			.then( function ( result ) {
-				printHtml( result.html );
+	item.innerHTML =
+		strong +
+		'Last printed ' +
+		stamp +
+		' (template ' +
+		version +
+		')';
+}
 
-				// The print dialog is effectively modal in every browser
-				// this needs to support, though no standard event marks
-				// its close — restoring immediately after `print()`
-				// returns is the closest approximation available
-				// (§IV.5.4: "focus returns to the scan sink").
+/**
+ * Prints one document type for the current fulfillment.
+ *
+ * @param {string} docType
+ * @returns {Promise<void>}
+ */
+export function printDocument( docType ) {
+	if ( printInFlight ) {
+		return Promise.resolve();
+	}
+
+	var ws = workspace();
+	var fulfillmentId = ws && ws.store ? ws.store.getFulfillmentId() : 0;
+
+	if ( ! fulfillmentId ) {
+		notifyError( new Error( 'No fulfillment loaded.' ) );
+		return Promise.resolve();
+	}
+
+	printInFlight = true;
+
+	return api
+		.renderDocument( fulfillmentId, docType )
+		.then( function ( result ) {
+			printHtml( result.html );
+			refreshStatus( docType, result );
+			notify(
+				( result.document_type || docType ) + ' printed.',
+				'success'
+			);
+
+			if ( ws && ws.focus && ws.focus.restingFocus ) {
 				ws.focus.restingFocus();
-			} )
-			.catch( notifyError );
+			}
+		} )
+		.catch( notifyError )
+		.finally( function () {
+			printInFlight = false;
+		} );
+}
+
+/**
+ * Shift+P primary print: clicks the primary enabled button, or toasts the denial.
+ */
+export function printPrimaryDocument() {
+	var primary = document.querySelector( '[data-mpcf-print-primary]' );
+
+	if ( primary && ! primary.disabled ) {
+		primary.click();
+		return;
+	}
+
+	if ( primary && primary.getAttribute( 'data-mpcf-denied-reason' ) ) {
+		notify( primary.getAttribute( 'data-mpcf-denied-reason' ), 'error' );
+		return;
+	}
+
+	var denied = document.querySelector( '[data-mpcf-documents-denied]' );
+	if ( denied ) {
+		notify( denied.textContent.trim(), 'error' );
+		return;
+	}
+
+	notify( 'No printable document is available in this stage.', 'error' );
+}
+
+document.addEventListener( 'DOMContentLoaded', function () {
+	var root = document.querySelector( '[data-mpcf-documents]' );
+
+	if ( ! root ) {
+		return;
+	}
+
+	root.addEventListener( 'click', function ( event ) {
+		var button = event.target.closest( '[data-mpcf-print-document]' );
+
+		if ( ! button || button.disabled ) {
+			return;
+		}
+
+		printDocument( button.getAttribute( 'data-mpcf-print-document' ) );
 	} );
 } );

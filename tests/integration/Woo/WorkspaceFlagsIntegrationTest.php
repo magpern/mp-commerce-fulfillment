@@ -125,7 +125,8 @@ final class WorkspaceFlagsIntegrationTest extends WP_UnitTestCase {
 			new AssignmentService( $this->fulfillments, $this->events, $dispatcher, $clock ),
 			new WooOrderSource(),
 			$definition,
-			new StoreUnits()
+			new StoreUnits(),
+			new \MPCF\Infrastructure\Database\WpdbDocumentRepository()
 		);
 	}
 

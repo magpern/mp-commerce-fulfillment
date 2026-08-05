@@ -388,7 +388,8 @@ final class Plugin {
 			$assignments,
 			new WooOrderSource(),
 			$definition,
-			new StoreUnits()
+			new StoreUnits(),
+			new WpdbDocumentRepository()
 		);
 
 		( new Menu(

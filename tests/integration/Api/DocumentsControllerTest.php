@@ -88,8 +88,56 @@ final class DocumentsControllerTest extends WP_UnitTestCase {
 		self::assertStringContainsString( 'Anna Andersson', $data['html'] );
 		self::assertStringContainsString( '<style>', $data['html'] );
 		self::assertIsInt( $data['document_id'] );
+		self::assertSame( 'packing_slip', $data['document_type'] );
+		self::assertTrue( $data['stored'] );
+		self::assertTrue( $data['file_available'] );
+		self::assertNotSame( '', $data['template_version'] );
 		self::assertSame( $fulfillment_id, $data['fulfillment']['id'] );
 		self::assertNotEmpty( $data['transitions'] );
+	}
+
+	public function test_render_accepts_picking_list_doc_type(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$order       = $this->create_paid_order_with_shipping_address();
+		$fulfillment = $this->fulfillments->find_by_order_id( $order->get_id() );
+		$fulfillment->apply_transition( 'picking', null, new \DateTimeImmutable() );
+		$this->fulfillments->save( $fulfillment );
+		$fulfillment_id = (int) $fulfillment->id();
+
+		$request = new WP_REST_Request( 'POST', "/mpcf/v1/fulfillments/{$fulfillment_id}/documents/render" );
+		$request->set_body_params( array( 'doc_type' => 'picking_list' ) );
+
+		$response = $this->server->dispatch( $request );
+
+		self::assertSame( 201, $response->get_status() );
+		$data = $response->get_data();
+		self::assertSame( 'picking_list', $data['document_type'] );
+		self::assertStringContainsString( 'Picking list', $data['html'] );
+	}
+
+	public function test_render_rejects_unknown_doc_type(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$fulfillment_id = $this->seed_fulfillment_with_shipping_address();
+		$request        = new WP_REST_Request( 'POST', "/mpcf/v1/fulfillments/{$fulfillment_id}/documents/render" );
+		$request->set_body_params( array( 'doc_type' => 'invoice' ) );
+
+		$response = $this->server->dispatch( $request );
+
+		self::assertSame( 422, $response->get_status() );
+	}
+
+	public function test_render_rejects_picking_list_in_packing_stage(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$fulfillment_id = $this->seed_fulfillment_with_shipping_address();
+		$request        = new WP_REST_Request( 'POST', "/mpcf/v1/fulfillments/{$fulfillment_id}/documents/render" );
+		$request->set_body_params( array( 'doc_type' => 'picking_list' ) );
+
+		$response = $this->server->dispatch( $request );
+
+		self::assertSame( 422, $response->get_status() );
 	}
 
 	public function test_render_is_forbidden_for_a_role_without_render_documents(): void {

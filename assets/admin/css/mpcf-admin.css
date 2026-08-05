@@ -166,6 +166,29 @@ body.mpcf-operator-mode #wpfooter {
 	padding-top: 0.75rem;
 }
 
+.mpcf-workspace__documents {
+	margin-bottom: 1.25rem;
+}
+
+.mpcf-workspace__document-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+	margin-bottom: 0.5rem;
+}
+
+.mpcf-workspace__document-denied {
+	flex-basis: 100%;
+	margin: 0;
+}
+
+.mpcf-workspace__document-status {
+	margin: 0.5rem 0 0;
+	padding-left: 1.25rem;
+	font-size: 0.9em;
+}
+
 .mpcf-workspace__secondary-action {
 	opacity: 0.9;
 }

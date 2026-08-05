@@ -139,7 +139,9 @@ export var api = {
 		return request( 'GET', 'carriers' );
 	},
 
-	renderDocument: function ( fulfillmentId ) {
-		return request( 'POST', 'fulfillments/' + fulfillmentId + '/documents/render' );
+	renderDocument: function ( fulfillmentId, docType ) {
+		return request( 'POST', 'fulfillments/' + fulfillmentId + '/documents/render', {
+			doc_type: docType || 'packing_slip'
+		} );
 	}
 };
