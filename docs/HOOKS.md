@@ -16,7 +16,7 @@ Milestone 2).
 | `admin_init` | action | `MPCF\Plugin::init()` | default | Runs `Migrator::maybe_migrate()` — the drift check for bind-mount deployments that never fire the activation hook (§7). |
 | `admin_menu` | action | `MPCF\Plugin::wire_admin()` | priority `20` | Registers `Fulfillment Detail` as a real submenu page (so its capability/URL resolve), then immediately calls `remove_submenu_page()` — reachable only from Queue/Dashboard, never a standalone nav item. |
 | `admin_menu` | action | `Vendor\Mpds\PageShell\Menu::register()` | default | Registers the top-level "Fulfillment" menu (Dashboard + Queue), invoked via `Plugin::wire_admin()`. |
-| `admin_enqueue_scripts` | action | `Admin\Assets::maybe_enqueue()` | default | Enqueues MPDS + plugin admin CSS/JS, gated to this plugin's own screens (`mpcf-dashboard`, `mpcf-queue`, `mpcf-fulfillment-detail`, `mpcf-workspace`). Script Modules API (`wp_enqueue_script_module`, WP 6.5+) enqueues five workspace ES modules from `assets/admin/js/`. |
+| `admin_enqueue_scripts` | action | `Admin\Assets::maybe_enqueue()` | default | Enqueues MPDS + plugin admin CSS/JS, gated to this plugin's own screens (`mpcf-dashboard`, `mpcf-queue`, `mpcf-orders`, `mpcf-settings`, `mpcf-fulfillment-detail`, `mpcf-workspace`). Script Modules API (`wp_enqueue_script_module`, WP 6.5+) enqueues five workspace ES modules from `assets/admin/js/`. |
 | `admin_body_class` | filter | `Admin\Assets::maybe_add_body_class()` | default | Appends `mpcf-ui-scope mpcf-admin` on this plugin's own screens. |
 | `admin_body_class` | filter | `Admin\OperatorMode::maybe_add_body_class()` | default | Appends `mpcf-operator-mode` for operator-tier users when the `operator_mode_enabled` setting is on and the user is not an admin/lead — CSS then hides the rest of wp-admin's nav. |
 | `woocommerce_payment_complete` | action | `Woo\IntakeHooks::handle_order_paid()` | default | Synchronous order-to-fulfillment intake on payment completion (classic and Blocks checkout). |
@@ -73,6 +73,8 @@ Full endpoint documentation: `docs/API.md`.
 | `mpcf_document_types` | filter | `src/Documents/DocumentTypeRegistry.php` | Amend the small packing_slip / picking_list type map. Malformed entries are dropped. |
 | `mpcf_document_template` | filter | `src/Documents/TemplateRegistry.php` | Override template path before theme/bundled resolution. Must be a readable `.php` file. |
 | `mpcf_document_model` | filter | `src/Application/DocumentService.php` | Amend the assembled `DocumentModel` after core assemble and before render. Must return a `DocumentModel` with the same `doc_type`. |
+
+M4-B did not add public hooks. Branding is settings-backed; storage is orchestrated solely by `DocumentService`.
 
 All other v1.0 extension surfaces (`mpcf_workflows`, `mpcf_carriers`,
 `mpcf_event` + per-type actions, `mpcf_intake_should_create`) remain

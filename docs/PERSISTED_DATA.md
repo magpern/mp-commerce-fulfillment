@@ -32,7 +32,7 @@ DDL in `MPCF\Infrastructure\Database\Schema` (see `docs/ARCHITECTURE_PLAN.md`
 | `mpcf_shipments` | 4 | The consignment (one carrier handover) — carrier, tracking, status, timestamps. |
 | `mpcf_packages` | 4 | Physical boxes within a shipment (ADR-0005/D19) — weight, dimensions, colli tracking, a reserved `label_path` (NULL until M12). |
 | `mpcf_package_items` | 4 | Per-package line-quantity allocations. Milestone 2 always allocates every packed line to package 1 (PO decision, §IV.0.2); the shape already supports M4's line-allocation split. |
-| `mpcf_documents` | 5 | Document generation record (§10) — one row per render, `file_path` NULL for render-to-print (M2/M4-A). Indexes: `fulfillment_id`, `doc_type`. M4-A adds repository reads (`get` / `list_for_fulfillment` / `latest_for_fulfillment_and_type`) without a schema bump; a composite `(fulfillment_id, doc_type, created_at)` may be added in M4-D if history volume requires it. Protected HTML storage and `source_document_id` are M4-B/M4-D. |
+| `mpcf_documents` | 5 | Document generation record (§10) — one row per fresh render. M4-B stores relative `file_path` under the protected upload root for packing_slip and picking_list; integrity (`mime`, `bytes`, `sha256`) lives in the `document.rendered` event payload (no schema bump). Indexes: `fulfillment_id`, `doc_type`. Composite `(fulfillment_id, doc_type, created_at)` and `source_document_id` deferred to M4-D. |
 
 ## Capabilities and roles
 
@@ -84,8 +84,10 @@ user-meta, extending that list is the only change `uninstall.php` needs.
 
 ## Directories
 
-None created in M0. Milestone 5 introduces the protected photo store under
-`wp-content/uploads/mpcf/`.
+Protected upload root under `wp-content/uploads/mpcf/` (ADR-0004). M4-B
+stores canonical document HTML under `mpcf/documents/{yyyy}/{mm}/{fulfillment_id}/`.
+Inventoried as `PersistedKeys::upload_directories()` → `mpcf`. Removed on
+uninstall when `remove_data_on_uninstall` is enabled.
 
 ## Uninstall policy
 
