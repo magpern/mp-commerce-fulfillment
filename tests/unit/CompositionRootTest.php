@@ -113,6 +113,7 @@ final class CompositionRootTest extends TestCase {
 			'PackagesController',
 			'CarriersController',
 			'BundledCarrierRegistry',
+			'NotificationConfigurationService',
 			'DocumentsController',
 			'DocumentService',
 			'HtmlRenderer',

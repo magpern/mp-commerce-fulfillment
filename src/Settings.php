@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace MPCF;
 
+use MPCF\Domain\Notification\NotificationStrategy;
+
 /**
  * Sole owner of the `mpcf_settings` option.
  *
@@ -35,12 +37,16 @@ final class Settings {
 	 * `require_tracking_before_ship` (Architecture Plan §IV.5.3/§IV.6/F21).
 	 * 5: Documents branding (`documents_store_name`, `documents_address`,
 	 * `documents_footer`, `documents_logo_attachment_id`) for M4-B.
+	 * 6: Notification configuration (M5-B): `notification_strategy`,
+	 * sender/reply/footer/subject/introduction/signature keys. Carrier
+	 * default remains `default_carrier_id`; registry fallback to `other`
+	 * is applied by NotificationConfigurationService, not here (purity).
 	 * Each bump is purely informational (`sanitize()` always rebuilds the
 	 * canonical shape from `defaults()`, so there is no destructive
 	 * migration step to write for a purely additive change like any of
 	 * these).
 	 */
-	public const SCHEMA_VERSION = 5;
+	public const SCHEMA_VERSION = 6;
 
 	/**
 	 * Inbound cancel/refund behavior: move the fulfillment straight to
@@ -83,14 +89,14 @@ final class Settings {
 	 */
 	public static function defaults(): array {
 		return array(
-			'schema_version'               => self::SCHEMA_VERSION,
+			'schema_version'                  => self::SCHEMA_VERSION,
 
 			/*
 			 * Data retention on uninstall. Default off: fulfillment history
 			 * is warehouse evidence, deleting it must be a deliberate act
 			 * (invariant I12).
 			 */
-			'remove_data_on_uninstall'     => false,
+			'remove_data_on_uninstall'        => false,
 
 			/*
 			 * Outbound bridge (Architecture Plan §6.6, open decision P2):
@@ -98,7 +104,7 @@ final class Settings {
 			 * `completed`. Default on, prominently configurable, off means
 			 * the bridge never touches WC order status.
 			 */
-			'outbound_bridge_enabled'      => true,
+			'outbound_bridge_enabled'         => true,
 
 			/*
 			 * Inbound bridge, per §6.6: default automatic for cancellation
@@ -108,8 +114,8 @@ final class Settings {
 			 * is the case that most often needs a human look, cancelling
 			 * before it has isn't.
 			 */
-			'inbound_cancel_behavior'      => self::BRIDGE_BEHAVIOR_CANCEL,
-			'inbound_refund_behavior'      => self::BRIDGE_BEHAVIOR_FLAG,
+			'inbound_cancel_behavior'         => self::BRIDGE_BEHAVIOR_CANCEL,
+			'inbound_refund_behavior'         => self::BRIDGE_BEHAVIOR_FLAG,
 
 			/*
 			 * Operator Mode (D18, Architecture Plan Sec9.1): default off.
@@ -117,7 +123,7 @@ final class Settings {
 			 * (Admin\OperatorMode) — administrators always keep full chrome
 			 * regardless of this setting.
 			 */
-			'operator_mode_enabled'        => false,
+			'operator_mode_enabled'           => false,
 
 			/*
 			 * Packing Workspace, Architecture Plan §IV.5.3/F21. Default off:
@@ -125,7 +131,7 @@ final class Settings {
 			 * a surprise the operator did not ask for (P0 principle 6 — "no
 			 * surprise" is the default, reserved for the exception band).
 			 */
-			'auto_advance_after_ship'      => false,
+			'auto_advance_after_ship'         => false,
 
 			/*
 			 * Pre-selects a carrier in the workspace's shipment panel
@@ -134,7 +140,7 @@ final class Settings {
 			 * valid carrier id (`Domain\CarrierRegistry`'s own contract),
 			 * so this is not validated against the bundled set.
 			 */
-			'default_carrier_id'           => '',
+			'default_carrier_id'              => '',
 
 			/*
 			 * Blocks `packed -> shipped` when no tracking number has been
@@ -144,7 +150,7 @@ final class Settings {
 			 * legitimate `packed -> shipped` for a store that never asked
 			 * for tracking numbers in the first place.
 			 */
-			'require_tracking_before_ship' => false,
+			'require_tracking_before_ship'    => false,
 
 			/*
 			 * Documents branding (M4-B). Empty display name falls back to the
@@ -153,10 +159,25 @@ final class Settings {
 			 * id captured into a data-URI snapshot at render time (ADR-0004:
 			 * historical HTML must not depend on a mutable public URL).
 			 */
-			'documents_store_name'         => '',
-			'documents_address'            => '',
-			'documents_footer'             => '',
-			'documents_logo_attachment_id' => 0,
+			'documents_store_name'            => '',
+			'documents_address'               => '',
+			'documents_footer'                => '',
+			'documents_logo_attachment_id'    => 0,
+
+			/*
+			 * Notification configuration (M5-B). Strategy is a single enum
+			 * ({@see NotificationStrategy}); defaults prefer WC Completed
+			 * tracking when the outbound bridge is on (its own default).
+			 * Subject falls back to the configuration service default when
+			 * empty at read time.
+			 */
+			'notification_strategy'           => NotificationStrategy::COMPLETED_EMAIL,
+			'notification_sender_name'        => '',
+			'notification_reply_to'           => '',
+			'notification_tracking_footer'    => '',
+			'notification_email_subject'      => 'Your order has shipped',
+			'notification_email_introduction' => '',
+			'notification_email_signature'    => '',
 		);
 	}
 
@@ -183,6 +204,19 @@ final class Settings {
 		$out['documents_address']            = self::sanitize_multiline_text( $raw['documents_address'] ?? '', 2000 );
 		$out['documents_footer']             = self::sanitize_multiline_text( $raw['documents_footer'] ?? '', 2000 );
 		$out['documents_logo_attachment_id'] = self::sanitize_attachment_id( $raw['documents_logo_attachment_id'] ?? 0 );
+
+		$out['notification_strategy']           = NotificationStrategy::from( $raw['notification_strategy'] ?? null )->value();
+		$out['notification_sender_name']        = self::sanitize_plain_text( $raw['notification_sender_name'] ?? '', 191 );
+		$out['notification_reply_to']           = self::sanitize_email_address( $raw['notification_reply_to'] ?? '' );
+		$out['notification_tracking_footer']    = self::sanitize_multiline_text( $raw['notification_tracking_footer'] ?? '', 2000 );
+		$out['notification_email_subject']      = self::sanitize_plain_text(
+			array_key_exists( 'notification_email_subject', $raw )
+				? $raw['notification_email_subject']
+				: $out['notification_email_subject'],
+			191
+		);
+		$out['notification_email_introduction'] = self::sanitize_multiline_text( $raw['notification_email_introduction'] ?? '', 2000 );
+		$out['notification_email_signature']    = self::sanitize_multiline_text( $raw['notification_email_signature'] ?? '', 2000 );
 
 		return $out;
 	}
@@ -228,6 +262,29 @@ final class Settings {
 		}
 
 		return $text;
+	}
+
+	/**
+	 * Coerces an optional email address; invalid non-empty values become ''.
+	 *
+	 * @param mixed $raw Raw value.
+	 */
+	private static function sanitize_email_address( mixed $raw ): string {
+		if ( ! is_string( $raw ) && ! is_numeric( $raw ) ) {
+			return '';
+		}
+
+		$email = trim( (string) $raw );
+
+		if ( '' === $email ) {
+			return '';
+		}
+
+		if ( strlen( $email ) > 191 ) {
+			$email = substr( $email, 0, 191 );
+		}
+
+		return false !== filter_var( $email, FILTER_VALIDATE_EMAIL ) ? $email : '';
 	}
 
 	/**
@@ -364,6 +421,55 @@ final class Settings {
 	 */
 	public function documents_logo_attachment_id(): int {
 		return (int) $this->get()['documents_logo_attachment_id'];
+	}
+
+	/**
+	 * Notification delivery strategy value ({@see NotificationStrategy}).
+	 */
+	public function notification_strategy(): string {
+		return (string) $this->get()['notification_strategy'];
+	}
+
+	/**
+	 * Notification sender display name override.
+	 */
+	public function notification_sender_name(): string {
+		return (string) $this->get()['notification_sender_name'];
+	}
+
+	/**
+	 * Notification Reply-To address, or empty for store default.
+	 */
+	public function notification_reply_to(): string {
+		return (string) $this->get()['notification_reply_to'];
+	}
+
+	/**
+	 * Footer text under tracking links in notification emails.
+	 */
+	public function notification_tracking_footer(): string {
+		return (string) $this->get()['notification_tracking_footer'];
+	}
+
+	/**
+	 * Default notification email subject.
+	 */
+	public function notification_email_subject(): string {
+		return (string) $this->get()['notification_email_subject'];
+	}
+
+	/**
+	 * Optional notification email introduction.
+	 */
+	public function notification_email_introduction(): string {
+		return (string) $this->get()['notification_email_introduction'];
+	}
+
+	/**
+	 * Optional notification email signature.
+	 */
+	public function notification_email_signature(): string {
+		return (string) $this->get()['notification_email_signature'];
 	}
 
 	/**

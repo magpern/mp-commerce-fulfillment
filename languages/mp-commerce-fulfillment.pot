@@ -420,7 +420,7 @@ msgid "Order status"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:185
-#: src/Plugin.php:435
+#: src/Plugin.php:437
 msgid "Fulfillment"
 msgstr ""
 
@@ -665,57 +665,145 @@ msgstr ""
 msgid "Queue pagination"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:74
+#: src/Admin/SettingsPage.php:113
 msgid "Fulfillment Settings"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:81
+#: src/Admin/SettingsPage.php:120
 #: src/Admin/ShellNavigation.php:61
 msgid "Settings"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:105
+#: src/Admin/SettingsPage.php:147
+msgid "Settings saved."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:176
 msgid "Document branding"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:106
+#: src/Admin/SettingsPage.php:177
 msgid "Shown on packing slips and picking lists. Empty optional fields are omitted. Historical renders keep the branding captured at print time."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:115
+#: src/Admin/SettingsPage.php:183
 msgid "Store display name"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:117
+#: src/Admin/SettingsPage.php:185
 msgid "Leave blank to use the WordPress site name."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:123
+#: src/Admin/SettingsPage.php:191
 msgid "Address"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:125
+#: src/Admin/SettingsPage.php:193
 msgid "One line per row. Optional."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:130
+#: src/Admin/SettingsPage.php:198
 msgid "Footer / legal text"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:132
+#: src/Admin/SettingsPage.php:200
 msgid "Optional. Printed at the bottom of documents."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:137
+#: src/Admin/SettingsPage.php:205
 msgid "Logo attachment ID"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:139
+#: src/Admin/SettingsPage.php:207
 msgid "Optional Media Library attachment ID. Embedded into historical HTML as a data URI when the file is a small image; otherwise omitted (never stored as a public URL alone)."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:148
-msgid "Save changes"
+#: src/Admin/SettingsPage.php:226
+msgid "Notifications"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:227
+msgid "Configure how customers will learn about shipment tracking. Saving these settings does not send email — delivery starts in a later release."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:234
+msgid "Notification strategy"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:235
+msgid "Choose whether tracking appears on the store completed-order email, a dedicated shipped email, both, or neither."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:243
+msgid "Default carrier"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:244
+msgid "Pre-selected in the packing workspace. Unknown values fall back to Other. Carrier definitions themselves cannot be edited here."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:251
+msgid "Sender name"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:253
+msgid "Optional. Leave blank to use the store name at send time."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:259
+msgid "Reply-to email"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:260
+msgid "Optional. Invalid addresses are cleared on save."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:266
+msgid "Default email subject"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:268
+msgid "Used for the dedicated shipped email when that strategy is enabled."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:274
+msgid "Email introduction"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:276
+msgid "Optional paragraph shown above tracking details."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:281
+msgid "Tracking message footer"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:283
+msgid "Optional text under tracking links."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:288
+msgid "Email signature"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:290
+msgid "Optional closing signature."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:303
+msgid "Completed-order email"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:304
+msgid "MPCF shipped email"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:305
+msgid "Both"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:306
+msgid "Disabled"
 msgstr ""
 
 #: src/Admin/ShellHeader.php:28

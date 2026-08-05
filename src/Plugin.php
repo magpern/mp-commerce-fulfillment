@@ -20,6 +20,7 @@ use MPCF\Admin\SettingsPage;
 use MPCF\Admin\WorkspacePage;
 use MPCF\Application\DocumentHistoryService;
 use MPCF\Application\DocumentService;
+use MPCF\Application\Notifications\NotificationConfigurationService;
 use MPCF\Api\Rest\AssignmentController;
 use MPCF\Api\Rest\CarriersController;
 use MPCF\Api\Rest\DocumentsController;
@@ -372,16 +373,17 @@ final class Plugin {
 		$renderer = new ComponentRenderer();
 		$shell    = new AdminPageShell( new SectionNavigation() );
 
-		$queue_service    = new QueueService( $fulfillments, new WpdbSearchQuery() );
-		$detail_service   = new FulfillmentDetailService( $fulfillments, $items, $events, $notes );
-		$note_service     = new NoteService( $notes, $clock );
-		$assignments      = new AssignmentService( $fulfillments, $events, $dispatcher, $clock );
-		$dashboard        = new DashboardService( $fulfillments, $events, $clock );
-		$shipping_service = new ShippingService( $fulfillments, $items, $shipments, $packages, new WpdbPackageItemRepository(), $events, $dispatcher, $clock );
-		$carriers         = new BundledCarrierRegistry();
-		$document_repo    = new WpdbDocumentRepository();
-		$document_store   = new ProtectedDocumentStore();
-		$document_service = new DocumentService(
+		$queue_service       = new QueueService( $fulfillments, new WpdbSearchQuery() );
+		$detail_service      = new FulfillmentDetailService( $fulfillments, $items, $events, $notes );
+		$note_service        = new NoteService( $notes, $clock );
+		$assignments         = new AssignmentService( $fulfillments, $events, $dispatcher, $clock );
+		$dashboard           = new DashboardService( $fulfillments, $events, $clock );
+		$shipping_service    = new ShippingService( $fulfillments, $items, $shipments, $packages, new WpdbPackageItemRepository(), $events, $dispatcher, $clock );
+		$carriers            = new BundledCarrierRegistry();
+		$notification_config = new NotificationConfigurationService( $settings, $carriers );
+		$document_repo       = new WpdbDocumentRepository();
+		$document_store      = new ProtectedDocumentStore();
+		$document_service    = new DocumentService(
 			$fulfillments,
 			$items,
 			new WooOrderSource(),
@@ -396,7 +398,7 @@ final class Plugin {
 			$settings,
 			$document_store
 		);
-		$document_history = new DocumentHistoryService(
+		$document_history    = new DocumentHistoryService(
 			$document_repo,
 			$document_store,
 			$events,
@@ -412,7 +414,7 @@ final class Plugin {
 			$renderer,
 			new OrderOverviewService( new WooOrderSource(), $fulfillments, new WpdbSearchQuery() )
 		);
-		$settings_page  = new SettingsPage( $shell, $renderer, $settings );
+		$settings_page  = new SettingsPage( $shell, $renderer, $settings, $carriers, $notification_config );
 		$documents_page = new DocumentsPage( $shell, $document_history );
 		$detail_page    = new FulfillmentDetailPage( $shell, $renderer, $detail_service, $note_service, $workflow_service, $definition );
 		$workspace_page = new WorkspacePage(
