@@ -34,6 +34,20 @@ body {
 	font-weight: bold;
 }
 
+.mpcf-slip-logo {
+	max-height: 18mm;
+	max-width: 50mm;
+	display: block;
+	margin-bottom: 3mm;
+}
+
+.mpcf-slip-address {
+	font-style: normal;
+	font-size: 9pt;
+	margin-top: 2mm;
+	line-height: 1.35;
+}
+
 .mpcf-slip-title {
 	font-size: 14pt;
 	font-weight: bold;
@@ -43,6 +57,28 @@ body {
 .mpcf-slip-order-number {
 	font-size: 12pt;
 	text-align: right;
+}
+
+.mpcf-slip-meta {
+	text-align: right;
+	font-size: 10pt;
+	margin-top: 1mm;
+}
+
+.mpcf-slip-instructions {
+	margin-bottom: 6mm;
+	padding: 3mm;
+	border: 1px solid #333;
+}
+
+.mpcf-slip-instructions h2 {
+	font-size: 11pt;
+	margin: 0 0 2mm;
+}
+
+.mpcf-slip-instructions p {
+	margin: 0;
+	white-space: pre-wrap;
 }
 
 .mpcf-slip-addresses {
@@ -119,6 +155,15 @@ body {
 	font-family: "Courier New", Courier, monospace;
 	font-size: 14pt;
 	letter-spacing: 0.3em;
+}
+
+.mpcf-slip-footer {
+	margin-top: 10mm;
+	padding-top: 3mm;
+	border-top: 1px solid #999;
+	font-size: 8pt;
+	color: #333;
+	white-space: pre-wrap;
 }
 
 @media print {

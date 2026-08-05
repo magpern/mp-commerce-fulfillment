@@ -26,7 +26,7 @@ final class ShellNavigation {
 	 * @return list<SectionNavItemViewModel>
 	 */
 	public static function items( string $current_slug ): array {
-		return array(
+		$items = array(
 			new SectionNavItemViewModel(
 				__( 'Dashboard', 'mp-commerce-fulfillment' ),
 				admin_url( 'admin.php?page=' . DashboardPage::SLUG ),
@@ -46,5 +46,16 @@ final class ShellNavigation {
 				OrdersPage::SLUG === $current_slug
 			),
 		);
+
+		if ( ! function_exists( 'current_user_can' ) || current_user_can( \MPCF\Capabilities::MANAGE_SETTINGS ) ) {
+			$items[] = new SectionNavItemViewModel(
+				__( 'Settings', 'mp-commerce-fulfillment' ),
+				admin_url( 'admin.php?page=' . SettingsPage::SLUG ),
+				'dashicons-admin-generic',
+				SettingsPage::SLUG === $current_slug
+			);
+		}
+
+		return $items;
 	}
 }

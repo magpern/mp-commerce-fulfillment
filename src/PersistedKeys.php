@@ -87,6 +87,16 @@ final class PersistedKeys {
 	}
 
 	/**
+	 * Protected upload directory segments under `wp-content/uploads/`
+	 * (ADR-0004). M4-B introduces `mpcf/` for stored document HTML.
+	 *
+	 * @return list<string>
+	 */
+	public static function upload_directories(): array {
+		return array( 'mpcf' );
+	}
+
+	/**
 	 * The complete inventory, keyed by kind.
 	 *
 	 * @return array<string, list<string>>
@@ -99,6 +109,7 @@ final class PersistedKeys {
 			'roles'                   => self::roles(),
 			'action_scheduler_groups' => self::action_scheduler_groups(),
 			'user_meta'               => self::user_meta_keys(),
+			'upload_directories'      => self::upload_directories(),
 		);
 	}
 }

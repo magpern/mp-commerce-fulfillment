@@ -1,0 +1,130 @@
+/*
+ * Picking list print stylesheet (M4-B).
+ * A4 default, zero external dependency — inlined into rendered HTML.
+ */
+
+@page {
+	size: A4;
+	margin: 15mm;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+	color: #111;
+	margin: 0;
+}
+
+.mpcf-pick-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	border-bottom: 2px solid #111;
+	padding-bottom: 8mm;
+	margin-bottom: 8mm;
+	gap: 8mm;
+}
+
+.mpcf-pick-logo {
+	max-height: 18mm;
+	max-width: 50mm;
+	display: block;
+	margin-bottom: 3mm;
+}
+
+.mpcf-pick-store {
+	font-size: 16pt;
+	font-weight: bold;
+}
+
+.mpcf-pick-address {
+	font-style: normal;
+	font-size: 9pt;
+	margin-top: 2mm;
+	line-height: 1.35;
+}
+
+.mpcf-pick-title {
+	font-size: 14pt;
+	font-weight: bold;
+	text-align: right;
+}
+
+.mpcf-pick-order-number,
+.mpcf-pick-meta {
+	text-align: right;
+	font-size: 10pt;
+	margin-top: 1mm;
+}
+
+.mpcf-pick-instructions {
+	margin-bottom: 6mm;
+	padding: 3mm;
+	border: 1px solid #333;
+}
+
+.mpcf-pick-instructions h2 {
+	font-size: 11pt;
+	margin: 0 0 2mm;
+}
+
+.mpcf-pick-instructions p {
+	margin: 0;
+	white-space: pre-wrap;
+}
+
+.mpcf-pick-items {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 8mm;
+}
+
+.mpcf-pick-items th,
+.mpcf-pick-items td {
+	border-bottom: 1px solid #ccc;
+	padding: 2mm 1mm;
+	text-align: left;
+	vertical-align: top;
+}
+
+.mpcf-pick-items th {
+	border-bottom: 2px solid #111;
+	font-size: 9pt;
+	text-transform: uppercase;
+}
+
+.mpcf-pick-qty {
+	text-align: right;
+	width: 14mm;
+}
+
+.mpcf-pick-barcode {
+	margin-top: 10mm;
+	text-align: center;
+}
+
+.mpcf-pick-barcode-payload {
+	font-family: "Courier New", Courier, monospace;
+	font-size: 14pt;
+	letter-spacing: 0.05em;
+}
+
+.mpcf-pick-footer {
+	margin-top: 10mm;
+	padding-top: 3mm;
+	border-top: 1px solid #999;
+	font-size: 8pt;
+	color: #333;
+	white-space: pre-wrap;
+}
+
+@media print {
+	body {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+	}
+}

@@ -33,12 +33,14 @@ final class Settings {
 	 * keys, 3 added `operator_mode_enabled` (D18). Milestone 2 raises it to
 	 * 4: `auto_advance_after_ship`, `default_carrier_id` and
 	 * `require_tracking_before_ship` (Architecture Plan §IV.5.3/§IV.6/F21).
+	 * 5: Documents branding (`documents_store_name`, `documents_address`,
+	 * `documents_footer`, `documents_logo_attachment_id`) for M4-B.
 	 * Each bump is purely informational (`sanitize()` always rebuilds the
 	 * canonical shape from `defaults()`, so there is no destructive
 	 * migration step to write for a purely additive change like any of
 	 * these).
 	 */
-	public const SCHEMA_VERSION = 4;
+	public const SCHEMA_VERSION = 5;
 
 	/**
 	 * Inbound cancel/refund behavior: move the fulfillment straight to
@@ -143,6 +145,18 @@ final class Settings {
 			 * for tracking numbers in the first place.
 			 */
 			'require_tracking_before_ship' => false,
+
+			/*
+			 * Documents branding (M4-B). Empty display name falls back to the
+			 * WordPress site name at render time. Address/footer/logo are
+			 * optional — empty fields render nothing. Logo is an attachment
+			 * id captured into a data-URI snapshot at render time (ADR-0004:
+			 * historical HTML must not depend on a mutable public URL).
+			 */
+			'documents_store_name'         => '',
+			'documents_address'            => '',
+			'documents_footer'             => '',
+			'documents_logo_attachment_id' => 0,
 		);
 	}
 
@@ -165,8 +179,70 @@ final class Settings {
 		$out['auto_advance_after_ship']      = ! empty( $raw['auto_advance_after_ship'] );
 		$out['default_carrier_id']           = isset( $raw['default_carrier_id'] ) ? (string) $raw['default_carrier_id'] : '';
 		$out['require_tracking_before_ship'] = ! empty( $raw['require_tracking_before_ship'] );
+		$out['documents_store_name']         = self::sanitize_plain_text( $raw['documents_store_name'] ?? '', 191 );
+		$out['documents_address']            = self::sanitize_multiline_text( $raw['documents_address'] ?? '', 2000 );
+		$out['documents_footer']             = self::sanitize_multiline_text( $raw['documents_footer'] ?? '', 2000 );
+		$out['documents_logo_attachment_id'] = self::sanitize_attachment_id( $raw['documents_logo_attachment_id'] ?? 0 );
 
 		return $out;
+	}
+
+	/**
+	 * Coerces a single-line branding string, capping length.
+	 *
+	 * @param mixed $raw   Raw value.
+	 * @param int   $max   Maximum characters retained.
+	 */
+	private static function sanitize_plain_text( mixed $raw, int $max ): string {
+		if ( ! is_string( $raw ) && ! is_numeric( $raw ) ) {
+			return '';
+		}
+
+		$text = trim( (string) $raw );
+		$text = preg_replace( '/[\x00-\x1F\x7F]+/', '', $text ) ?? '';
+
+		if ( strlen( $text ) > $max ) {
+			$text = substr( $text, 0, $max );
+		}
+
+		return $text;
+	}
+
+	/**
+	 * Coerces multiline branding text (address/footer), preserving newlines.
+	 *
+	 * @param mixed $raw Raw value.
+	 * @param int   $max Maximum characters retained.
+	 */
+	private static function sanitize_multiline_text( mixed $raw, int $max ): string {
+		if ( ! is_string( $raw ) && ! is_numeric( $raw ) ) {
+			return '';
+		}
+
+		$text = str_replace( array( "\r\n", "\r" ), "\n", (string) $raw );
+		$text = preg_replace( '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/', '', $text ) ?? '';
+		$text = trim( $text );
+
+		if ( strlen( $text ) > $max ) {
+			$text = substr( $text, 0, $max );
+		}
+
+		return $text;
+	}
+
+	/**
+	 * Coerces a media attachment id; non-positive values become 0 (no logo).
+	 *
+	 * @param mixed $raw Raw value.
+	 */
+	private static function sanitize_attachment_id( mixed $raw ): int {
+		if ( is_numeric( $raw ) ) {
+			$id = (int) $raw;
+
+			return $id > 0 ? $id : 0;
+		}
+
+		return 0;
 	}
 
 	/**
@@ -259,6 +335,35 @@ final class Settings {
 	 */
 	public function require_tracking_before_ship(): bool {
 		return (bool) $this->get()['require_tracking_before_ship'];
+	}
+
+	/**
+	 * Documents branding: optional store display name override.
+	 * Empty means "use the WordPress site name at render time".
+	 */
+	public function documents_store_name(): string {
+		return (string) $this->get()['documents_store_name'];
+	}
+
+	/**
+	 * Documents branding: optional address block (newline-separated lines).
+	 */
+	public function documents_address(): string {
+		return (string) $this->get()['documents_address'];
+	}
+
+	/**
+	 * Documents branding: optional footer / legal text.
+	 */
+	public function documents_footer(): string {
+		return (string) $this->get()['documents_footer'];
+	}
+
+	/**
+	 * Documents branding: optional logo attachment id (0 = none).
+	 */
+	public function documents_logo_attachment_id(): int {
+		return (int) $this->get()['documents_logo_attachment_id'];
 	}
 
 	/**

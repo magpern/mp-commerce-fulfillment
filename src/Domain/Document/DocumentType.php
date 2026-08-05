@@ -26,7 +26,7 @@ final class DocumentType {
 	public const STORAGE_PRINT = 'print';
 
 	/**
-	 * Future storage policy (M4-B): persist HTML bytes under the protected store.
+	 * Storage policy: persist HTML bytes under the protected store (M4-B).
 	 */
 	public const STORAGE_STORE = 'store';
 
