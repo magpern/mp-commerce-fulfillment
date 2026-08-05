@@ -64,6 +64,10 @@ final class NotificationsControllerTest extends WP_UnitTestCase {
 		$instance->setAccessible( true );
 		$instance->setValue( null, null );
 
+		// Drop routes registered by the plugins_loaded boot so only this
+		// test's composition root owns /mpcf/v1 (WP merges duplicate routes).
+		remove_all_actions( 'rest_api_init' );
+
 		Plugin::instance()->init();
 
 		global $wp_rest_server;
