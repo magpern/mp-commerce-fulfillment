@@ -24,7 +24,7 @@ use MPCF\Domain\TrackingUrlResolver;
  */
 final class BundledCarrierRegistry implements CarrierRegistry {
 
-	public const OTHER = 'other';
+	public const OTHER = CarrierRegistry::OTHER;
 
 	/**
 	 * Tracking URL resolver.

@@ -21,6 +21,12 @@ use MPCF\Domain\Shipping\Carrier;
 interface CarrierRegistry {
 
 	/**
+	 * Universal fallback carrier id — always present in the registry so
+	 * merchants are never blocked on an unbundled carrier.
+	 */
+	public const OTHER = 'other';
+
+	/**
 	 * Every registered carrier, in display order.
 	 *
 	 * @return list<array{
