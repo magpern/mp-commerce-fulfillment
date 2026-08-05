@@ -62,6 +62,10 @@ final class PickingWorkflowIntegrationTest extends WP_UnitTestCase {
 		$instance->setAccessible( true );
 		$instance->setValue( null, null );
 
+		// Drop routes from the plugins_loaded boot so only this test's
+		// composition root owns /mpcf/v1 (WP merges duplicate routes).
+		remove_all_actions( 'rest_api_init' );
+
 		Plugin::instance()->init();
 
 		global $wp_rest_server;
@@ -77,7 +81,7 @@ final class PickingWorkflowIntegrationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @return array{0:int,1:int,2:int} Fulfillment id, item id, ordered qty.
+	 * @return array{0:int,1:int,2:int,3:int} Fulfillment id, item id, ordered qty, version after seed.
 	 */
 	private function seed_picking_fulfillment(): array {
 		$order       = $this->create_paid_order( 1 );
@@ -96,8 +100,9 @@ final class PickingWorkflowIntegrationTest extends WP_UnitTestCase {
 		self::assertSame( 200, $response->get_status() );
 
 		$fulfillment = $this->fulfillments->find( $fulfillment->id() );
+		self::assertNotNull( $fulfillment );
 
-		return array( $fulfillment->id(), (int) $item->id(), $item->qty_ordered() );
+		return array( $fulfillment->id(), (int) $item->id(), $item->qty_ordered(), $fulfillment->version() );
 	}
 
 	/**
@@ -122,11 +127,12 @@ final class PickingWorkflowIntegrationTest extends WP_UnitTestCase {
 	}
 
 	public function test_increment_persists_qty_picked_and_advances_version(): void {
-		list( $fulfillment_id, $item_id ) = $this->seed_picking_fulfillment();
+		list( $fulfillment_id, $item_id, $qty_ordered, $version ) = $this->seed_picking_fulfillment();
+		unset( $qty_ordered );
 
 		$data = $this->update_items(
 			$fulfillment_id,
-			1,
+			$version,
 			array(
 				array(
 					'item_id'    => $item_id,
@@ -135,17 +141,18 @@ final class PickingWorkflowIntegrationTest extends WP_UnitTestCase {
 			)
 		);
 
-		self::assertSame( 2, $data['version'] );
+		self::assertSame( $version + 1, $data['version'] );
 		self::assertSame( 1, $data['items'][0]['qty_picked'] );
 		self::assertSame( 1, $this->items->find_for_fulfillment( $fulfillment_id )[0]->qty_picked() );
 	}
 
 	public function test_decrement_persists_qty_picked(): void {
-		list( $fulfillment_id, $item_id ) = $this->seed_picking_fulfillment();
+		list( $fulfillment_id, $item_id, $qty_ordered, $version ) = $this->seed_picking_fulfillment();
+		unset( $qty_ordered );
 
 		$data = $this->update_items(
 			$fulfillment_id,
-			1,
+			$version,
 			array(
 				array(
 					'item_id'    => $item_id,
@@ -170,11 +177,12 @@ final class PickingWorkflowIntegrationTest extends WP_UnitTestCase {
 	}
 
 	public function test_idempotent_resubmit_does_not_append_a_second_items_picked_event(): void {
-		list( $fulfillment_id, $item_id ) = $this->seed_picking_fulfillment();
+		list( $fulfillment_id, $item_id, $qty_ordered, $version ) = $this->seed_picking_fulfillment();
+		unset( $qty_ordered );
 
 		$data = $this->update_items(
 			$fulfillment_id,
-			1,
+			$version,
 			array(
 				array(
 					'item_id'    => $item_id,
@@ -205,11 +213,11 @@ final class PickingWorkflowIntegrationTest extends WP_UnitTestCase {
 	}
 
 	public function test_picked_transition_is_approved_when_every_line_is_fully_picked(): void {
-		list( $fulfillment_id, $item_id, $qty_ordered ) = $this->seed_picking_fulfillment();
+		list( $fulfillment_id, $item_id, $qty_ordered, $version ) = $this->seed_picking_fulfillment();
 
 		$data = $this->update_items(
 			$fulfillment_id,
-			1,
+			$version,
 			array(
 				array(
 					'item_id'    => $item_id,
@@ -230,11 +238,11 @@ final class PickingWorkflowIntegrationTest extends WP_UnitTestCase {
 	}
 
 	public function test_transition_to_picked_succeeds_after_quantities_are_saved(): void {
-		list( $fulfillment_id, $item_id, $qty_ordered ) = $this->seed_picking_fulfillment();
+		list( $fulfillment_id, $item_id, $qty_ordered, $version ) = $this->seed_picking_fulfillment();
 
 		$data = $this->update_items(
 			$fulfillment_id,
-			1,
+			$version,
 			array(
 				array(
 					'item_id'    => $item_id,
@@ -250,10 +258,9 @@ final class PickingWorkflowIntegrationTest extends WP_UnitTestCase {
 				'version' => (int) $data['version'],
 			)
 		);
-
 		$response = $this->server->dispatch( $request );
 
 		self::assertSame( 200, $response->get_status() );
-		self::assertSame( 'picked', $this->fulfillments->find( $fulfillment_id )->state() );
+		self::assertSame( 'picked', $response->get_data()['fulfillment']['state'] );
 	}
 }
