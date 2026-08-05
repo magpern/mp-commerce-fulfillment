@@ -85,9 +85,9 @@ against the real composition root (MariaDB + Woo). Classification:
 Prepared on branch (see commit `chore(release): prepare v0.5.0 release candidate`):
 
 - Version bump to `0.5.0` (plugin header, `MPCF_VERSION`, `readme.txt`)
-- ZIP via `bin/build-zip.sh`
-- `composer release-audit`
-- SHA-256 of dist ZIP
+- ZIP via `bin/build-zip.sh` / `release-audit`
+- SHA-256: `030b977a7e2122c6985fee888d3fdb75affcb7588cae4f6f2aa04e0557d66c46`
+- Artifact: `dist/mp-commerce-fulfillment-0.5.0.zip`
 
 **Not done (PO gate):** merge to `main`, tag `v0.5.0`, GitHub Release publish.
 
