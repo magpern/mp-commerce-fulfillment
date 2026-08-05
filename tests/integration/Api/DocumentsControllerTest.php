@@ -170,9 +170,22 @@ final class DocumentsControllerTest extends WP_UnitTestCase {
 
 		self::assertSame( 200, $response->get_status() );
 		$data = $response->get_data();
+		self::assertArrayHasKey( 'items', $data );
 		self::assertGreaterThanOrEqual( 1, $data['total'] );
 		$ids = array_column( $data['items'], 'id' );
 		self::assertContains( $document_id, $ids );
+
+		$filtered = new WP_REST_Request( 'GET', '/mpcf/v1/documents' );
+		$filtered->set_query_params( array( 'doc_type' => 'packing_slip' ) );
+		$filtered_response = $this->server->dispatch( $filtered );
+
+		self::assertSame( 200, $filtered_response->get_status() );
+		$filtered_data = $filtered_response->get_data();
+		self::assertArrayHasKey( 'items', $filtered_data );
+		foreach ( $filtered_data['items'] as $row ) {
+			self::assertSame( 'packing_slip', $row['doc_type'] );
+		}
+		self::assertContains( $document_id, array_column( $filtered_data['items'], 'id' ) );
 	}
 
 	public function test_reprint_returns_exact_html_and_does_not_create_a_new_document(): void {
@@ -190,8 +203,16 @@ final class DocumentsControllerTest extends WP_UnitTestCase {
 		self::assertSame( $html, $response->get_data()['html'] );
 		self::assertSame( $document_id, (int) $response->get_data()['document_id'] );
 
-		$list = $this->server->dispatch( new WP_REST_Request( 'GET', '/mpcf/v1/documents?doc_type=packing_slip' ) );
-		$ids  = array_column( $list->get_data()['items'], 'id' );
+		// Query args must be set on the request — embedding `?doc_type=` in the
+		// route path is not how WP_REST_Request parses filters (real HTTP clients
+		// still send `/documents?doc_type=…` and WordPress populates params).
+		$list_request = new WP_REST_Request( 'GET', '/mpcf/v1/documents' );
+		$list_request->set_query_params( array( 'doc_type' => 'packing_slip' ) );
+		$list = $this->server->dispatch( $list_request );
+
+		self::assertSame( 200, $list->get_status() );
+		self::assertArrayHasKey( 'items', $list->get_data() );
+		$ids = array_column( $list->get_data()['items'], 'id' );
 		self::assertSame( 1, count( array_filter( $ids, static fn( $id ): bool => (int) $id === $document_id ) ) );
 	}
 
