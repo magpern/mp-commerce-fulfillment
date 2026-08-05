@@ -22,8 +22,8 @@ Milestone 2).
 | `woocommerce_payment_complete` | action | `Woo\IntakeHooks::handle_order_paid()` | default | Synchronous order-to-fulfillment intake on payment completion (classic and Blocks checkout). |
 | `woocommerce_order_status_processing` | action | `Woo\IntakeHooks::handle_order_paid()` | default | Same intake path — covers gateways/manual-order flows that go straight to `processing` without firing `payment_complete`. |
 | `mpcf_process_intake` | action + Action Scheduler | `Woo\IntakeHooks::process_scheduled_intake()` | default | Action Scheduler fallback retry when a synchronous intake attempt fails; does not reschedule itself on further failure. Scheduled via `as_enqueue_async_action()` in group `mpcf` — see `docs/PERSISTED_DATA.md`. |
-| `woocommerce_order_status_cancelled` | action | `Woo\RefundObserver::handle_order_cancelled()` | default | Proposes cancel/flag-problem per the `inbound_cancel_behavior` setting. |
-| `woocommerce_order_fully_refunded` | action | `Woo\RefundObserver::handle_order_fully_refunded()` | default | Proposes cancel/flag-problem per the `inbound_refund_behavior` setting. |
+| `woocommerce_order_status_cancelled` | action | `Woo\RefundObserver::handle_order_cancelled()` | default | Store-order bridge: proposes cancel/flag-problem per `inbound_cancel_behavior` (not supplier receiving — see ADR-0007). |
+| `woocommerce_order_fully_refunded` | action | `Woo\RefundObserver::handle_order_fully_refunded()` | default | Store-order bridge: proposes cancel/flag-problem per `inbound_refund_behavior` (not supplier receiving — see ADR-0007). |
 | `woocommerce_order_partially_refunded` | action | `Woo\RefundObserver::handle_order_partially_refunded()` | default | Always flags the fulfillment `problem` — no automatic-cancel setting exists for a partial refund. |
 | `woocommerce_saved_order_items` | action | `Woo\RefundObserver::handle_order_items_saved()` | `accepted_args=2` | Diffs live order items against the intake snapshot; flags `problem` with a minimal id/qty diff on any material post-intake edit. |
 

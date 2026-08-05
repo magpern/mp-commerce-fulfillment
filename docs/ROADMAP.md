@@ -81,6 +81,14 @@ picked and packed before shipment; this capability is a future evolution
 of the existing shipment model, not a redesign. Full concept:
 `docs/ARCHITECTURE_PLAN.md` §24.1.
 
-Milestones beyond 1.0 (Returns & RMA, Multi-warehouse & locations, Carrier
+Milestones beyond 1.0 (Returns & RMA, Multi-warehouse queues & location-sorted picking, Carrier
 integrations, Automation & webhooks, Warehouse mobile mode) are listed in
 `docs/ARCHITECTURE_PLAN.md` §20 and are not yet scheduled.
+
+## Domain ownership
+
+Inbound inventory (suppliers, purchase orders, goods receipts, receiving,
+inventory movements, stock ledger, inventory position, landed cost, warehouse
+location hierarchy, bins) is owned by **`wc-inventory-overview`**, not MPCF.
+See ADR-0007 and `docs/ARCHITECTURE_PLAN.md` §2.6. MPCF owns outbound
+warehouse execution only; M4 remains **Documents I**.

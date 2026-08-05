@@ -31,6 +31,7 @@ This document is the **authoritative architectural specification** for Commerce 
 | M2 Execution Plan (Part IV) | 2026-08-02 | Part IV appended: Milestone 2 (Packing Workspace & REST) execution plan, reconciled against M1's actual shipped state — reconciliation found one real M1 defect (the admin-side composition root wires a subscriber-less `EventDispatcher`, so admin-initiated transitions never reach `Woo\StatusBridge`) and three related findings in how transition eligibility is derived, all resolved by a single fix (§IV.3.B). Four PO decisions captured at approval: the dispatcher defect ships as its own `v0.1.1` patch before M2 feature work starts; multi-package "add package" ships in M2 without line-quantity allocation (M4); a minimal packing slip is pulled forward from M3 into M2; a dev/CI-only Playwright toolchain is added under new **ADR-0006**, which narrows ADR-0003's *Consequences* (shipped code stays framework-free and build-free) without altering its Decision. Two roadmap-sequencing amendments (§20's M2/M3 rows, §7.1's `mpcf_documents` milestone number) and ADR-0006 are the only document changes; no invariant, D-decision, layer rule, data-model semantic, engine contract or public-surface rule is altered. PO approved for implementation 2026-08-02. |
 | Partial fulfillment future capability | 2026-08-03 | §24.1 appended: partial fulfillment & split shipments documented as a future capability (operator dogfooding, M2). No architectural decision altered — a documentation-only pass. |
 | M3 Ops UX / Part V | 2026-08-04 | Roadmap sequencing amendment: M3 becomes Ops UX (Workspace next-action + Orders + dogfood stabilization) for `v0.3.0`; Documents I moves to M4; later milestones +1. Mission Control A/B/C deferred. Part V appended (execution summary). No invariant, D-decision, layer rule, data-model semantic, engine contract, or public-surface rule altered. |
+| ADR-0007 inbound/outbound ownership | 2026-08-04 | ADR-0007 Accepted: inbound inventory domain assigned to `wc-inventory-overview`; MPCF outbound-only reaffirmed; D13 amended (location hierarchy removed from MPCF); §2.6 ownership registry added; M12 rewritten; §6.6 store-order bridge naming clarified. Documentation-only — no invariant, engine contract, schema, or public-surface change. |
 
 ## Governance
 
@@ -98,17 +99,20 @@ Commerce Fulfillment is not an isolated plugin: it is the founding member of a p
 - **Strict plugin independence:** every MP Commerce plugin installs, functions and uninstalls entirely alone. **No runtime dependency between siblings, ever.** Integration happens only through documented public surfaces (hooks, REST, domain-event actions), discovered defensively at runtime — the proven precedent is UMC consuming Universal Geo Context through an adapter that degrades gracefully when the sibling is absent.
 - **Boundary hygiene over time:** where a future sibling overlaps this plugin's roadmap (e.g., a standalone MP Commerce Returns vs the M10 returns milestone, or MP Commerce Shipping vs the M12 carrier integrations), the split is decided then, by ADR, along the natural seam: Fulfillment owns the *warehouse-side* of any process; a sibling owns the customer-/carrier-facing side and integrates through the same public events and REST API available to any third party. No sibling ever gets a private backdoor — that rule is what keeps the ecosystem honest.
 
-This section binds branding, conventions and independence rules — not the roadmap. Ecosystem products beyond Fulfillment and Promotions are vision, not commitments.
+This section binds branding, conventions and independence rules — not the roadmap. Ecosystem products beyond Fulfillment and Promotions are vision, not commitments. In the Biopentra stack, the deployed inventory sibling is **`wc-inventory-overview`**; ADR-0007 assigns it the complete inbound domain per §2.6.
 
 ### 2.3 Ownership boundary
 
 | Concern | Owner | Notes |
 |---|---|---|
-| Products, stock quantity, prices | WooCommerce | MPCF reads product data (SKU, image, weight, dims) for display and documents; never writes it |
+| Products, stock quantity, prices | WooCommerce | MPCF reads product data (SKU, image, weight, dims) for display and documents; never writes it. Inbound stock mutation is performed only by `wc-inventory-overview` (ADR-0007). |
 | Checkout, payment, refunds | WooCommerce | MPCF *reacts* to refunds/cancellations (exception states); never initiates them in v1 |
 | Customers, addresses | WooCommerce | MPCF reads shipping address; address *corrections* before shipping are a post-1.0 candidate, and would write through WC CRUD |
 | The order record and its statuses | WooCommerce | MPCF may advance WC status through one narrow, configurable bridge (§6.6) |
-| Warehouse workflow state | **Commerce Fulfillment** | `mpcf_fulfillments.state`, driven only by the workflow engine |
+| Suppliers, purchase orders, goods receipts, receiving | **wc-inventory-overview** | Complete inbound purchasing and receiving domain (ADR-0007) |
+| Inventory movements, stock ledger, inventory position, landed cost | **wc-inventory-overview** | Including weighted-average cost writes on receive |
+| Warehouse location hierarchy, bins, shelves, aisles, item-to-location assignment | **wc-inventory-overview** | Inventory topology master data (ADR-0007) |
+| Warehouse workflow state (outbound) | **Commerce Fulfillment** | `mpcf_fulfillments.state`, driven only by the workflow engine |
 | Picking / packing progress | **Commerce Fulfillment** | per-line quantities in `mpcf_fulfillment_items` |
 | Shipments, carriers, tracking | **Commerce Fulfillment** | multiple shipments per order from day one |
 | Fulfillment documents | **Commerce Fulfillment** | packing slip, picking list, invoice, customs, return slip |
@@ -116,6 +120,9 @@ This section binds branding, conventions and independence rules — not the road
 | Fulfillment audit trail | **Commerce Fulfillment** | append-only `mpcf_events` |
 | Internal warehouse notes | **Commerce Fulfillment** | separate from WC order notes (§14) |
 | Fulfillment analytics | **Commerce Fulfillment** | derived from the event log |
+| Operator workflow UX (Queue, Workspace, Orders) | **Commerce Fulfillment** | outbound warehouse execution screens |
+| Per-warehouse queue partition (`warehouse_id`) | **Commerce Fulfillment** | execution routing, not the location registry |
+| Pick-path hint at intake (`location_snapshot`) | **Commerce Fulfillment** | immutable snapshot on fulfillment items; not inventory authority |
 | Returns / RMA | **Commerce Fulfillment** (post-1.0) | separate aggregate, same engine |
 
 ### 2.4 Personas
@@ -126,11 +133,79 @@ This section binds branding, conventions and independence rules — not the road
 
 ### 2.5 Explicit non-goals (v1.x)
 
-- No stock/inventory management (quantity on hand stays WooCommerce's).
+MPCF owns **outbound warehouse execution** only: fulfillment, picking, packing,
+shipments, packages, tracking, fulfillment documents, operator workflow, and
+the fulfillment audit trail.
+
+MPCF does **not** own (all owned by **`wc-inventory-overview`**, ADR-0007):
+
+- Suppliers, purchase orders, goods receipts, or receiving
+- Inventory movements, stock ledger, or inventory position
+- Landed cost or inbound cost ledger writes
+- Inventory topology: warehouse location hierarchy, bins, shelves, aisles, or
+  item-to-location assignment
+- Inbound stock mutation of any kind
+
+Additional non-goals:
+
+- No stock/inventory management (quantity on hand stays WooCommerce's record;
+  inbound mutation is wc-inventory-overview's responsibility).
 - No rate shopping / checkout shipping-rate calculation (that is checkout territory; MPCF starts after payment).
-- No purchase orders / inbound logistics.
+- No purchase orders / supplier inbound logistics (wc-inventory-overview).
 - No customer-facing "track your order" portal pages in early milestones (customer touch = notification emails with tracking links; a portal is a Future Opportunity).
 - No non-WooCommerce order sources in v1 — but the `OrderSource` port exists from M1 so the assumption is architectural, not structural.
+
+Cross-plugin integration with the inventory owner uses documented hooks or a
+versioned read contract only — never direct table access (ADR-0007).
+
+### 2.6 Domain ownership registry
+
+Every business concept has **exactly one canonical owner**. Duplicate ownership
+is prohibited. Reassigning a concept requires an Accepted ADR in **every**
+affected repository before implementation.
+
+| Business concept | Owner |
+|---|---|
+| Product catalog | WooCommerce |
+| Stock quantity (on hand) | WooCommerce |
+| Product prices | WooCommerce |
+| Customer | WooCommerce |
+| Customer order | WooCommerce |
+| Checkout and payment | WooCommerce |
+| Refunds and cancellations (initiation) | WooCommerce |
+| Supplier | wc-inventory-overview |
+| Purchase order | wc-inventory-overview |
+| PO line / incoming supply | wc-inventory-overview |
+| Goods receipt | wc-inventory-overview |
+| Receiving (supplier delivery) | wc-inventory-overview |
+| Receiving discrepancy | wc-inventory-overview |
+| Inventory movement | wc-inventory-overview |
+| Stock ledger | wc-inventory-overview |
+| Inventory position / incoming | wc-inventory-overview |
+| Warehouse location (hierarchy) | wc-inventory-overview |
+| Bin / shelf / aisle | wc-inventory-overview |
+| Item-to-location assignment | wc-inventory-overview |
+| Inventory cost / weighted average | wc-inventory-overview |
+| Landed cost | wc-inventory-overview |
+| Inbound stock mutation | wc-inventory-overview |
+| Inventory reconciliation | wc-inventory-overview |
+| Fulfillment (outbound) | MPCF |
+| Warehouse workflow (outbound states) | MPCF |
+| Picking progress | MPCF |
+| Packing progress | MPCF |
+| Shipment | MPCF |
+| Package | MPCF |
+| Tracking (outbound consignment) | MPCF |
+| Packing slip | MPCF |
+| Picking list (fulfillment document) | MPCF |
+| Fulfillment audit trail | MPCF |
+| Operator workflow UX | MPCF |
+| Per-warehouse queue partition (`warehouse_id`) | MPCF |
+| Pick-path hint at intake (`location_snapshot`) | MPCF |
+
+If a concept is not listed, default to WooCommerce for commerce data,
+wc-inventory-overview for inbound inventory, and MPCF for outbound execution —
+and add a row here via ADR before building it.
 
 ---
 
@@ -365,10 +440,12 @@ They are not WC order statuses. Registering eight custom `wc-*` statuses was con
 
 A narrow, configurable, re-entrancy-guarded two-way mapping:
 
-- **Outbound (MPCF → WC), event-driven:** default mapping ships as: first fulfillment enters `shipped` **and** all fulfillments for the order are shipped → WC order `completed`. Merchant-configurable (e.g. map to a single custom `wc-shipped` status if the merchant already has one; or do nothing). Writes use `WC_Order::update_status()` with an `mpcf` note prefix.
-- **Inbound (WC → MPCF), hook-driven:** order `cancelled` / fully `refunded` → open fulfillments proposed into `cancelled`/`problem` (setting: automatic vs. flagged-for-review; default automatic for cancel, flag for refund). Order edits after intake (items added/removed) → fulfillment flagged `problem` with a diff summary in the audit payload (§21 R3).
+- **Outbound bridge (MPCF → WC), event-driven:** default mapping ships as: first fulfillment enters `shipped` **and** all fulfillments for the order are shipped → WC order `completed`. Merchant-configurable (e.g. map to a single custom `wc-shipped` status if the merchant already has one; or do nothing). Writes use `WC_Order::update_status()` with an `mpcf` note prefix.
+- **Store-order bridge (WC → MPCF), hook-driven:** order `cancelled` / fully `refunded` → open fulfillments proposed into `cancelled`/`problem` (settings `inbound_cancel_behavior` / `inbound_refund_behavior`: automatic vs. flagged-for-review; default automatic for cancel, flag for refund). Order edits after intake (items added/removed) → fulfillment flagged `problem` with a diff summary in the audit payload (§21 R3).
 - **Loop guard:** an int depth counter (UMC's `OrderCurrencyLock` pattern) so bridge-initiated WC writes don't re-enter intake/observers.
 - Authority rule, stated once and enforced by the mapping shape: **WC is authoritative for the money lifecycle; MPCF is authoritative for the warehouse lifecycle.** The bridge translates; it never lets one side drive the other's internal states directly.
+
+**Bridge direction naming (ADR-0007).** Settings keys retain the `inbound_*` prefix for backward compatibility, but they configure **store-order bridge** behaviour only — how WooCommerce order cancellations, full refunds, and post-intake edits propagate into MPCF fulfillment states. They have **nothing to do with supplier inbound logistics**, goods receipts, purchase orders, or receiving (owned by `wc-inventory-overview`, §2.6).
 
 ---
 
@@ -380,11 +457,11 @@ All tables `ENGINE=InnoDB ROW_FORMAT=DYNAMIC`, explicit `CREATE TABLE` DDL in `I
 
 **`mpcf_fulfillments`** (M1) — the aggregate root.
 `id, order_id (indexed), order_source VARCHAR(32) DEFAULT 'woocommerce', warehouse_id BIGINT DEFAULT 1, workflow VARCHAR(64), state VARCHAR(32), previous_state VARCHAR(32), return_to_state VARCHAR(32) NULL, exception_reason VARCHAR(191) NULL, priority SMALLINT DEFAULT 0, assignee_type VARCHAR(16) NULL, assignee_id BIGINT NULL, version INT (optimistic lock), order_number_snapshot VARCHAR(64), customer_name_snapshot VARCHAR(191), item_count SMALLINT, created_at, state_entered_at, completed_at NULL`
-Indexes: `(state, warehouse_id)`, `(order_id)`, `(assignee_type, assignee_id, state)`, `(created_at)`. The two snapshots exist so the Queue renders without N+1 order loads; they are display hints, never authority (the workspace always reads live order data through `OrderSource`). **Assignment is polymorphic (D20):** `assignee_type` is `'user'` everywhere in v1, but packing stations, teams and virtual queues become new type values plus registry data — never a migration. `warehouse_id` points at the warehouse-level node of the future `mpcf_locations` hierarchy (row 1 = the implicit default warehouse until that table exists).
+Indexes: `(state, warehouse_id)`, `(order_id)`, `(assignee_type, assignee_id, state)`, `(created_at)`. The two snapshots exist so the Queue renders without N+1 order loads; they are display hints, never authority (the workspace always reads live order data through `OrderSource`). **Assignment is polymorphic (D20):** `assignee_type` is `'user'` everywhere in v1, but packing stations, teams and virtual queues become new type values plus registry data — never a migration. `warehouse_id` partitions outbound fulfillments into per-warehouse queues (default `1` = single-warehouse install). It is an **execution routing dimension**, not the inventory location registry (owned by `wc-inventory-overview`, ADR-0007).
 
 **`mpcf_fulfillment_items`** (M1)
-`id, fulfillment_id (indexed), order_item_id, product_id, variation_id, sku_snapshot VARCHAR(191), name_snapshot VARCHAR(255), qty_ordered, qty_picked, qty_packed, location_snapshot VARCHAR(191) NULL (M-locations)`
-Snapshots make picking lists and audit stable even if the product is later renamed/deleted.
+`id, fulfillment_id (indexed), order_item_id, product_id, variation_id, sku_snapshot VARCHAR(191), name_snapshot VARCHAR(255), qty_ordered, qty_picked, qty_packed, location_snapshot VARCHAR(191) NULL`
+`location_snapshot` is an **immutable intake snapshot** of a pick-path hint copied at fulfillment creation (e.g. aisle/shelf label from an external source). It supports picking lists and display only; it is **not** inventory position authority and is **not** written by receiving. Inventory topology lives in `wc-inventory-overview` (ADR-0007). Nullable until a future integration supplies the hint. Other snapshots make picking lists and audit stable even if the product is later renamed/deleted.
 
 **`mpcf_shipments`** (M2) — the consignment (one carrier handover).
 `id, fulfillment_id (indexed), carrier_id VARCHAR(64), service VARCHAR(128) NULL, tracking_number VARCHAR(191) (consignment-level), tracking_url TEXT NULL (explicit override; normally derived), status VARCHAR(32) DEFAULT 'pending', shipped_at NULL, delivered_at NULL, created_at`
@@ -404,7 +481,9 @@ Snapshots make picking lists and audit stable even if the product is later renam
 **`mpcf_documents`** (M3) — generation record (§10).
 `id, fulfillment_id (indexed), doc_type VARCHAR(64), template_version VARCHAR(32), file_path VARCHAR(255) NULL (NULL = rendered-to-print, not stored), rendered_by, created_at`
 
-Post-1.0 (schema reserved, not created early): **`mpcf_locations`** — a single self-referential hierarchy table (`id, parent_id NULL, type VARCHAR(32), name, code VARCHAR(64), sort`) covering facility → warehouse → zone → shelf → bin with **types as data** (a flat warehouse list is just parentless rows; aisles or totes later are new type values, never an ALTER; separate `mpcf_warehouses`/`mpcf_bins` tables were rejected for exactly that reason) + `mpcf_item_locations`; `mpcf_batches` + `mpcf_batch_items` (M7); `mpcf_returns` + `mpcf_return_items`; `mpcf_stats_daily` (M8 rollups); `mpcf_search_index` (§9.3 — only if profiling demands it); `mpcf_webhooks`, `mpcf_api_keys`.
+Post-1.0 (schema reserved, not created early): `mpcf_batches` + `mpcf_batch_items` (M7); `mpcf_returns` + `mpcf_return_items`; `mpcf_stats_daily` (M8 rollups); `mpcf_search_index` (§9.3 — only if profiling demands it); `mpcf_webhooks`, `mpcf_api_keys`.
+
+Location hierarchy and item-to-location assignment are owned by **`wc-inventory-overview`** (ADR-0007, §2.6). MPCF does not create `mpcf_locations` or `mpcf_item_locations`. Future location-sorted picking consumes pick-path data from the inventory owner via a versioned contract; `location_snapshot` and `warehouse_id` remain MPCF-side execution hints and queue partitioning.
 
 ### 7.2 Why custom tables (ADR-0001)
 
@@ -634,7 +713,7 @@ Nonces on all cookie-authenticated mutations; capability + ownership checks serv
 | D10 | Append-only audit with per-fulfillment hash chain | Trust product; cheap tamper-evidence |
 | D11 | Explicit-SQL Schema/Migrator, no dbDelta, no SQL ENUM, own version option | AIM ADR-0003, proven |
 | D12 | Async via Action Scheduler (WC required ⇒ always present); never assume WP pseudo-cron | Reliability on real hosts |
-| D13 | `warehouse_id` on fulfillments from day one (default 1); physical topology arrives post-1.0 as ONE self-referential `mpcf_locations` hierarchy (facility→warehouse→zone→shelf→bin, types as data) | Multi-warehouse is a column today, a feature later; new hierarchy levels never require an ALTER |
+| D13 | `warehouse_id` on fulfillments from day one (default 1) for per-warehouse queue partitioning; location hierarchy and item-to-location assignment belong to `wc-inventory-overview` (ADR-0007). M12 adds location-sorted picking by consuming inventory-owner data via a future contract — not MPCF location tables | Multi-warehouse queues are a column today; inventory topology is a sibling concern |
 | D14 | Returns are a separate aggregate + workflow definition, not extra forward-flow states | Different lifecycle, same engine |
 | D15 | Weight/dims in integer base units (g/mm); display conversion in UI | Determinism, no float drift |
 | D16 | Documents: pure assembler → model → renderer; HTML-print first, PDF port later | Testability; no heavy deps until customs needs them |
@@ -682,7 +761,7 @@ Each milestone is a usable release, tagged, installable. Detailed execution plan
 | **M10** | 0.9.x → RC | Hardening & operational maturity | i18n complete, Site Health tests, `wp mpcf doctor`/`audit verify`, privacy exporter/eraser, performance baselines at 50k fulfillments, security review doc, `ARCHITECTURE_FREEZE.md`, compatibility matrix | — |
 | **1.0** | 1.0.0 | Commercial release | Freeze public surface (hooks, REST v1, schema semantics, template contract) | — |
 | M11 | 1.1.0 | Returns & RMA | Return aggregate + workflow, return slip doc, customer-initiated intake hook, refund handoff to WC | returns, return_items |
-| M12 | 1.2.0 | Multi-warehouse & locations | Location hierarchy (facility/warehouse/zone/shelf/bin as data, §7.1), item-location assignment, location-sorted picking, warehouse routing rules, per-warehouse queues | locations, item_locations |
+| M12 | 1.2.0 | Multi-warehouse queues & location-sorted picking | Per-warehouse queue UX and filters (existing `warehouse_id`); warehouse routing rules for outbound assignment; location-sorted pick path in Workspace and picking list **consuming** location data from `wc-inventory-overview` via a versioned contract; immutable `location_snapshot` at intake unchanged | — |
 | M13 | 1.3.0 | Carrier integrations I | `CarrierPort` label purchase + tracking sync (first adapters chosen by PO — candidates: Sendcloud, nShift, EasyPost as an aggregator strategy); label documents; CN22/CN23 + commercial invoice (PDF renderer lands here) | carrier_accounts |
 | M14 | 1.4.0 | Automation & webhooks | Outgoing HMAC webhooks, automation rules (event→condition→action), scoped API keys | webhooks, api_keys, rules |
 | M15 | 1.5.0 | Warehouse mobile mode | PWA-style tablet frontend over `mpcf/v1` (scan-first), station login via API keys | — |
@@ -755,7 +834,7 @@ These are documented for architectural guidance only. They are **not** in the mi
 
 ## 24. Future opportunities (explicitly deferred, architecture-compatible)
 
-Admin workflow builder UI (definitions are already data); customer-facing tracking portal page + branded tracking emails; inbound logistics/purchase orders; address validation/correction pre-ship; rate shopping at pack time (choose cheapest carrier for measured weight/dims); packing-material optimization (box suggestion from item dims); SLA rules & alerting (age thresholds → notifications) on the automation engine; multi-source orders (the `order_source` column + `OrderSource` port admit non-WooCommerce feeds); photo annotations; voice picking; hardware station integrations (scales via WebHID/WebSerial — reads feed the same `PackageSpec` REST field); marketplace of carrier adapters as separate paid add-on plugins hooking `mpcf_carriers`/`CarrierPort`; additional notification channels (SMS/push/Slack/Teams) as `NotificationChannel` implementations; audit investigation mode and Audit Explorer (§13); cross-plugin MP Commerce integrations (Inventory feeding backorder detection, Shipping providing negotiated rates at pack time) strictly through the public surfaces of §2.2.
+Admin workflow builder UI (definitions are already data); customer-facing tracking portal page + branded tracking emails; address validation/correction pre-ship; rate shopping at pack time (choose cheapest carrier for measured weight/dims); packing-material optimization (box suggestion from item dims); SLA rules & alerting (age thresholds → notifications) on the automation engine; multi-source orders (the `order_source` column + `OrderSource` port admit non-WooCommerce feeds); photo annotations; voice picking; hardware station integrations (scales via WebHID/WebSerial — reads feed the same `PackageSpec` REST field); marketplace of carrier adapters as separate paid add-on plugins hooking `mpcf_carriers`/`CarrierPort`; additional notification channels (SMS/push/Slack/Teams) as `NotificationChannel` implementations; audit investigation mode and Audit Explorer (§13); cross-plugin MP Commerce integrations (`wc-inventory-overview` feeding backorder/incoming signals, Shipping providing negotiated rates at pack time) strictly through the public surfaces of §2.2. Inbound logistics, purchase orders, and receiving are **not** MPCF future opportunities — they belong to `wc-inventory-overview` (ADR-0007, §2.6).
 
 ### 24.1 Partial fulfillment & split shipments (future capability)
 
