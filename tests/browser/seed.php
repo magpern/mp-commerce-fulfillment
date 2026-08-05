@@ -57,7 +57,7 @@ for ( $i = 0; $i < MPCF_SEED_ORDER_COUNT; $i++ ) {
 	// order-paid → fulfillment-created flow a live store relies on.
 	$order->update_status( 'processing' );
 
-	$order_id = (int) $order->get_id();
+	$order_id    = (int) $order->get_id();
 	$order_ids[] = $order_id;
 
 	$fulfillment_id = (int) $wpdb->get_var(
@@ -75,7 +75,7 @@ for ( $i = 0; $i < MPCF_SEED_ORDER_COUNT; $i++ ) {
 	$fulfillment_ids[] = $fulfillment_id;
 }
 
-$auth_dir = dirname( __FILE__ ) . '/.auth';
+$auth_dir = __DIR__ . '/.auth';
 if ( ! is_dir( $auth_dir ) && ! mkdir( $auth_dir, 0755, true ) && ! is_dir( $auth_dir ) ) {
 	fwrite( STDERR, "Seed failed: could not create {$auth_dir}\n" );
 	exit( 1 );

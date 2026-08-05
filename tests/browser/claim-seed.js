@@ -77,20 +77,42 @@ function claimSeedFulfillmentId() {
 /**
  * Opens the workspace for a freshly claimed seeded fulfillment via Queue.
  *
+ * Walks numbered pagination when needed — the Queue defaults to 20 rows
+ * while the seed pool is larger, so a claimed id may not be on page 1.
+ *
  * @param {import('@playwright/test').Page} page Playwright page.
  * @return {Promise<number>} Claimed fulfillment id.
  */
 async function openClaimedWorkspaceFromQueue( page ) {
 	const fulfillmentId = claimSeedFulfillmentId();
+	const rowSelector = `a[data-mpcf-row-open][href*="fulfillment_id=${fulfillmentId}"]`;
 
-	await page.goto( '/wp-admin/admin.php?page=mpcf-queue' );
-	const row = page.locator(
-		`a[data-mpcf-row-open][href*="fulfillment_id=${fulfillmentId}"]`
+	for ( let paged = 1; paged <= 20; paged++ ) {
+		await page.goto( `/wp-admin/admin.php?page=mpcf-queue&paged=${paged}` );
+		const row = page.locator( rowSelector );
+		if ( ( await row.count() ) > 0 ) {
+			await row.first().click();
+			await page.waitForURL(
+				new RegExp( `page=mpcf-workspace.*fulfillment_id=${fulfillmentId}` )
+			);
+			return fulfillmentId;
+		}
+
+		// No further pages when the pagination nav is absent or this page
+		// rendered fewer than a full page of rows.
+		const pageLinks = page.locator( '.mpcf-queue-pagination a' );
+		const hasHigherPage = ( await pageLinks.evaluateAll(
+			( links, current ) => links.some( ( a ) => Number( a.textContent ) > current ),
+			paged
+		) );
+		if ( ! hasHigherPage ) {
+			break;
+		}
+	}
+
+	throw new Error(
+		'Seeded fulfillment ' + fulfillmentId + ' not found in Queue pagination'
 	);
-	await row.click();
-	await page.waitForURL( new RegExp( `page=mpcf-workspace.*fulfillment_id=${fulfillmentId}` ) );
-
-	return fulfillmentId;
 }
 
 /**
