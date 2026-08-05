@@ -64,14 +64,17 @@ Full endpoint documentation: `docs/API.md`.
 
 | Hook | Type | File | Purpose |
 |---|---|---|---|
-| `mpcf_workspace_flags` | filter | `src/Admin/WorkspacePage.php:453` | Returns a list of flag descriptors to render in the workspace's context column. Bundled: customer note present, high value, repeat problem customer. Integrators can add custom flags via this filter. |
+| `mpcf_workspace_flags` | filter | `src/Admin/WorkspacePage.php` | Returns a list of flag descriptors to render in the workspace's context column. Bundled: customer note present, high value, repeat problem customer. Integrators can add custom flags via this filter. |
+
+## Public extension points added in M4-A (Documents I)
+
+| Hook | Type | File | Purpose |
+|---|---|---|---|
+| `mpcf_document_types` | filter | `src/Documents/DocumentTypeRegistry.php` | Amend the small packing_slip / picking_list type map. Malformed entries are dropped. |
+| `mpcf_document_template` | filter | `src/Documents/TemplateRegistry.php` | Override template path before theme/bundled resolution. Must be a readable `.php` file. |
+| `mpcf_document_model` | filter | `src/Application/DocumentService.php` | Amend the assembled `DocumentModel` after core assemble and before render. Must return a `DocumentModel` with the same `doc_type`. |
 
 All other v1.0 extension surfaces (`mpcf_workflows`, `mpcf_carriers`,
-`mpcf_document_types`, `mpcf_event` + per-type actions,
-`mpcf_intake_should_create`, template overrides) are documented in
-`docs/ARCHITECTURE_PLAN.md` §16.2 as future milestones. `mpcf_event` and
-`mpcf_document_types` were originally planned for M2 but are deferred to M3,
-as noted in §IV.9 and §IV.7 respectively — they are design-time
-dependencies for the real registries (`mpcf_carriers` in M4, the template
-override chain in M3) and adding them in M2 with only one bundled entry each
-would constrain those later designs unnecessarily.
+`mpcf_event` + per-type actions, `mpcf_intake_should_create`) remain
+documented in `docs/ARCHITECTURE_PLAN.md` §16.2 as future milestones.
+`mpcf_carriers` remains Tracking (M5) after renumber.

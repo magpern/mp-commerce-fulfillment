@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted (Milestone 0; photo capture lands in Milestone 5, document
-storage in Milestone 3).
+Accepted (Milestone 0; document protected storage lands in **M4-B**
+Documents I; photo capture lands in Milestone 6 after renumber).
 
 ## Context
 

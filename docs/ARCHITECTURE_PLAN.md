@@ -1,6 +1,6 @@
 # Commerce Fulfillment for WooCommerce — Architecture Specification
 
-**Status:** **Architecture Freeze v1.0** — Architecture Plan Rev 2.1 and Milestone 0 Execution Plan Rev 1 approved by the Product Owner 2026-07-31 as the permanent architectural baseline for Commerce Fulfillment. M0–M3 are closed (`v0.0.1`, `v0.1.0`/`v0.1.1`, `v0.2.0`, `v0.3.0`). Mission Control Dashboard/Queue redesign remains deferred. Documents I is sequenced as M4.
+**Status:** **Architecture Freeze v1.0** — Architecture Plan Rev 2.1 and Milestone 0 Execution Plan Rev 1 approved by the Product Owner 2026-07-31 as the permanent architectural baseline for Commerce Fulfillment. M0–M3 are closed (`v0.0.1`, `v0.1.0`/`v0.1.1`, `v0.2.0`, `v0.3.0`). Mission Control Dashboard/Queue redesign remains deferred. Documents I is sequenced as M4; **M4-A Document Architecture** is in progress on `feature/m4-documents` (Part VI).
 **Working name:** Commerce Fulfillment (commercial name TBD — internal identifiers are rename-proof and never churn).
 **Internal identity (fixed, PO-approved 2026-07-31):** namespace `MPCF\`, prefix `mpcf_`, tables `{$wpdb->prefix}mpcf_*`, text domain `mp-commerce-fulfillment`, constants `MPCF_*`, capability prefix `mpcf_`.
 **Repo (to create):** private GitHub `magpern/mp-commerce-fulfillment`, plus sibling `magpern/mp-admin-design-system` (PO-approved 2026-07-31).
@@ -2103,3 +2103,41 @@ Primary confidence: PHPUnit, integration tests, and manual operator dogfooding. 
 ## V.6 Roadmap amendment
 
 §20 table updated so M3 = Ops UX at 0.3.0 and Documents I = M4. Post-1.0 milestones renumbered M11–M15. No ADR required (sequencing only; no invariant or D-decision change).
+
+---
+
+# Part VI — Milestone 4 Documents I (in progress)
+
+**Status:** M4-A Document Architecture landed on `feature/m4-documents` (not released). Target release remains `v0.4.0`. Architecture Freeze v1.0 §10 / D16 / ADR-0004 / ADR-0007 remain authoritative.
+
+## VI.1 Reconciliation (vs v0.3.0)
+
+M2 shipped a minimal packing-slip pipeline (`DocumentService` → `PackingSlipAssembler` → `HtmlRenderer` → `mpcf_documents` + `document.rendered`). M3 did not touch documents. M4-A **extends** that pipeline; it does not replace it.
+
+## VI.2 M4-A delivered
+
+| Concern | Implementation |
+|---|---|
+| Simple type registry | `Documents\DocumentTypeRegistry` — bundled `packing_slip` + `picking_list`; filter `mpcf_document_types`; malformed entries dropped |
+| Stage policy | `Domain\Document\DocumentStagePolicy` — packing_slip: packing…completed; picking_list: queued…picked; cancelled always denied; exceptions use `return_to_state` |
+| Generalized orchestrator | `DocumentService::render(id, doc_type, options)`; `render_packing_slip()` delegates |
+| Renderer contract | `Documents\DocumentRendererInterface`; `HtmlRenderer` implements it (canonical HTML) |
+| Template chain | filter `mpcf_document_template` → theme `mp-commerce-fulfillment/documents/` → bundled; path validated |
+| DocumentModel contract | Render-time snapshots: fulfillment state, template version, branding placeholder, rendered_at/by via `with_render_meta()` |
+| Repository reads | `get`, `list_for_fulfillment`, `latest_for_fulfillment_and_type` — no schema change; composite index deferred to M4-D if needed |
+| Hooks | `mpcf_document_types`, `mpcf_document_template`, `mpcf_document_model` |
+| Template version | Explicit on type definition (`template_version = '1'`), never mtime |
+
+## VI.3 Explicitly not in M4-A
+
+Picking-list assembler/template/UI; branding settings; protected HTML storage; reprint UI / `source_document_id` column; Documents admin screen; Queue bulk print; Workspace multi-doc controls; REST streaming; PDF renderer; version bump / release.
+
+## VI.4 Reprint / storage seams (for M4-B / M4-D)
+
+- Fresh render: new `document_id`, assemble current state, `file_path` NULL in M4-A (`storage_policy=print`).
+- M4-B: store canonical HTML under ADR-0004 protected root; snapshots travel with the model/HTML.
+- M4-D: historical reprint streams stored HTML; optional `source_document_id` lineage; never reassemble under the original id.
+
+## VI.5 Ownership
+
+Outbound documents only. No `wc_io_*` reads. No carrier APIs. ADR-0007 unchanged.

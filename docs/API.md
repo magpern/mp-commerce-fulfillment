@@ -295,7 +295,10 @@ client converts to/from the store's display units itself.
 ### `POST /fulfillments/{id}/documents/render`
 
 No body. Assembles, renders, and records a packing slip for the
-fulfillment. `201`:
+fulfillment via `DocumentService::render_packing_slip()` (delegates to
+`DocumentService::render(..., 'packing_slip')`). Stage policy applies:
+packing slip is available from `packing` onward (not `queued`/`picking`).
+`201`:
 
 ```json
 {
@@ -306,12 +309,13 @@ fulfillment. `201`:
 }
 ```
 
-There is no stored file to link to — every Milestone 2 render is
-render-to-print (`file_path` is always `null`, §10) — so `html` is the
-rendered document itself, not a URL. Load it into a same-origin hidden
-`<iframe>` (`iframe.srcdoc = html`) and call `iframe.contentWindow.print()`
-(§IV.8); the stylesheet is already inlined into `html`, so no second
-request is needed to render correctly.
+There is no stored file to link to — M4-A keeps render-to-print
+(`file_path` is always `null`, §10) — so `html` is the rendered document
+itself, not a URL. Load it into a same-origin hidden `<iframe>`
+(`iframe.srcdoc = html`) and call `iframe.contentWindow.print()` (§IV.8);
+the stylesheet is already inlined into `html`, so no second request is
+needed to render correctly. Protected HTML storage is M4-B; `doc_type`
+request body is M4-C.
 
 ### `GET /carriers`
 
@@ -326,7 +330,8 @@ phone-required flags, an `mpcf_carriers` filter) is Milestone 4's job.
 
 ## What is not exposed, and why
 
-- **No pick list or batch picking routes** (Milestone 3+/7).
+- **No pick list or batch picking routes** (picking list assembler/UI is M4-B; batch is M8).
+- **No `doc_type` body on documents/render yet** (M4-C); endpoint still renders packing_slip only via the compatibility wrapper.
 - **No `mpcf_workflows`/`mpcf_carriers` filter routes** — the workflow
   definition and the real carrier registry shape are still evolving;
   freezing an API surface around them now would be premature (§16.2).
