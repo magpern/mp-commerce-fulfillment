@@ -57,7 +57,33 @@ final class CarriersControllerTest extends WP_UnitTestCase {
 		self::assertSame( 200, $response->get_status() );
 		$ids = array_column( $response->get_data()['carriers'], 'id' );
 		self::assertContains( 'postnord', $ids );
+		self::assertContains( 'bring', $ids );
 		self::assertContains( 'other', $ids );
+	}
+
+	public function test_list_carriers_exposes_additive_tracking_metadata(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_OPERATOR ) ) );
+
+		$response = $this->server->dispatch( new WP_REST_Request( 'GET', '/mpcf/v1/carriers' ) );
+
+		self::assertSame( 200, $response->get_status() );
+		$carriers = $response->get_data()['carriers'];
+		self::assertNotEmpty( $carriers );
+
+		$postnord = null;
+		foreach ( $carriers as $carrier ) {
+			if ( 'postnord' === $carrier['id'] ) {
+				$postnord = $carrier;
+				break;
+			}
+		}
+
+		self::assertNotNull( $postnord );
+		self::assertArrayHasKey( 'label', $postnord );
+		self::assertArrayHasKey( 'tracking_url_template', $postnord );
+		self::assertArrayHasKey( 'tracking_number_pattern', $postnord );
+		self::assertArrayHasKey( 'phone_required', $postnord );
+		self::assertStringContainsString( '{tracking}', (string) $postnord['tracking_url_template'] );
 	}
 
 	public function test_list_carriers_is_forbidden_for_a_role_without_view_queue(): void {
