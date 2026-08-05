@@ -12,6 +12,7 @@ declare( strict_types=1 );
 namespace MPCF\Tests\Integration\Admin;
 
 use MPCF\Admin\DashboardPage;
+use MPCF\Admin\DocumentsPage;
 use MPCF\Admin\FulfillmentDetailPage;
 use MPCF\Admin\OrdersPage;
 use MPCF\Admin\QueuePage;
@@ -91,6 +92,7 @@ final class MenuVisibilityTest extends WP_UnitTestCase {
 		self::assertContains( DashboardPage::SLUG, $slugs );
 		self::assertContains( QueuePage::SLUG, $slugs );
 		self::assertContains( OrdersPage::SLUG, $slugs );
+		self::assertContains( DocumentsPage::SLUG, $slugs );
 
 		// Fulfillment Detail's entry is deliberately still present in
 		// $submenu — Plugin.php no longer calls remove_submenu_page(),
@@ -125,6 +127,7 @@ final class MenuVisibilityTest extends WP_UnitTestCase {
 		self::assertContains( DashboardPage::SLUG, $slugs );
 		self::assertContains( QueuePage::SLUG, $slugs );
 		self::assertContains( OrdersPage::SLUG, $slugs );
+		self::assertContains( DocumentsPage::SLUG, $slugs );
 	}
 
 	public function test_administrator_sees_the_fulfillment_menu_too(): void {

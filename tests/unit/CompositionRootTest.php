@@ -154,6 +154,8 @@ final class CompositionRootTest extends TestCase {
 			'WorkspaceFlags',
 			'StoreUnits',
 			'ProtectedDocumentStore',
+			'DocumentHistoryService',
+			'DocumentsPage',
 		);
 		$disallowed = array_values( array_diff( $matches[1], $allowed ) );
 

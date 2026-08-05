@@ -11,6 +11,7 @@ declare( strict_types=1 );
 namespace MPCF\Tests\Integration\Admin;
 
 use MPCF\Admin\DashboardPage;
+use MPCF\Admin\DocumentsPage;
 use MPCF\Admin\FulfillmentDetailPage;
 use MPCF\Admin\OrdersPage;
 use MPCF\Admin\QueuePage;
@@ -94,6 +95,7 @@ final class CapabilityMatrixTest extends WP_UnitTestCase {
 		self::assertSame( Capabilities::VIEW_QUEUE, self::capability_of( FulfillmentDetailPage::class ) );
 		self::assertSame( Capabilities::VIEW_QUEUE, self::capability_of( DashboardPage::class ) );
 		self::assertSame( Capabilities::VIEW_QUEUE, self::capability_of( OrdersPage::class ) );
+		self::assertSame( Capabilities::RENDER_DOCUMENTS, self::capability_of( DocumentsPage::class ) );
 	}
 
 	private static function capability_of( string $page_class ): string {

@@ -157,4 +157,56 @@ final class DocumentsControllerTest extends WP_UnitTestCase {
 
 		self::assertSame( 404, $response->get_status() );
 	}
+
+	public function test_list_documents_returns_history_rows(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$fulfillment_id = $this->seed_fulfillment_with_shipping_address();
+		$render         = $this->server->dispatch( new WP_REST_Request( 'POST', "/mpcf/v1/fulfillments/{$fulfillment_id}/documents/render" ) );
+		self::assertSame( 201, $render->get_status() );
+		$document_id = (int) $render->get_data()['document_id'];
+
+		$response = $this->server->dispatch( new WP_REST_Request( 'GET', '/mpcf/v1/documents' ) );
+
+		self::assertSame( 200, $response->get_status() );
+		$data = $response->get_data();
+		self::assertGreaterThanOrEqual( 1, $data['total'] );
+		$ids = array_column( $data['items'], 'id' );
+		self::assertContains( $document_id, $ids );
+	}
+
+	public function test_reprint_returns_exact_html_and_does_not_create_a_new_document(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$fulfillment_id = $this->seed_fulfillment_with_shipping_address();
+		$render         = $this->server->dispatch( new WP_REST_Request( 'POST', "/mpcf/v1/fulfillments/{$fulfillment_id}/documents/render" ) );
+		$document_id    = (int) $render->get_data()['document_id'];
+		$html           = (string) $render->get_data()['html'];
+
+		$request  = new WP_REST_Request( 'POST', "/mpcf/v1/documents/{$document_id}/reprint" );
+		$response = $this->server->dispatch( $request );
+
+		self::assertSame( 200, $response->get_status() );
+		self::assertSame( $html, $response->get_data()['html'] );
+		self::assertSame( $document_id, (int) $response->get_data()['document_id'] );
+
+		$list = $this->server->dispatch( new WP_REST_Request( 'GET', '/mpcf/v1/documents?doc_type=packing_slip' ) );
+		$ids  = array_column( $list->get_data()['items'], 'id' );
+		self::assertSame( 1, count( array_filter( $ids, static fn( $id ): bool => (int) $id === $document_id ) ) );
+	}
+
+	public function test_content_and_reprint_are_forbidden_without_capability(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+		$fulfillment_id = $this->seed_fulfillment_with_shipping_address();
+		$render         = $this->server->dispatch( new WP_REST_Request( 'POST', "/mpcf/v1/fulfillments/{$fulfillment_id}/documents/render" ) );
+		$document_id    = (int) $render->get_data()['document_id'];
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$content = $this->server->dispatch( new WP_REST_Request( 'GET', "/mpcf/v1/documents/{$document_id}/content" ) );
+		$reprint = $this->server->dispatch( new WP_REST_Request( 'POST', "/mpcf/v1/documents/{$document_id}/reprint" ) );
+
+		self::assertSame( 403, $content->get_status() );
+		self::assertSame( 403, $reprint->get_status() );
+	}
 }
