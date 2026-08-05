@@ -109,6 +109,9 @@ route surfaced it.
 | PATCH | `/packages/{id}` | `mpcf_manage_shipments` |
 | DELETE | `/packages/{id}` | `mpcf_manage_shipments` |
 | POST | `/fulfillments/{id}/documents/render` | `mpcf_render_documents` |
+| GET | `/documents` | `mpcf_render_documents` |
+| GET | `/documents/{document_id}/content` | `mpcf_render_documents` |
+| POST | `/documents/{document_id}/reprint` | `mpcf_render_documents` |
 | GET | `/carriers` | `mpcf_view_queue` |
 
 ### `GET /fulfillments`
@@ -294,28 +297,45 @@ client converts to/from the store's display units itself.
 
 ### `POST /fulfillments/{id}/documents/render`
 
-No body. Assembles, renders, and records a packing slip for the
-fulfillment via `DocumentService::render_packing_slip()` (delegates to
-`DocumentService::render(..., 'packing_slip')`). Stage policy applies:
-packing slip is available from `packing` onward (not `queued`/`picking`).
+Optional body field `doc_type` (`packing_slip` default; `picking_list` also
+bundled). Assembles, renders, stores canonical HTML, and records via
+`DocumentService::render()`. Stage policy applies (`DocumentStagePolicy`).
 `201`:
 
 ```json
 {
   "html": "<!DOCTYPE html>...",
   "document_id": 7,
+  "document_type": "packing_slip",
+  "template_version": "2",
+  "stored": true,
+  "file_available": true,
   "fulfillment": { "id": 42, "version": 5, "...": "..." },
   "transitions": [ "..." ]
 }
 ```
 
-There is no stored file to link to — M4-A keeps render-to-print
-(`file_path` is always `null`, §10) — so `html` is the rendered document
-itself, not a URL. Load it into a same-origin hidden `<iframe>`
-(`iframe.srcdoc = html`) and call `iframe.contentWindow.print()` (§IV.8);
-the stylesheet is already inlined into `html`, so no second request is
-needed to render correctly. Protected HTML storage is M4-B; `doc_type`
-request body is M4-C.
+Load `html` into a same-origin hidden `<iframe>` (`iframe.srcdoc = html`)
+and call `iframe.contentWindow.print()` (§IV.8); the stylesheet is inlined.
+
+### `GET /documents`
+
+Query: `doc_type`, `search` (order # / fulfillment id), `date_from`,
+`date_to` (`Y-m-d`), `limit` (≤100), `offset`. Requires
+`mpcf_render_documents`. Returns `{ "items": [...], "total": N }`.
+
+### `GET /documents/{document_id}/content`
+
+Streams the **exact** stored HTML artifact (no reprint audit). Capability
+`mpcf_render_documents`. Path resolved only from trusted repository
+metadata under the protected upload root; traversal rejected. Response is
+raw `text/html; charset=UTF-8` (not a JSON envelope).
+
+### `POST /documents/{document_id}/reprint`
+
+Streams the exact stored HTML and appends `document.reprinted` (payload
+includes `source_document_id`). Does **not** create a new document row.
+`200`: `{ "html": "...", "document_id": 7, "source_document_id": 7, ... }`.
 
 ### `GET /carriers`
 
@@ -330,8 +350,9 @@ phone-required flags, an `mpcf_carriers` filter) is Milestone 4's job.
 
 ## What is not exposed, and why
 
-- **No pick list or batch picking routes** (picking list assembler/UI is M4-B; batch is M8).
-- **No `doc_type` body on documents/render yet** (M4-C); endpoint still renders packing_slip only via the compatibility wrapper.
+- **No batch-picking engine routes** (M8). Queue bulk picking-list print is
+  an admin form action (cap 25), not a REST batch domain.
+- **No PDF download routes** — canonical stored format is HTML; PDF remains deferred.
 - **No `mpcf_workflows`/`mpcf_carriers` filter routes** — the workflow
   definition and the real carrier registry shape are still evolving;
   freezing an API surface around them now would be premature (§16.2).
@@ -340,3 +361,4 @@ phone-required flags, an `mpcf_carriers` filter) is Milestone 4's job.
   is a post-1.0 idea (§IV.13).
 - **No REST response caching** — a warehouse queue that shows stale data
   is worse than a slow one (§IV.10).
+- **No document delete route** — documents are immutable historical artifacts.

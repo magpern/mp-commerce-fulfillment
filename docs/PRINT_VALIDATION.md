@@ -82,3 +82,28 @@ under a deliberately adversarial fixture. The `PdfRendererPort` binding
 stays deferred to the milestone that actually needs a stored file (§10) —
 adding it now would cost the zero-runtime-dependency property this
 plugin has held since Milestone 1 for no benefit this milestone needs.
+
+---
+
+# M4 Spike S2 — packing slip + picking list (both browsers)
+
+Architecture Plan Part VI / M4-E: confirm both outbound document types still
+print acceptably to A4 from Chrome and Firefox using the same method as S1
+(Chrome `--print-to-pdf`; Firefox W3C WebDriver `Print`), against **real
+stored HTML artifacts** produced on `dev.biopentra.eu` during dogfood
+(fulfillments #6 picking list, #4 packing slip).
+
+**Result: pass on both engines for both document types. No PDF renderer
+required for M4.**
+
+| Document | Engine | Pages | Page size | Result |
+|---|---|---|---|---|
+| Picking list | Chrome | 1 | 594.96 × 841.92 pt (A4) | Header, order identity, items table (ordered/to-pick/picked/remaining), barcode payload present; no clipping. |
+| Picking list | Firefox | 1 | 596 × 842 pt (A4) | Same. |
+| Packing slip | Chrome | 1 | 594.96 × 841.92 pt (A4) | Branding, ship-to, items, template v2 identity present; no clipping. |
+| Packing slip | Firefox | 1 | 596 × 842 pt (A4) | Same. |
+
+Evidence files (local dogfood working copies, not shipped in the release ZIP):
+`tmp-print-{picking-list,packing-slip}-{chrome,firefox}.pdf`.
+
+Mandatory PDF remains out of scope (D16 / Part VI.7).
