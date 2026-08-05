@@ -9,22 +9,36 @@ declare( strict_types=1 );
 
 namespace MPCF\Domain;
 
+use MPCF\Domain\Shipping\Carrier;
+
 /**
- * Architecture Plan §IV.6: carriers are data, not code. The Milestone 2
- * bundled set (`Infrastructure\Carriers\BundledCarrierRegistry`) is
- * deliberately minimal and includes an "other" entry accepting a free-text
- * label and a manual tracking URL, so no merchant is blocked on a carrier
- * that isn't bundled — the real EU-skewed registry shape (format-validation
- * hints, phone-required flags, the `mpcf_carriers` filter) is M4's job.
+ * Architecture Plan §11 / M5-A: carriers are data, not code. The bundled
+ * EU-skewed set lives in {@see \MPCF\Infrastructure\Carriers\BundledCarrierRegistry}
+ * and is filterable via `mpcf_carriers`. Definitions are immutable after
+ * registration; runtime merchant preferences belong in Settings (M5-B).
+ * Includes an "other" entry so no merchant is blocked on an unbundled carrier.
  */
 interface CarrierRegistry {
 
 	/**
 	 * Every registered carrier, in display order.
 	 *
-	 * @return list<array{id: string, label: string}>
+	 * @return list<array{
+	 *     id: string,
+	 *     label: string,
+	 *     tracking_url_template: string|null,
+	 *     tracking_number_pattern: string|null,
+	 *     phone_required: bool
+	 * }>
 	 */
 	public function all(): array;
+
+	/**
+	 * One validated carrier by id, or null when unknown.
+	 *
+	 * @param string $carrier_id Carrier registry key.
+	 */
+	public function get( string $carrier_id ): ?Carrier;
 
 	/**
 	 * A carrier's display label, or the id itself if unregistered.
@@ -35,7 +49,8 @@ interface CarrierRegistry {
 
 	/**
 	 * The tracking URL a carrier's template derives for a tracking number,
-	 * or null if the carrier is unregistered or has no template.
+	 * or null if the carrier is unregistered or has no template. Delegates
+	 * to {@see TrackingUrlResolver}.
 	 *
 	 * @param string $carrier_id      Carrier registry key.
 	 * @param string $tracking_number Tracking number to build a URL for.
