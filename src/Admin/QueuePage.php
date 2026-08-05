@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace MPCF\Admin;
 
 use MPCF\Application\AssignmentService;
+use MPCF\Application\DocumentHistoryService;
 use MPCF\Application\FulfillmentDetailService;
 use MPCF\Application\QueueService;
 use MPCF\Application\WorkflowService;
@@ -105,15 +106,23 @@ final class QueuePage implements Page {
 	private WorkflowDefinition $definition;
 
 	/**
+	 * Document history / capped bulk picking-list print (M4-D).
+	 *
+	 * @var DocumentHistoryService
+	 */
+	private DocumentHistoryService $document_history;
+
+	/**
 	 * Builds the page.
 	 *
-	 * @param AdminPageShell           $shell       Page-shell chrome renderer.
-	 * @param ComponentRenderer        $renderer    MPDS component renderer.
-	 * @param QueueService             $queue       Read-side Queue listing.
-	 * @param FulfillmentDetailService $detail      Read-side fulfillment lookup, for per-row capability checks.
-	 * @param AssignmentService        $assignments Assignment mutations.
-	 * @param WorkflowService          $workflow    Transition mutations.
-	 * @param WorkflowDefinition       $definition  The governing workflow, for state labels and edge lookups.
+	 * @param AdminPageShell           $shell             Page-shell chrome renderer.
+	 * @param ComponentRenderer        $renderer          MPDS component renderer.
+	 * @param QueueService             $queue             Read-side Queue listing.
+	 * @param FulfillmentDetailService $detail            Read-side fulfillment lookup, for per-row capability checks.
+	 * @param AssignmentService        $assignments       Assignment mutations.
+	 * @param WorkflowService          $workflow          Transition mutations.
+	 * @param WorkflowDefinition       $definition        The governing workflow, for state labels and edge lookups.
+	 * @param DocumentHistoryService   $document_history  History + bulk picking-list print.
 	 */
 	public function __construct(
 		AdminPageShell $shell,
@@ -122,15 +131,17 @@ final class QueuePage implements Page {
 		FulfillmentDetailService $detail,
 		AssignmentService $assignments,
 		WorkflowService $workflow,
-		WorkflowDefinition $definition
+		WorkflowDefinition $definition,
+		DocumentHistoryService $document_history
 	) {
-		$this->shell       = $shell;
-		$this->renderer    = $renderer;
-		$this->queue       = $queue;
-		$this->detail      = $detail;
-		$this->assignments = $assignments;
-		$this->workflow    = $workflow;
-		$this->definition  = $definition;
+		$this->shell             = $shell;
+		$this->renderer          = $renderer;
+		$this->queue             = $queue;
+		$this->detail            = $detail;
+		$this->assignments       = $assignments;
+		$this->workflow          = $workflow;
+		$this->definition        = $definition;
+		$this->document_history  = $document_history;
 	}
 
 	/**
@@ -204,16 +215,20 @@ final class QueuePage implements Page {
 	}
 
 	/**
-	 * Runs a bulk assign/advance action and reports per-row outcomes.
+	 * Runs a bulk assign/advance/print-picking-lists action and reports per-row outcomes.
 	 * Public and decoupled from `$_POST`/`$_GET` so it is directly
 	 * testable, the same way `Cli\BackfillCommand::run_backfill()` is.
 	 *
 	 * @param array<int, int>      $ids    Fulfillment ids to act on.
-	 * @param string               $action `assign` or `advance`.
+	 * @param string               $action `assign`, `advance`, or `print_picking_lists`.
 	 * @param array<string, mixed> $params Action-specific parameters (`assignee_id` or `target_state`).
-	 * @return array{succeeded: list<int>, failed: array<int, string>}
+	 * @return array{succeeded: list<int>, failed: array<int, string>, combined_html?: string}
 	 */
 	public function handle_bulk_action( array $ids, string $action, array $params ): array {
+		if ( 'print_picking_lists' === $action ) {
+			return $this->apply_bulk_picking_lists( $ids );
+		}
+
 		$result = array(
 			'succeeded' => array(),
 			'failed'    => array(),
@@ -232,6 +247,45 @@ final class QueuePage implements Page {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Capped bulk fresh picking-list print (one stored document + audit per success).
+	 * Returns a combined HTML print sheet for browser printing (page-break separated).
+	 *
+	 * @param array<int, int> $ids Selected fulfillment ids.
+	 * @return array{succeeded: list<int>, failed: array<int, string>, combined_html: string}
+	 */
+	private function apply_bulk_picking_lists( array $ids ): array {
+		if ( ! current_user_can( Capabilities::RENDER_DOCUMENTS ) ) {
+			$failed = array();
+			foreach ( $ids as $id ) {
+				$failed[ (int) $id ] = __( 'You are not allowed to render documents.', 'mp-commerce-fulfillment' );
+			}
+
+			return array(
+				'succeeded'     => array(),
+				'failed'        => $failed,
+				'combined_html' => '',
+			);
+		}
+
+		$bulk = $this->document_history->bulk_print_picking_lists(
+			$ids,
+			self::current_actor(),
+			static fn( string $capability ): bool => current_user_can( $capability )
+		);
+
+		$succeeded = array();
+		foreach ( $bulk['succeeded'] as $row ) {
+			$succeeded[] = (int) $row['fulfillment_id'];
+		}
+
+		return array(
+			'succeeded'     => $succeeded,
+			'failed'        => $bulk['failed'],
+			'combined_html' => $bulk['combined_html'],
+		);
 	}
 
 	/**
@@ -327,26 +381,64 @@ final class QueuePage implements Page {
 
 		$succeeded = count( $result['succeeded'] ?? array() );
 		$failed    = $result['failed'] ?? array();
+		$combined  = isset( $result['combined_html'] ) ? (string) $result['combined_html'] : '';
 
 		if ( array() === $failed ) {
 			/* translators: %d: number of fulfillments updated */
 			$message = sprintf( _n( '%d fulfillment updated.', '%d fulfillments updated.', $succeeded, 'mp-commerce-fulfillment' ), $succeeded );
 			printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html( $message ) );
+		} else {
+			printf(
+				'<div class="notice notice-warning is-dismissible"><p>%s</p></div>',
+				esc_html(
+					sprintf(
+						/* translators: 1: succeeded count, 2: failed count */
+						__( '%1$d fulfillment(s) updated; %2$d could not be updated.', 'mp-commerce-fulfillment' ),
+						$succeeded,
+						count( $failed )
+					)
+				)
+			);
 
-			return;
+			if ( array() !== $failed ) {
+				echo '<div class="notice notice-warning is-dismissible"><ul>';
+				foreach ( $failed as $fid => $reason ) {
+					printf(
+						'<li>%s</li>',
+						esc_html(
+							sprintf(
+								/* translators: 1: fulfillment id, 2: failure reason */
+								__( 'Fulfillment #%1$d: %2$s', 'mp-commerce-fulfillment' ),
+								(int) $fid,
+								(string) $reason
+							)
+						)
+					);
+				}
+				echo '</ul></div>';
+			}
 		}
 
-		printf(
-			'<div class="notice notice-warning is-dismissible"><p>%s</p></div>',
-			esc_html(
-				sprintf(
-					/* translators: 1: succeeded count, 2: failed count */
-					__( '%1$d fulfillment(s) updated; %2$d could not be updated.', 'mp-commerce-fulfillment' ),
-					$succeeded,
-					count( $failed )
-				)
-			)
-		);
+		if ( '' !== $combined ) {
+			// Bounded combined print sheet: one stored/audited document per
+			// fulfillment; browser prints page-separated HTML in one window.
+			$encoded = wp_json_encode( $combined );
+			echo '<script>';
+			echo 'document.addEventListener("DOMContentLoaded", function () {';
+			echo 'var html = ' . $encoded . ';'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-encoded HTML for iframe srcdoc.
+			echo <<<'JS'
+  var iframe = document.createElement('iframe');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  iframe.srcdoc = html;
+  iframe.addEventListener('load', function () {
+    try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) {}
+  }, { once: true });
+  document.body.appendChild(iframe);
+});
+JS;
+			echo '</script>';
+		}
 	}
 
 	/**
@@ -520,6 +612,18 @@ final class QueuePage implements Page {
 		printf( '<option value="">%s</option>', esc_html__( 'Bulk actions…', 'mp-commerce-fulfillment' ) );
 		printf( '<option value="assign">%s</option>', esc_html__( 'Assign to…', 'mp-commerce-fulfillment' ) );
 		printf( '<option value="advance">%s</option>', esc_html__( 'Advance to state…', 'mp-commerce-fulfillment' ) );
+		if ( current_user_can( Capabilities::RENDER_DOCUMENTS ) ) {
+			printf(
+				'<option value="print_picking_lists">%s</option>',
+				esc_html(
+					sprintf(
+						/* translators: %d: bulk cap */
+						__( 'Print picking lists (max %d)…', 'mp-commerce-fulfillment' ),
+						DocumentHistoryService::BULK_PICKING_CAP
+					)
+				)
+			);
+		}
 		echo '</select>';
 
 		echo '<select name="assignee_id">';

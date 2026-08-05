@@ -17,8 +17,9 @@ use MPCF\Domain\Document\DocumentRecord;
  * {@see EventRepository}'s own contract — "documents printed" must stay a
  * reliable fact (§10). No delete API — documents are immutable audit records.
  *
- * M4-D reprint lineage (`source_document_id`) and content streaming are
- * deferred; M4-A only adds the read methods history UI will need.
+ * M4-D: search() powers history UI; reprint lineage uses event payload
+ * `source_document_id` (no schema column). No delete API — documents are
+ * immutable audit records.
  */
 interface DocumentRepository {
 
@@ -51,4 +52,15 @@ interface DocumentRepository {
 	 * @param string $doc_type       Document type key.
 	 */
 	public function latest_for_fulfillment_and_type( int $fulfillment_id, string $doc_type ): ?DocumentRecord;
+
+	/**
+	 * Searches document history with optional filters.
+	 *
+	 * Filters: `doc_type`, `search` (order number / fulfillment id),
+	 * `date_from`, `date_to` (Y-m-d), `limit`, `offset`.
+	 *
+	 * @param array<string, mixed> $filters Search filters.
+	 * @return array{items: list<array<string, mixed>>, total: int}
+	 */
+	public function search( array $filters ): array;
 }
