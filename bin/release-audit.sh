@@ -104,7 +104,12 @@ else
 	if [ -f "$ZIP_PATH" ]; then
 		pass "built $ZIP_PATH"
 
-		for required in "mp-commerce-fulfillment/mp-commerce-fulfillment.php" "mp-commerce-fulfillment/uninstall.php" "mp-commerce-fulfillment/vendor/autoload.php"; do
+		for required in \
+			"mp-commerce-fulfillment/mp-commerce-fulfillment.php" \
+			"mp-commerce-fulfillment/uninstall.php" \
+			"mp-commerce-fulfillment/vendor/autoload.php" \
+			"mp-commerce-fulfillment/templates/documents/packing-slip.php" \
+			"mp-commerce-fulfillment/templates/documents/picking-list.php"; do
 			if zip_has "$ZIP_PATH" "$required"; then
 				pass "zip contains $required"
 			else
