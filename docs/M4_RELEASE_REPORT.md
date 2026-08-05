@@ -1,9 +1,12 @@
 # Milestone 4 Release Report — Documents I
 
-**Version:** 0.4.0 (release candidate)  
-**Branch:** `feature/m4-documents`  
-**PR:** https://github.com/magpern/mp-commerce-fulfillment/pull/1 (draft)  
-**Status:** Release candidate — **not tagged / not published** pending Product Owner approval.
+**Released:** 2026-08-05  
+**Version:** 0.4.0  
+**Status:** ✅ Production Ready (plugin artifact published; production deploy not part of this release)
+
+**Tag:** `v0.4.0`  
+**Merged commit:** `ed7c3b9`  
+**PR:** https://github.com/magpern/mp-commerce-fulfillment/pull/1 (rebase-merged)
 
 ---
 
@@ -12,10 +15,13 @@
 M4 delivers outbound packing slips and picking lists end-to-end: typed
 `DocumentService` orchestration, branding, protected immutable HTML storage,
 Workspace actions, Documents history with exact reprint, capped Queue bulk
-picking-list print, dogfood, and RC packaging.
+picking-list print, dogfood, and published release packaging.
 
 Binding constraints held: no carrier APIs, no inventory/receiving/PO, no
 mandatory PDF, no silent printing, no Mission Control redesign, no M5+.
+
+PO approved GO 2026-08-05 after the M4 integration-test regression gate
+passed (test defect, not production defect).
 
 ---
 
@@ -27,7 +33,7 @@ mandatory PDF, no silent printing, no Mission Control redesign, no M5+.
 | M4-B | Branding, picking list, protected store, integrity + compensation | Landed |
 | M4-C | Workspace actions, Shift+P, typed REST render, timeline labels | Landed |
 | M4-D | History UI, exact reprint, content stream, Queue bulk cap 25 | Landed |
-| M4-E | Dogfood, docs, RC prep | Landed (this report) |
+| M4-E | Dogfood, docs, RC prep, publish | Landed / closed |
 
 ---
 
@@ -55,15 +61,17 @@ Service-level scenarios via WP-CLI against live fulfillments (#6 queued,
 
 | Blocker | Fix |
 |---|---|
-| Release ZIP omitted `templates/documents/` (bundled packing-slip + picking-list) | `bin/build-zip.sh` copies `templates/`; `bin/release-audit.sh` requires both template PHP files |
+| Release ZIP omitted `templates/documents/` | `bin/build-zip.sh` copies `templates/`; audit requires both template PHP files |
+| CI `DocumentsControllerTest` `Undefined array key "items"` | Integration test used `?doc_type=` in the route path; fixed with `set_query_params` (`9e61f18` / `ed7c3b9`) |
 
 ## Deferred / polish (not fixed)
 
 | Finding | Class |
 |---|---|
-| Manual browser click-through of Workspace Shift+P / History Reprint buttons | Important polish (service path covered; UI paths covered by unit/integration + existing JS) |
+| Manual browser click-through of Workspace Shift+P / History Reprint buttons | Important polish |
 | Operator/Lead role matrix exercised via capability unit/integration tests, not full UI login matrix | Important polish |
 | Composite DB index for history | Future enhancement |
+| Baseline CI: picking `409` + WorkspaceFlags `trim()` | Pre-existing on `main`; not M4 regressions |
 
 ---
 
@@ -91,8 +99,8 @@ slip and picking list — **pass**.
 
 - Unit suite: **431** OK (local Docker PHP 8.3).
 - Focused M4 history/reprint/bulk unit tests added.
-- Integration: DocumentsController list/reprint/auth extended; QueuePage ctor wired.
-- CI on PR: continues to fail known **baseline** integration issues (picking `409` version conflicts; WorkspaceFlags `trim()` TypeError) — not introduced by M4 document commits; compare against prior `feature/m4-documents` runs.
+- Integration: DocumentsController list/reprint/auth green after query-param fix.
+- CI vs `main`: identical baseline failures only (picking `409` ×5; WorkspaceFlags `trim()` ×3).
 
 ---
 
@@ -112,11 +120,31 @@ slip and picking list — **pass**.
 
 ---
 
-## Release candidate packaging
+## Release artifacts
 
-ZIP: `dist/mp-commerce-fulfillment-0.4.0.zip`  
-SHA-256: `d2dc8fdbe3a638a76015c4e71e612f0309e9f5b39a1e277da5551c7bb2b511ba`  
-Release audit: **passed**.  
-Live upgrade (bind-mounted feature branch): plugin reports `0.4.0` active; existing stored documents remain readable (`reprint_survives=yes`). Clean-install: ZIP contains bootstrap, autoload, both templates, `DocumentsPage`, `DocumentHistoryService`, `ProtectedDocumentStore` (audit + zip listing).
+| Property | Value |
+|---|---|
+| **Tag** | `v0.4.0` |
+| **Commit** | `ed7c3b9` |
+| **Released** | 2026-08-05 |
+| **GitHub Release** | https://github.com/magpern/mp-commerce-fulfillment/releases/tag/v0.4.0 |
+| **Release workflow** | https://github.com/magpern/mp-commerce-fulfillment/actions/runs/31025832130 (**success**) |
+| **Installable ZIP** | `mp-commerce-fulfillment-0.4.0.zip` |
+| **Version parity** | header / `MPCF_VERSION` / Stable tag = `0.4.0` |
+| **Local Build SHA-256** | `996cb581534ffb1cd68fd96cc4ac7fb367b5811dcd4d1e3e338698842c4fbce3` |
+| **Published ZIP SHA-256** | `75383506f0eb42f1ae30b30146554fe5e553f9ea5120a6a29d3db792177309a1` |
+| **Templates present** | `packing-slip.php`, `picking-list.php` |
+| **Protected storage present** | `ProtectedDocumentStore.php` |
+| **Prohibited artifacts** | none (no phpunit/tests/node_modules/playwright) |
 
-**Explicit:** `v0.4.0` is **not** tagged and **not** published without PO approval.
+**Note:** Local vs published ZIP SHA-256 differ. File-level comparison shows
+identical plugin sources; only Composer autoload metadata differs
+(`autoload_classmap.php`, `autoload_static.php`, `installed.php`) because
+the Release workflow runs `composer install --optimize-autoloader`. Archive
+timestamps also differ. Content verification confirms correctness.
+
+---
+
+## Milestone status
+
+**M4 — Documents I is closed.** Tag `v0.4.0` published. M5 has not started.
