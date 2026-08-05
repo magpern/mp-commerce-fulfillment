@@ -321,7 +321,7 @@ msgid "Order status"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:185
-#: src/Plugin.php:390
+#: src/Plugin.php:396
 msgid "Fulfillment"
 msgstr ""
 
@@ -380,6 +380,7 @@ msgstr ""
 #: src/Admin/WorkspacePage.php:658
 #: src/Admin/WorkspaceStageGuidance.php:132
 #: src/Application/OrdersNextAction.php:101
+#: templates/documents/picking-list.php:109
 msgid "Picked"
 msgstr ""
 
@@ -393,6 +394,7 @@ msgstr ""
 #: src/Admin/WorkspacePage.php:658
 #: src/Admin/WorkspaceStageGuidance.php:144
 #: src/Application/OrdersNextAction.php:103
+#: templates/documents/packing-slip.php:121
 msgid "Packed"
 msgstr ""
 
@@ -548,6 +550,59 @@ msgstr ""
 msgid "Queue pagination"
 msgstr ""
 
+#: src/Admin/SettingsPage.php:74
+msgid "Fulfillment Settings"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:81
+#: src/Admin/ShellNavigation.php:52
+msgid "Settings"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:105
+msgid "Document branding"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:106
+msgid "Shown on packing slips and picking lists. Empty optional fields are omitted. Historical renders keep the branding captured at print time."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:115
+msgid "Store display name"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:117
+msgid "Leave blank to use the WordPress site name."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:123
+msgid "Address"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:125
+msgid "One line per row. Optional."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:130
+msgid "Footer / legal text"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:132
+msgid "Optional. Printed at the bottom of documents."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:137
+msgid "Logo attachment ID"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:139
+msgid "Optional Media Library attachment ID. Embedded into historical HTML as a data URI when the file is a small image; otherwise omitted (never stored as a public URL alone)."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:148
+msgid "Save changes"
+msgstr ""
+
 #: src/Admin/ShellHeader.php:28
 msgid "Warehouse fulfillment workspace"
 msgstr ""
@@ -676,11 +731,13 @@ msgid "Take over"
 msgstr ""
 
 #: src/Admin/WorkspacePage.php:562
-#: templates/documents/packing-slip.php:49
+#: templates/documents/packing-slip.php:98
 msgid "Ship to"
 msgstr ""
 
 #: src/Admin/WorkspacePage.php:621
+#: templates/documents/packing-slip.php:110
+#: templates/documents/picking-list.php:96
 msgid "Customer instructions"
 msgstr ""
 
@@ -790,7 +847,7 @@ msgstr ""
 
 #: src/Admin/WorkspacePage.php:845
 #: src/Admin/WorkspacePage.php:898
-#: templates/documents/packing-slip.php:79
+#: templates/documents/packing-slip.php:138
 msgid "Packages"
 msgstr ""
 
@@ -1036,31 +1093,73 @@ msgstr ""
 msgid "Repeat problem customer"
 msgstr ""
 
-#: templates/documents/packing-slip.php:25
-#: templates/documents/packing-slip.php:34
+#: templates/documents/packing-slip.php:32
+#: templates/documents/packing-slip.php:53
 msgid "Packing slip"
 msgstr ""
 
 #. translators: %s: order number
-#: templates/documents/packing-slip.php:39
+#: templates/documents/packing-slip.php:58
+#: templates/documents/picking-list.php:56
 #, php-format
 msgid "Order %s"
 msgstr ""
 
-#: templates/documents/packing-slip.php:61
+#. translators: 1: fulfillment id, 2: fulfillment state
+#: templates/documents/packing-slip.php:67
+#: templates/documents/picking-list.php:65
+#, php-format
+msgid "Fulfillment #%1$d · %2$s"
+msgstr ""
+
+#. translators: %s: render timestamp
+#: templates/documents/packing-slip.php:78
+#: templates/documents/picking-list.php:76
+#, php-format
+msgid "Rendered %s"
+msgstr ""
+
+#. translators: %s: template version
+#: templates/documents/packing-slip.php:88
+#: templates/documents/picking-list.php:86
+#, php-format
+msgid "Template %s"
+msgstr ""
+
+#: templates/documents/packing-slip.php:118
+#: templates/documents/picking-list.php:104
 msgid "SKU"
 msgstr ""
 
-#: templates/documents/packing-slip.php:62
+#: templates/documents/packing-slip.php:119
+#: templates/documents/picking-list.php:105
 msgid "Item"
 msgstr ""
 
-#: templates/documents/packing-slip.php:63
-msgid "Qty"
+#: templates/documents/packing-slip.php:120
+#: templates/documents/picking-list.php:107
+msgid "Ordered"
 msgstr ""
 
 #. translators: 1: package sequence number
-#: templates/documents/packing-slip.php:86
+#: templates/documents/packing-slip.php:145
 #, php-format
 msgid "Package %1$d"
+msgstr ""
+
+#: templates/documents/picking-list.php:30
+#: templates/documents/picking-list.php:51
+msgid "Picking list"
+msgstr ""
+
+#: templates/documents/picking-list.php:106
+msgid "Location"
+msgstr ""
+
+#: templates/documents/picking-list.php:108
+msgid "To pick"
+msgstr ""
+
+#: templates/documents/picking-list.php:110
+msgid "Remaining"
 msgstr ""
