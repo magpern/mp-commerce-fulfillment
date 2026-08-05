@@ -95,7 +95,7 @@ always restored if a filter removes it.
 
 Definitions are **immutable after registration**. Runtime merchant
 preferences (default carrier, notification strategy) belong in Settings
-(later M5) — do not mutate registry definitions for that.
+— do not mutate registry definitions for that.
 
 `TrackingUrlResolver` (default `TemplateTrackingUrlResolver`) expands
 `{tracking}` templates; it is not a live carrier API and is not hooked.
@@ -104,8 +104,23 @@ preferences (default carrier, notification strategy) belong in Settings
 
 M5-B adds no public WordPress hooks. Merchant notification preferences
 are settings-backed (`mpcf_settings` schema v6) and read through
-`Application\Notifications\NotificationConfigurationService` for M5-C.
-Avoid speculative filters until a second consumer needs them.
+`Application\Notifications\NotificationConfigurationService`.
+
+## M5-C/D notification pipeline
+
+M5-C/D add no public WordPress filters for channel registration yet
+(single `EmailChannel`). Internal domain events used for audit:
+
+| Event type | When |
+|---|---|
+| `notification.sent` | MPCF shipped email delivered |
+| `notification.failed` | Send failed (e.g. missing recipient, `wp_mail` false) |
+| `notification.suppressed` | Auto-send deduped within 120s |
+
+Payloads are PayloadGuard-safe (no recipient email). WooCommerce
+completed-order emails are extended via
+`Woo\TrackingEmailExtension` on `woocommerce_email_after_order_table`
+when strategy includes `COMPLETED_EMAIL` / `BOTH` — not a public MPCF hook.
 
 All other v1.0 extension surfaces (`mpcf_workflows`, `mpcf_event` +
 per-type actions, `mpcf_intake_should_create`) remain documented in

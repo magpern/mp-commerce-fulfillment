@@ -2228,3 +2228,35 @@ Notification / NotificationFactory / Dispatcher / EmailChannel /
 TrackingEmailExtension; shipment event handlers; customer emails;
 notification REST endpoints; carrier APIs; preview/test-send UI.
 
+## VII.5 M5-C delivered (Notification Engine)
+
+| Concern | Implementation |
+|---|---|
+| Notification | Immutable `Domain\Notification\Notification` (recipient, subject, bodies, tracking, shipment snapshot, metadata) |
+| Factory | `Application\Notifications\NotificationFactory` — shipment → Notification |
+| Orchestration | `NotificationService` — strategy gate, dedup (120s), audit, status |
+| Event bridge | `NotificationDispatcher` subscribes to `shipment.shipped` |
+| Channel port | `Domain\Notification\NotificationChannel` + `NotificationResult` |
+| Email transport | `Infrastructure\Notifications\EmailChannel` (`wp_mail` only) |
+| Recipient port | `Domain\CustomerEmailLookup` → `Woo\WooCustomerEmailLookup` |
+| Schema | No new tables — audit via existing fulfillment events |
+
+## VII.6 M5-D delivered (WooCommerce Email Integration)
+
+| Concern | Implementation |
+|---|---|
+| Completed-order extension | `Woo\TrackingEmailExtension` on `woocommerce_email_after_order_table` |
+| Strategy | `COMPLETED_EMAIL` / `MPCF_SHIPPED` / `BOTH` / `DISABLED` via configuration service |
+| No duplicate templates | Extension appends tracking block; MPCF shipped email uses factory HTML |
+| Workspace | Send button + last status/time on shipped shipment cards |
+| REST | `POST /shipments/{id}/notify`, `GET /shipments/{id}/notification-status` |
+
+## VII.7 M5-E delivered (Stabilization & RC)
+
+Focused unit + integration coverage; dogfood classification; docs
+reconciled; `v0.5.0` release candidate prepared (not tagged/published
+without PO approval). Explicitly not in M5: SMS/push, carrier APIs,
+labels, inventory/receiving, Mission Control, M6 photography.
+
+---
+

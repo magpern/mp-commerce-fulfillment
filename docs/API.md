@@ -113,6 +113,8 @@ route surfaced it.
 | GET | `/documents/{document_id}/content` | `mpcf_render_documents` |
 | POST | `/documents/{document_id}/reprint` | `mpcf_render_documents` |
 | GET | `/carriers` | `mpcf_view_queue` |
+| POST | `/shipments/{id}/notify` | `mpcf_manage_shipments` |
+| GET | `/shipments/{id}/notification-status` | `mpcf_view_queue` |
 
 ### `GET /fulfillments`
 
@@ -370,6 +372,40 @@ Integrators extend the set via the `mpcf_carriers` filter (see
 `docs/HOOKS.md`). Tracking URLs are resolved by `TrackingUrlResolver`
 (default: template expansion) — not a live carrier API.
 
+### `POST /shipments/{id}/notify`
+
+Sends the MPCF shipped-email notification for one shipment when the
+merchant strategy includes `MPCF_SHIPPED` or `BOTH`. Body param `force`
+(default `true` for this route) bypasses the automatic 120s dedup window
+used by the `shipment.shipped` subscriber.
+
+```json
+{
+  "status": "sent",
+  "strategy": "MPCF_SHIPPED",
+  "result": { "success": true, "channel": "email", "error_code": "" }
+}
+```
+
+`status` values: `sent`, `failed`, `suppressed`, `skipped_strategy`,
+`not_found`. Response never includes the customer email address.
+
+### `GET /shipments/{id}/notification-status`
+
+Last audited notification outcome for the shipment (from the fulfillment
+event trail).
+
+```json
+{
+  "notification": {
+    "status": "sent",
+    "occurred_at": "2026-08-05T12:00:00+00:00",
+    "strategy": "MPCF_SHIPPED",
+    "error_code": null
+  }
+}
+```
+
 ## What is not exposed, and why
 
 - **No batch-picking engine routes** (M8). Queue bulk picking-list print is
@@ -378,8 +414,10 @@ Integrators extend the set via the `mpcf_carriers` filter (see
 - **No `mpcf_workflows` filter routes** — the workflow definition is still
   evolving; freezing an API surface around it now would be premature (§16.2).
 - **No carrier API / label / live-tracking routes** — M13.
-- **No notification send routes** — customer communication ships in later
-  M5 slices; ship remains the side-effect trigger.
+- **No SMS / push / webhook / Slack notification channels** — email only in M5;
+  future channels are additive on `NotificationChannel`.
+- **No notification history / campaign / resend-queue routes** — Workspace
+  shows last status only; audit trail remains on the fulfillment timeline.
 - **No scoped API keys** — an Application Password authenticates as its
   full user account today; a credential limited to specific capabilities
   is a post-1.0 idea (§IV.13).
