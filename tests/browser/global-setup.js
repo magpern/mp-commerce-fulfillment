@@ -20,4 +20,14 @@ module.exports = async function globalSetup() {
 
 	await page.context().storageState( { path: 'tests/browser/.auth/admin.json' } );
 	await browser.close();
+
+	// Reset the seed claim cursor so every Playwright run starts at the
+	// first seeded fulfillment (seed.php also writes 0, but re-running
+	// Playwright without re-seeding must not resume a stale cursor).
+	const fs = require( 'fs' );
+	const path = require( 'path' );
+	const cursor = path.join( __dirname, '.auth/seed-claim.cursor' );
+	if ( fs.existsSync( path.join( __dirname, '.auth/seed-fulfillments.json' ) ) ) {
+		fs.writeFileSync( cursor, '0', 'utf8' );
+	}
 };

@@ -3,13 +3,10 @@
 // detection, transition enablement, and idempotent server reconciliation.
 
 const { test, expect } = require( '@playwright/test' );
+const { openClaimedWorkspace } = require( './claim-seed' );
 
-async function openPickingWorkspace( page, testInfo ) {
-	await page.goto( '/wp-admin/admin.php?page=mpcf-queue' );
-
-	const row = page.locator( '[data-mpcf-row-open]' ).nth( testInfo.parallelIndex );
-	await row.click();
-	await page.waitForURL( /page=mpcf-workspace/ );
+async function openPickingWorkspace( page ) {
+	await openClaimedWorkspace( page );
 
 	const primary = page.locator( '[data-mpcf-primary-action]' );
 	await expect( primary ).toHaveText( /^Picking$/ );
@@ -23,8 +20,8 @@ async function openPickingWorkspace( page, testInfo ) {
 }
 
 test.describe( 'Packing Workspace — quantity controls', () => {
-	test( 'plus button increments quantity and persists via REST', async ( { page }, testInfo ) => {
-		const { primary, stepper } = await openPickingWorkspace( page, testInfo );
+	test( 'plus button increments quantity and persists via REST', async ( { page } ) => {
+		const { primary, stepper } = await openPickingWorkspace( page );
 		const incrementButton = page.locator( '[data-mpcf-quantity-increment]' ).first();
 		const checklistRow = page.locator( '.mpcf-ui-checklist__row' ).first();
 		const quantityDisplay = page.locator( '.mpcf-workspace__quantity-processed' ).first();
@@ -49,12 +46,13 @@ test.describe( 'Packing Workspace — quantity controls', () => {
 		expect( body.items[ 0 ].qty_picked ).toBe( 1 );
 		expect( body.version ).toBeGreaterThan( 1 );
 
-		await expect( checklistRow ).toHaveClass( /mpcf-ui-checklist__row--complete/ );
-		await expect( primary ).toBeEnabled();
+		// Seed qty_ordered is 2 — a single increment must not mark complete.
+		await expect( checklistRow ).not.toHaveClass( /mpcf-ui-checklist__row--complete/ );
+		await expect( primary ).toBeDisabled();
 	} );
 
-	test( 'minus button decrements quantity and persists via REST', async ( { page }, testInfo ) => {
-		const { primary, stepper } = await openPickingWorkspace( page, testInfo );
+	test( 'minus button decrements quantity and persists via REST', async ( { page } ) => {
+		const { primary, stepper } = await openPickingWorkspace( page );
 		const incrementButton = page.locator( '[data-mpcf-quantity-increment]' ).first();
 		const decrementButton = page.locator( '[data-mpcf-quantity-decrement]' ).first();
 
@@ -83,8 +81,8 @@ test.describe( 'Packing Workspace — quantity controls', () => {
 		await expect( primary ).toBeDisabled();
 	} );
 
-	test( 'direct numeric input persists on blur', async ( { page }, testInfo ) => {
-		const { primary, stepper } = await openPickingWorkspace( page, testInfo );
+	test( 'direct numeric input persists on blur', async ( { page } ) => {
+		const { primary, stepper } = await openPickingWorkspace( page );
 		const maxQty = await stepper.getAttribute( 'max' );
 
 		const itemsRequest = page.waitForResponse(
@@ -105,8 +103,8 @@ test.describe( 'Packing Workspace — quantity controls', () => {
 		await expect( primary ).toBeEnabled();
 	} );
 
-	test( 'ordered quantity is visible in checklist', async ( { page }, testInfo ) => {
-		await openPickingWorkspace( page, testInfo );
+	test( 'ordered quantity is visible in checklist', async ( { page } ) => {
+		await openPickingWorkspace( page );
 
 		const ordered = page.locator( '.mpcf-workspace__quantity-ordered' ).first();
 		await expect( ordered ).toContainText( /^Ordered: \d+/ );
@@ -118,8 +116,8 @@ test.describe( 'Packing Workspace — quantity controls', () => {
 		await expect( remaining ).toContainText( /^Remaining: \d+/ );
 	} );
 
-	test( 'row becomes complete when all ordered quantity is picked', async ( { page }, testInfo ) => {
-		const { stepper } = await openPickingWorkspace( page, testInfo );
+	test( 'row becomes complete when all ordered quantity is picked', async ( { page } ) => {
+		const { stepper } = await openPickingWorkspace( page );
 		const maxQty = await stepper.getAttribute( 'max' );
 		const maxValue = parseInt( maxQty, 10 );
 		const checklistRow = page.locator( '.mpcf-ui-checklist__row' ).first();
@@ -142,8 +140,8 @@ test.describe( 'Packing Workspace — quantity controls', () => {
 		await expect( checklistRow ).toHaveClass( /mpcf-ui-checklist__row--complete/ );
 	} );
 
-	test( 'primary action becomes enabled when all items are picked', async ( { page }, testInfo ) => {
-		const { primary } = await openPickingWorkspace( page, testInfo );
+	test( 'primary action becomes enabled when all items are picked', async ( { page } ) => {
+		const { primary } = await openPickingWorkspace( page );
 
 		await expect( primary ).toBeDisabled();
 		await page.keyboard.press( 'Shift+A' );
@@ -159,8 +157,8 @@ test.describe( 'Packing Workspace — quantity controls', () => {
 		await expect( primary ).toHaveText( /^Picked$/ );
 	} );
 
-	test( 'transition succeeds after all items are picked', async ( { page }, testInfo ) => {
-		const { primary } = await openPickingWorkspace( page, testInfo );
+	test( 'transition succeeds after all items are picked', async ( { page } ) => {
+		const { primary } = await openPickingWorkspace( page );
 
 		await page.keyboard.press( 'Shift+A' );
 		await page.waitForResponse(

@@ -7,20 +7,15 @@
 // without any pointer interaction — the same "no mouse" property
 // `page.keyboard.press()` has, just not a literal per-keystroke simulation.
 //
-// Selects its row by `testInfo.parallelIndex` rather than always the
-// first one: chromium and firefox run as separate projects, by default
-// concurrently, and both mutating the *same* fulfillment would race each
-// other's transitions non-deterministically — `tests/browser/seed.php`
-// seeds one fulfillment per worker slot specifically so this is safe.
+// Claims a unique seeded fulfillment (tests/browser/claim-seed.js) rather
+// than `testInfo.parallelIndex`: chromium and firefox mutate concurrently,
+// and shipping removes rows from the Queue so nth-index selection races.
 const { test, expect } = require( '@playwright/test' );
+const { openClaimedWorkspaceFromQueue } = require( './claim-seed' );
 
 test.describe( 'Packing Workspace — keyboard-only queued to shipped', () => {
-	test( 'ships a single-line order with no pointer interaction beyond opening it', async ( { page }, testInfo ) => {
-		await page.goto( '/wp-admin/admin.php?page=mpcf-queue' );
-
-		const row = page.locator( '[data-mpcf-row-open]' ).nth( testInfo.parallelIndex );
-		await row.click();
-		await page.waitForURL( /page=mpcf-workspace/ );
+	test( 'ships a single-line order with no pointer interaction beyond opening it', async ( { page } ) => {
+		await openClaimedWorkspaceFromQueue( page );
 
 		await expect( page.locator( '[data-mpcf-workspace]' ) ).toBeVisible();
 

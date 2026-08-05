@@ -4,12 +4,11 @@
 // real-browser-only observation ADR-0006 exists for.
 const { test, expect } = require( '@playwright/test' );
 const AxeBuilder = require( '@axe-core/playwright' ).default;
+const { openClaimedWorkspace } = require( './claim-seed' );
 
 test.describe( 'Packing Workspace — accessibility', () => {
 	test( 'has no serious or critical axe violations', async ( { page } ) => {
-		await page.goto( '/wp-admin/admin.php?page=mpcf-queue' );
-		await page.locator( '[data-mpcf-row-open]' ).first().click();
-		await page.waitForURL( /page=mpcf-workspace/ );
+		await openClaimedWorkspace( page );
 		await expect( page.locator( '[data-mpcf-workspace]' ) ).toBeVisible();
 
 		const results = await new AxeBuilder( { page } )
