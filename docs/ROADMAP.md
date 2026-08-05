@@ -55,10 +55,12 @@ actual state before work starts.
    dogfood + operator-feedback polish. Mission Control Dashboard/Queue
    redesign (M3-A/B/C) is deferred post-0.3.0. Permanent operational
    backlog: `docs/DOGFOOD_LESSONS.md`. Evidence: `docs/M3_RELEASE_REPORT.md`.
-4. **M4 — Documents I** — not started (was previously labelled M3). Assembler/
-   renderer/template architecture beyond the M2 packing-slip pull-forward;
-   picking list; stored renders; PDF port; template overrides; branding;
-   reprint history.
+4. **M4 — Documents I** — **release candidate `v0.4.0`** on
+   `feature/m4-documents` (not tagged/published pending PO approval).
+   Typed packing slip + picking list; branding; protected HTML storage;
+   Workspace document actions; Documents history + exact reprint; capped
+   Queue bulk picking-list print; dogfood + print S2 evidence. See
+   `docs/ARCHITECTURE_PLAN.md` Part VI and `docs/M4_RELEASE_REPORT.md`.
 5. **M5 — Tracking & notifications** — not started.
 6. **M6 — Package photography** — not started.
 7. **M7 — Barcode & scan mode** — not started.

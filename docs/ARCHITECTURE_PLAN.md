@@ -1,6 +1,6 @@
 # Commerce Fulfillment for WooCommerce — Architecture Specification
 
-**Status:** **Architecture Freeze v1.0** — Architecture Plan Rev 2.1 and Milestone 0 Execution Plan Rev 1 approved by the Product Owner 2026-07-31 as the permanent architectural baseline for Commerce Fulfillment. M0–M3 are closed (`v0.0.1`, `v0.1.0`/`v0.1.1`, `v0.2.0`, `v0.3.0`). Mission Control Dashboard/Queue redesign remains deferred. Documents I is sequenced as M4; **M4-A Document Architecture** is in progress on `feature/m4-documents` (Part VI).
+**Status:** **Architecture Freeze v1.0** — Architecture Plan Rev 2.1 and Milestone 0 Execution Plan Rev 1 approved by the Product Owner 2026-07-31 as the permanent architectural baseline for Commerce Fulfillment. M0–M3 are closed (`v0.0.1`, `v0.1.0`/`v0.1.1`, `v0.2.0`, `v0.3.0`). Mission Control Dashboard/Queue redesign remains deferred. Documents I (M4) is a **release candidate** on `feature/m4-documents` targeting `v0.4.0` (Part VI) — not tagged pending PO approval.
 **Working name:** Commerce Fulfillment (commercial name TBD — internal identifiers are rename-proof and never churn).
 **Internal identity (fixed, PO-approved 2026-07-31):** namespace `MPCF\`, prefix `mpcf_`, tables `{$wpdb->prefix}mpcf_*`, text domain `mp-commerce-fulfillment`, constants `MPCF_*`, capability prefix `mpcf_`.
 **Repo (to create):** private GitHub `magpern/mp-commerce-fulfillment`, plus sibling `magpern/mp-admin-design-system` (PO-approved 2026-07-31).
@@ -2106,13 +2106,13 @@ Primary confidence: PHPUnit, integration tests, and manual operator dogfooding. 
 
 ---
 
-# Part VI — Milestone 4 Documents I (in progress)
+# Part VI — Milestone 4 Documents I (release candidate)
 
-**Status:** M4-A + **M4-B** landed on `feature/m4-documents` (not released). Target release remains `v0.4.0`. Architecture Freeze v1.0 §10 / D16 / ADR-0004 / ADR-0007 remain authoritative.
+**Status:** M4-A through **M4-E** complete on `feature/m4-documents`. Release candidate prepared as `v0.4.0` — **not tagged/published pending PO approval**. Architecture Freeze v1.0 §10 / D16 / ADR-0004 / ADR-0007 remain authoritative.
 
 ## VI.1 Reconciliation (vs v0.3.0)
 
-M2 shipped a minimal packing-slip pipeline (`DocumentService` → `PackingSlipAssembler` → `HtmlRenderer` → `mpcf_documents` + `document.rendered`). M3 did not touch documents. M4-A **extends** that pipeline; M4-B completes rendering + protected storage for both document types. It does not replace `DocumentService`.
+M2 shipped a minimal packing-slip pipeline (`DocumentService` → `PackingSlipAssembler` → `HtmlRenderer` → `mpcf_documents` + `document.rendered`). M3 did not touch documents. M4 **extends** that pipeline end-to-end (typed render, protected storage, workspace/history/bulk, dogfood). It does not replace `DocumentService`.
 
 ## VI.2 M4-A delivered
 
@@ -2124,7 +2124,7 @@ M2 shipped a minimal packing-slip pipeline (`DocumentService` → `PackingSlipAs
 | Renderer contract | `Documents\DocumentRendererInterface` (`render` / `format` / `mime_type`); `HtmlRenderer` implements it (canonical HTML) |
 | Template chain | filter `mpcf_document_template` → theme `mp-commerce-fulfillment/documents/` → bundled; path validated |
 | DocumentModel contract | Render-time snapshots: fulfillment state, template version, branding, rendered_at/by, customer instructions, renderer format via `with_render_meta()` |
-| Repository reads | `get`, `list_for_fulfillment`, `latest_for_fulfillment_and_type` — no schema change; composite index deferred to M4-D if needed |
+| Repository reads | `get`, `list_for_fulfillment`, `latest_for_fulfillment_and_type` — no schema change |
 | Hooks | `mpcf_document_types`, `mpcf_document_template`, `mpcf_document_model` |
 | Template version | Explicit on type definition; theme/filter overrides use `override-{sha256-prefix}` (never mtime) |
 
@@ -2142,15 +2142,40 @@ M2 shipped a minimal packing-slip pipeline (`DocumentService` → `PackingSlipAs
 | Compensation | Storage fail → no row/event; DB fail after write → delete orphan file; event after successful file+row |
 | Logo historical guarantee | Data-URI embed when practical; otherwise omit (never mutable public URL alone) |
 
-## VI.4 Explicitly not in M4-B (→ M4-C / M4-D / M4-E)
+## VI.4 M4-C delivered (Workspace Integration)
 
-Workspace multi-document controls; Queue bulk print; Documents history screen; reprint UI / `source_document_id`; REST streaming endpoints; browser workflow changes; PDF renderer implementation; version bump / release.
+| Concern | Implementation |
+|---|---|
+| State-aware actions | `Documents\DocumentPrintContext` — sole consumer of `DocumentStagePolicy` for button enablement + Shift+P primary type |
+| Workspace UI | Bounded Documents action group; picking list + packing slip; disabled reasons; last-printed status per type |
+| REST typed render | `POST .../documents/render` accepts optional `doc_type` (default `packing_slip`); structured meta (`document_type`, `template_version`, `stored`, `file_available`) |
+| Client | Existing `documents.js` / `api.js` / `shortcuts.js` — in-flight guard; primary Shift+P |
+| Timeline labels | `DocumentEventLabels` for `document.rendered` / `document.reprinted` |
 
-## VI.5 Reprint / storage seams (for M4-D)
+## VI.5 M4-D delivered (History and Print Workflow)
 
-- Fresh render: new `document_id`, assemble current state, store canonical HTML, audit `document.rendered` with integrity payload.
-- M4-D: historical reprint streams stored HTML; optional `source_document_id` lineage; never reassemble under the original id.
+| Concern | Implementation |
+|---|---|
+| History screen | `Admin\DocumentsPage` — filters by type/date/order; Workspace link; Reprint (no edit/delete) |
+| Exact reprint | `DocumentHistoryService::reprint` streams stored HTML bytes; appends `document.reprinted` with `source_document_id` in **event payload only** (no schema column) |
+| Content stream | `GET /documents/{id}/content` — capability-checked; path from repository metadata only; traversal rejected; raw HTML MIME via `rest_pre_serve_request` |
+| List | `GET /documents` — thin wrapper over repository search |
+| Queue bulk | Cap **25**; picking_list only; per-row stage/capability; partial success; combined page-break HTML for browser print; one stored document + audit per success |
 
-## VI.6 Ownership
+## VI.6 M4-E delivered (Dogfood / RC prep)
 
-Outbound documents only. No `wc_io_*` reads. No carrier APIs. ADR-0007 unchanged.
+Zero release blockers from dogfood round 1 on `dev.biopentra.eu` (WP-CLI service-level scenarios + Chrome/Firefox A4 print S2). Documentation reconciled; version bumped to `0.4.0` RC artifacts built. **Tag/publish gated on PO approval.**
+
+## VI.7 Final decisions / deviations
+
+| Topic | Decision |
+|---|---|
+| Canonical format | HTML only (no mandatory PDF) |
+| Reprint lineage | Event payload `source_document_id` — **no** `mpcf_documents` schema bump |
+| Bulk print UX | Combined page-separated HTML response (no print server / background queue) |
+| Composite index | Deferred — history queries acceptable at current volume without migration |
+| Ownership | Outbound only; no carrier APIs; no inventory/receiving/PO (`wc-inventory-overview`); ADR-0007 unchanged |
+
+## VI.8 Explicitly not in M4 (→ later)
+
+PDF renderer implementation; Mission Control redesign; M5 tracking/notifications; silent/print-server printing; M8 batch-picking engine.

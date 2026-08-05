@@ -74,7 +74,11 @@ Full endpoint documentation: `docs/API.md`.
 | `mpcf_document_template` | filter | `src/Documents/TemplateRegistry.php` | Override template path before theme/bundled resolution. Must be a readable `.php` file. |
 | `mpcf_document_model` | filter | `src/Application/DocumentService.php` | Amend the assembled `DocumentModel` after core assemble and before render. Must return a `DocumentModel` with the same `doc_type`. |
 
-M4-B did not add public hooks. Branding is settings-backed; storage is orchestrated solely by `DocumentService`.
+M4-B–E did not add public hooks. Branding is settings-backed; storage,
+history, and reprint are orchestrated by `DocumentService` /
+`DocumentHistoryService`. Audit event types used by the documents
+subsystem (not WordPress hooks): `document.rendered`,
+`document.reprinted` (payload includes `source_document_id`).
 
 All other v1.0 extension surfaces (`mpcf_workflows`, `mpcf_carriers`,
 `mpcf_event` + per-type actions, `mpcf_intake_should_create`) remain

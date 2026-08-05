@@ -16,3 +16,7 @@
 
 # M3-F dogfood session files
 .dogfood*
+
+# Local M4 dogfood / print fixtures (not release artifacts)
+/tmp-m4e-*.php
+/tmp-print-*
