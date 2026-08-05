@@ -4,7 +4,7 @@ Tags: woocommerce, fulfillment, warehouse, shipping, picking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.4.0
+Stable tag: 0.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,13 @@ Performance Order Storage (HPOS).
 3. WooCommerce 8.2+ must be installed and active.
 
 == Changelog ==
+
+= 0.5.0 =
+* Feat: Carrier registry foundation with tracking URL templates (M5-A).
+* Feat: Notification strategy and merchant notification configuration (M5-B).
+* Feat: Shipment notification pipeline (factory → dispatcher → EmailChannel) (M5-C).
+* Feat: Completed-order tracking email extension; Workspace notify + REST status (M5-D).
+* Docs: Part VII M5-C/D/E, API notify routes, M5 release-candidate report.
 
 = 0.4.0 =
 * Feat: Documents I — packing slip + picking list with branding and protected HTML storage (M4).

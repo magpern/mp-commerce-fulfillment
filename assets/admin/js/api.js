@@ -123,6 +123,16 @@ export var api = {
 		return request( 'POST', 'shipments/' + shipmentId + '/ship' );
 	},
 
+	notifyShipment: function ( shipmentId, force ) {
+		return request( 'POST', 'shipments/' + shipmentId + '/notify', {
+			force: false !== force
+		} );
+	},
+
+	notificationStatus: function ( shipmentId ) {
+		return request( 'GET', 'shipments/' + shipmentId + '/notification-status' );
+	},
+
 	addPackage: function ( shipmentId ) {
 		return request( 'POST', 'shipments/' + shipmentId + '/packages' );
 	},

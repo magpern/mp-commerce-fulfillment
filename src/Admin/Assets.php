@@ -73,6 +73,10 @@ final class Assets {
 		if ( self::is_workspace_screen() ) {
 			$this->enqueue_workspace_assets();
 		}
+
+		if ( self::is_settings_screen() ) {
+			wp_enqueue_script( 'mpcf-mpds-sticky-save', MPCF_PLUGIN_URL . 'assets/mpds/js/sticky-save.js', array(), MPCF_VERSION, true );
+		}
 	}
 
 	/**
@@ -128,6 +132,15 @@ final class Assets {
 				wp_json_encode( wp_create_nonce( 'wp_rest' ) )
 			)
 		);
+	}
+
+	/**
+	 * Whether the current admin request is the Settings screen.
+	 */
+	private static function is_settings_screen(): bool {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen detection, no state change.
+
+		return 'mpcf-settings' === $page;
 	}
 
 	/**

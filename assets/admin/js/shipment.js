@@ -497,10 +497,95 @@ document.addEventListener( 'DOMContentLoaded', function () {
 
 		if ( removeButton ) {
 			handleRemovePackage( removeButton );
+			return;
 		}
+
+		var notifyButton = event.target.closest( '[data-mpcf-notify-shipment]' );
+		if ( notifyButton ) {
+			handleNotifyShipment( notifyButton );
+		}
+	} );
+
+	document.querySelectorAll( '[data-mpcf-notification-panel]' ).forEach( function ( panel ) {
+		refreshNotificationStatus( panel );
 	} );
 
 	if ( window.MpcfWorkspace ) {
 		window.MpcfWorkspace.flushPendingPackages = flushPendingPackages;
 	}
 } );
+
+function formatNotificationStatus( payload ) {
+	var notification = ( payload && payload.notification ) || {};
+	var status = notification.status;
+	var when = notification.occurred_at;
+
+	if ( ! status ) {
+		return 'Notification status: none yet';
+	}
+
+	var label = 'Notification status: ' + status;
+	if ( when ) {
+		label += ' (' + when + ')';
+	}
+	if ( notification.error_code ) {
+		label += ' — ' + notification.error_code;
+	}
+	return label;
+}
+
+function refreshNotificationStatus( panel ) {
+	var card = panel.closest( '[data-mpcf-shipment-id]' );
+	var statusEl = panel.querySelector( '[data-mpcf-notification-status]' );
+	if ( ! card || ! statusEl ) {
+		return;
+	}
+
+	var shipmentId = parseInt( card.getAttribute( 'data-mpcf-shipment-id' ), 10 );
+	if ( ! shipmentId ) {
+		return;
+	}
+
+	api.notificationStatus( shipmentId ).then(
+		function ( data ) {
+			statusEl.textContent = formatNotificationStatus( data );
+		},
+		function () {
+			statusEl.textContent = 'Notification status: unavailable';
+		}
+	);
+}
+
+function handleNotifyShipment( button ) {
+	var card = button.closest( '[data-mpcf-shipment-id]' );
+	var panel = button.closest( '[data-mpcf-notification-panel]' );
+	var statusEl = panel ? panel.querySelector( '[data-mpcf-notification-status]' ) : null;
+	if ( ! card ) {
+		return;
+	}
+
+	var shipmentId = parseInt( card.getAttribute( 'data-mpcf-shipment-id' ), 10 );
+	if ( ! shipmentId ) {
+		return;
+	}
+
+	button.disabled = true;
+	if ( statusEl ) {
+		statusEl.textContent = 'Sending notification…';
+	}
+
+	api.notifyShipment( shipmentId, true ).then(
+		function ( data ) {
+			if ( statusEl ) {
+				statusEl.textContent = 'Notification status: ' + ( data.status || 'unknown' );
+			}
+			button.disabled = false;
+		},
+		function ( error ) {
+			if ( statusEl ) {
+				statusEl.textContent = 'Notification failed: ' + ( error.code || error.message || 'error' );
+			}
+			button.disabled = false;
+		}
+	);
+}

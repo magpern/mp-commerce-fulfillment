@@ -80,7 +80,48 @@ history, and reprint are orchestrated by `DocumentService` /
 subsystem (not WordPress hooks): `document.rendered`,
 `document.reprinted` (payload includes `source_document_id`).
 
-All other v1.0 extension surfaces (`mpcf_workflows`, `mpcf_carriers`,
-`mpcf_event` + per-type actions, `mpcf_intake_should_create`) remain
-documented in `docs/ARCHITECTURE_PLAN.md` §16.2 as future milestones.
-`mpcf_carriers` remains Tracking (M5) after renumber.
+## Public extension points added in M5-A (Carrier Registry Foundation)
+
+| Hook | Type | File | Purpose |
+|---|---|---|---|
+| `mpcf_carriers` | filter | `src/Infrastructure/Carriers/BundledCarrierRegistry.php` | Amend the EU-skewed carrier map. Each entry: `id`, `label`, `tracking_url_template` (nullable), optional `tracking_number_pattern`, optional `phone_required`. |
+
+**Validation (DocumentTypeRegistry resilience):** every contributed definition
+is validated. Malformed entries are **rejected**, **logged** (`wc_get_logger`
+source `mpcf-carriers`, or `error_log` fallback), and **skipped**. Remaining
+valid carriers load normally. A non-array filter return reverts to the
+bundled set. Duplicate ids: later definition wins (logged). `other` is
+always restored if a filter removes it.
+
+Definitions are **immutable after registration**. Runtime merchant
+preferences (default carrier, notification strategy) belong in Settings
+— do not mutate registry definitions for that.
+
+`TrackingUrlResolver` (default `TemplateTrackingUrlResolver`) expands
+`{tracking}` templates; it is not a live carrier API and is not hooked.
+
+## M5-B notification configuration
+
+M5-B adds no public WordPress hooks. Merchant notification preferences
+are settings-backed (`mpcf_settings` schema v6) and read through
+`Application\Notifications\NotificationConfigurationService`.
+
+## M5-C/D notification pipeline
+
+M5-C/D add no public WordPress filters for channel registration yet
+(single `EmailChannel`). Internal domain events used for audit:
+
+| Event type | When |
+|---|---|
+| `notification.sent` | MPCF shipped email delivered |
+| `notification.failed` | Send failed (e.g. missing recipient, `wp_mail` false) |
+| `notification.suppressed` | Auto-send deduped within 120s |
+
+Payloads are PayloadGuard-safe (no recipient email). WooCommerce
+completed-order emails are extended via
+`Woo\TrackingEmailExtension` on `woocommerce_email_after_order_table`
+when strategy includes `COMPLETED_EMAIL` / `BOTH` — not a public MPCF hook.
+
+All other v1.0 extension surfaces (`mpcf_workflows`, `mpcf_event` +
+per-type actions, `mpcf_intake_should_create`) remain documented in
+`docs/ARCHITECTURE_PLAN.md` §16.2 as future milestones.

@@ -18,7 +18,8 @@ use WP_REST_Server;
  * `GET /carriers` — reuses the {@see CarrierRegistry} port exactly as the
  * workspace's shipment panel will (invariant I11); no controller ever
  * names {@see \MPCF\Infrastructure\Carriers\BundledCarrierRegistry}
- * directly.
+ * directly. Response is additive: `id`/`label` remain, plus template and
+ * validation metadata for future UI (M5-A).
  */
 final class CarriersController extends AbstractRestController {
 

@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace MPCF\Tests\Unit;
 
+use MPCF\Domain\Notification\NotificationStrategy;
 use MPCF\Settings;
 use PHPUnit\Framework\TestCase;
 
@@ -119,7 +120,7 @@ final class SettingsTest extends TestCase {
 		self::assertFalse( $defaults['auto_advance_after_ship'] );
 		self::assertSame( '', $defaults['default_carrier_id'] );
 		self::assertFalse( $defaults['require_tracking_before_ship'] );
-		self::assertSame( 5, Settings::SCHEMA_VERSION );
+		self::assertSame( 6, Settings::SCHEMA_VERSION );
 	}
 
 	public function test_sanitize_coerces_auto_advance_after_ship_truthy_and_falsy_values(): void {
@@ -205,5 +206,84 @@ final class SettingsTest extends TestCase {
 		$settings = new Settings();
 
 		self::assertSame( Settings::defaults(), $settings->get() );
+	}
+
+	public function test_defaults_include_notification_configuration(): void {
+		$defaults = Settings::defaults();
+
+		self::assertSame( NotificationStrategy::COMPLETED_EMAIL, $defaults['notification_strategy'] );
+		self::assertSame( 'Your order has shipped', $defaults['notification_email_subject'] );
+		self::assertSame( '', $defaults['notification_sender_name'] );
+		self::assertSame( '', $defaults['notification_reply_to'] );
+	}
+
+	public function test_sanitize_falls_back_for_invalid_notification_strategy(): void {
+		$sanitized = Settings::sanitize( array( 'notification_strategy' => 'EMAIL_EVERYONE' ) );
+
+		self::assertSame( NotificationStrategy::COMPLETED_EMAIL, $sanitized['notification_strategy'] );
+	}
+
+	public function test_sanitize_accepts_every_notification_strategy(): void {
+		foreach ( NotificationStrategy::values() as $value ) {
+			self::assertSame(
+				$value,
+				Settings::sanitize( array( 'notification_strategy' => $value ) )['notification_strategy']
+			);
+		}
+	}
+
+	public function test_sanitize_clears_invalid_reply_to_email(): void {
+		self::assertSame(
+			'',
+			Settings::sanitize( array( 'notification_reply_to' => 'not-an-email' ) )['notification_reply_to']
+		);
+		self::assertSame(
+			'ops@example.com',
+			Settings::sanitize( array( 'notification_reply_to' => 'ops@example.com' ) )['notification_reply_to']
+		);
+	}
+
+	public function test_sanitize_truncates_notification_text_fields(): void {
+		$long      = str_repeat( 'a', 300 );
+		$sanitized = Settings::sanitize(
+			array(
+				'notification_sender_name'   => $long,
+				'notification_email_subject' => $long,
+			)
+		);
+
+		self::assertSame( 191, strlen( $sanitized['notification_sender_name'] ) );
+		self::assertSame( 191, strlen( $sanitized['notification_email_subject'] ) );
+	}
+
+	public function test_sanitize_upgrades_pre_notification_settings_while_preserving_values(): void {
+		$legacy = array(
+			'schema_version'       => 5,
+			'documents_store_name' => 'Acme',
+		);
+
+		$sanitized = Settings::sanitize( $legacy );
+
+		self::assertSame( Settings::SCHEMA_VERSION, $sanitized['schema_version'] );
+		self::assertSame( 'Acme', $sanitized['documents_store_name'] );
+		self::assertSame( NotificationStrategy::COMPLETED_EMAIL, $sanitized['notification_strategy'] );
+	}
+
+	public function test_notification_accessors_read_sanitized_values(): void {
+		$settings = new Settings(
+			array(
+				'notification_strategy'        => NotificationStrategy::BOTH,
+				'notification_sender_name'     => 'Desk',
+				'notification_reply_to'        => 'desk@example.com',
+				'notification_email_subject'   => 'Shipped',
+				'notification_tracking_footer' => 'Thanks',
+			)
+		);
+
+		self::assertSame( NotificationStrategy::BOTH, $settings->notification_strategy() );
+		self::assertSame( 'Desk', $settings->notification_sender_name() );
+		self::assertSame( 'desk@example.com', $settings->notification_reply_to() );
+		self::assertSame( 'Shipped', $settings->notification_email_subject() );
+		self::assertSame( 'Thanks', $settings->notification_tracking_footer() );
 	}
 }

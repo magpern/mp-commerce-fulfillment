@@ -3,7 +3,7 @@
  * Plugin Name: Commerce Fulfillment
  * Plugin URI: https://github.com/magpern/mp-commerce-fulfillment
  * Description: Warehouse fulfillment platform for WooCommerce. WooCommerce remains the order source; Commerce Fulfillment owns everything from "paid" to "delivered" — picking, packing, shipping, tracking, documents and audit.
- * Version: 0.4.0
+ * Version: 0.5.0
  * Author: magpern
  * License: GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -27,7 +27,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'MPCF_VERSION', '0.4.0' );
+define( 'MPCF_VERSION', '0.5.0' );
 define( 'MPCF_PLUGIN_FILE', __FILE__ );
 define( 'MPCF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 

@@ -2179,3 +2179,84 @@ Zero release blockers from dogfood round 1 on `dev.biopentra.eu` (WP-CLI service
 ## VI.8 Explicitly not in M4 (→ later)
 
 PDF renderer implementation; Mission Control redesign; M5 tracking/notifications; silent/print-server printing; M8 batch-picking engine.
+
+---
+
+# Part VII — M5 Tracking & notifications (Customer Communication)
+
+**Milestone purpose:** Customer Communication — complete the outbound
+communication layer after ship. Tracking **capture** already exists from
+M2; M5 does not invent shipping. Labels, customs, rates, and live carrier
+APIs remain **M13**.
+
+## VII.1 M5-A delivered (Carrier Registry Foundation)
+
+| Concern | Implementation |
+|---|---|
+| Immutable carrier VO | `Domain\Shipping\Carrier` — private ctor, `define()` / `is_valid()` / `to_array()`, no setters |
+| Bundled EU set | PostNord, DHL, Bring, DPD, GLS, UPS, DB Schenker, Budbee, Instabox + `other` |
+| Public filter | `mpcf_carriers` on `Infrastructure\Carriers\BundledCarrierRegistry` |
+| Validation | Reject + log + continue (DocumentTypeRegistry resilience); `other` always restored |
+| URL resolution | `Domain\TrackingUrlResolver` + `TemplateTrackingUrlResolver` (template expand only) |
+| REST | `GET /mpcf/v1/carriers` additive metadata (`tracking_url_template`, `tracking_number_pattern`, `phone_required`) |
+| Immutability | Registry definitions never mutated at runtime; Settings deferred to later M5 |
+| Schema | No new tables |
+
+## VII.2 Explicitly not in M5-A (→ later M5 / M13)
+
+Notification / NotificationFactory / Dispatcher / NotificationStrategy;
+TrackingEmailExtension; Settings Shipping & notifications card; customer
+emails; Workspace warn-only UX polish; carrier APIs / labels / PDF /
+receiving / inventory / Mission Control.
+
+## VII.3 M5-B delivered (Notification Configuration)
+
+| Concern | Implementation |
+|---|---|
+| NotificationStrategy | `Domain\Notification\NotificationStrategy` — `COMPLETED_EMAIL` / `MPCF_SHIPPED` / `BOTH` / `DISABLED` immutable enum (`COMPLETED_EMAIL` is the approved completed-order email strategy; Domain avoids confined store-platform tokens) |
+| Configuration | `Application\Notifications\NotificationConfiguration` (immutable) + `NotificationConfigurationService` |
+| Settings keys | schema v6: strategy, sender, reply-to, tracking footer, subject, introduction, signature; reuses `default_carrier_id` |
+| Carrier default | Registry-validated via configuration service; empty/unknown → `other` (Settings stays pure — no registry dependency) |
+| Admin UI | Settings **Notifications** card (MPDS); sticky save bar; capability `mpcf_manage_settings` |
+| Public API for M5-C | `NotificationConfigurationService::get()` / `strategy()` / `default_carrier_id()` |
+| Hooks | None added (avoid speculative hooks) |
+| Schema | No new tables |
+
+## VII.4 Explicitly not in M5-B (→ M5-C+)
+
+Notification / NotificationFactory / Dispatcher / EmailChannel /
+TrackingEmailExtension; shipment event handlers; customer emails;
+notification REST endpoints; carrier APIs; preview/test-send UI.
+
+## VII.5 M5-C delivered (Notification Engine)
+
+| Concern | Implementation |
+|---|---|
+| Notification | Immutable `Domain\Notification\Notification` (recipient, subject, bodies, tracking, shipment snapshot, metadata) |
+| Factory | `Application\Notifications\NotificationFactory` — shipment → Notification |
+| Orchestration | `NotificationService` — strategy gate, dedup (120s), audit, status |
+| Event bridge | `NotificationDispatcher` subscribes to `shipment.shipped` |
+| Channel port | `Domain\Notification\NotificationChannel` + `NotificationResult` |
+| Email transport | `Infrastructure\Notifications\EmailChannel` (`wp_mail` only) |
+| Recipient port | `Domain\CustomerEmailLookup` → `Woo\WooCustomerEmailLookup` |
+| Schema | No new tables — audit via existing fulfillment events |
+
+## VII.6 M5-D delivered (WooCommerce Email Integration)
+
+| Concern | Implementation |
+|---|---|
+| Completed-order extension | `Woo\TrackingEmailExtension` on `woocommerce_email_after_order_table` |
+| Strategy | `COMPLETED_EMAIL` / `MPCF_SHIPPED` / `BOTH` / `DISABLED` via configuration service |
+| No duplicate templates | Extension appends tracking block; MPCF shipped email uses factory HTML |
+| Workspace | Send button + last status/time on shipped shipment cards |
+| REST | `POST /shipments/{id}/notify`, `GET /shipments/{id}/notification-status` |
+
+## VII.7 M5-E delivered (Stabilization & RC)
+
+Focused unit + integration coverage; dogfood classification; docs
+reconciled; `v0.5.0` release candidate prepared (not tagged/published
+without PO approval). Explicitly not in M5: SMS/push, carrier APIs,
+labels, inventory/receiving, Mission Control, M6 photography.
+
+---
+
