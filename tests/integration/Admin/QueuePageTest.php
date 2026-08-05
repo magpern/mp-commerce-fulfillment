@@ -13,26 +13,35 @@ namespace MPCF\Tests\Integration\Admin;
 use DateTimeImmutable;
 use MPCF\Admin\QueuePage;
 use MPCF\Application\AssignmentService;
+use MPCF\Application\DocumentHistoryService;
+use MPCF\Application\DocumentService;
 use MPCF\Application\EventDispatcher;
 use MPCF\Application\FulfillmentDetailService;
 use MPCF\Application\QueueService;
+use MPCF\Application\ShippingService;
 use MPCF\Application\TransitionContextFactory;
 use MPCF\Application\WorkflowService;
 use MPCF\Capabilities;
+use MPCF\Documents\HtmlRenderer;
+use MPCF\Documents\TemplateRegistry;
 use MPCF\Domain\Fulfillment;
 use MPCF\Domain\Workflow\StandardWorkflow;
 use MPCF\Engine\GuardRegistry;
 use MPCF\Engine\WorkflowEngine;
+use MPCF\Infrastructure\Database\WpdbDocumentRepository;
 use MPCF\Infrastructure\Database\WpdbEventRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentItemRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
 use MPCF\Infrastructure\Database\WpdbNoteRepository;
+use MPCF\Infrastructure\Database\WpdbPackageItemRepository;
 use MPCF\Infrastructure\Database\WpdbPackageRepository;
 use MPCF\Infrastructure\Database\WpdbSearchQuery;
 use MPCF\Infrastructure\Database\WpdbShipmentRepository;
+use MPCF\Infrastructure\Files\ProtectedDocumentStore;
 use MPCF\Infrastructure\SystemClock;
 use MPCF\Settings;
 use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
+use MPCF\Woo\WooOrderSource;
 use WP_UnitTestCase;
 
 /**
@@ -62,26 +71,61 @@ final class QueuePageTest extends WP_UnitTestCase {
 		$this->fulfillments = new WpdbFulfillmentRepository();
 		$items              = new WpdbFulfillmentItemRepository();
 		$events             = new WpdbEventRepository();
+		$shipments          = new WpdbShipmentRepository();
+		$packages           = new WpdbPackageRepository();
+		$clock              = new SystemClock();
+		$dispatcher         = new EventDispatcher();
+		$settings           = new Settings( array() );
 
 		$definition = StandardWorkflow::definition();
 		$workflow   = new WorkflowService(
 			$this->fulfillments,
 			$events,
 			new WorkflowEngine( GuardRegistry::standard() ),
-			new EventDispatcher(),
-			new SystemClock(),
+			$dispatcher,
+			$clock,
 			array( StandardWorkflow::NAME => $definition ),
-			new TransitionContextFactory( $items, new WpdbShipmentRepository(), new WpdbPackageRepository(), new Settings( array() ) )
+			new TransitionContextFactory( $items, $shipments, $packages, $settings )
 		);
+
+		$shipping = new ShippingService(
+			$this->fulfillments,
+			$items,
+			$shipments,
+			$packages,
+			new WpdbPackageItemRepository(),
+			$events,
+			$dispatcher,
+			$clock
+		);
+		$doc_repo  = new WpdbDocumentRepository();
+		$doc_store = new ProtectedDocumentStore();
+		$doc_svc   = new DocumentService(
+			$this->fulfillments,
+			$items,
+			new WooOrderSource(),
+			$shipping,
+			new HtmlRenderer( new TemplateRegistry() ),
+			$doc_repo,
+			$events,
+			$dispatcher,
+			$clock,
+			'Test Store',
+			null,
+			$settings,
+			$doc_store
+		);
+		$history = new DocumentHistoryService( $doc_repo, $doc_store, $events, $dispatcher, $clock, $doc_svc );
 
 		$this->page = new QueuePage(
 			new \MPCF\Vendor\Mpds\PageShell\AdminPageShell( new \MPCF\Vendor\Mpds\PageShell\SectionNavigation() ),
 			new \MPCF\Vendor\Mpds\ComponentRenderer(),
 			new QueueService( $this->fulfillments, new WpdbSearchQuery() ),
 			new FulfillmentDetailService( $this->fulfillments, $items, $events, new WpdbNoteRepository() ),
-			new AssignmentService( $this->fulfillments, $events, new EventDispatcher(), new SystemClock() ),
+			new AssignmentService( $this->fulfillments, $events, $dispatcher, $clock ),
 			$workflow,
-			$definition
+			$definition,
+			$history
 		);
 	}
 

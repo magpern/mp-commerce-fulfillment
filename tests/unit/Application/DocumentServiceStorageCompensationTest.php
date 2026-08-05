@@ -82,6 +82,13 @@ final class DocumentServiceStorageCompensationTest extends TestCase {
 			public function latest_for_fulfillment_and_type( int $fulfillment_id, string $doc_type ): ?DocumentRecord {
 				return null;
 			}
+
+			public function search( array $filters ): array {
+				return array(
+					'items' => array(),
+					'total' => 0,
+				);
+			}
 		};
 
 		$service = new DocumentService(
