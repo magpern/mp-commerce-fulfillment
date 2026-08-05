@@ -18,6 +18,7 @@ use MPCF\Application\ShippingService;
 use MPCF\Application\WorkflowService;
 use MPCF\Capabilities;
 use MPCF\Documents\DocumentEventLabels;
+use MPCF\Admin\NotificationEventLabels;
 use MPCF\Documents\DocumentPrintContext;
 use MPCF\Domain\CarrierRegistry;
 use MPCF\Domain\Event\Actor;
@@ -773,7 +774,10 @@ final class WorkspacePage implements Page {
 			$actor = '' !== (string) $event['actor_label_snapshot'] ? (string) $event['actor_label_snapshot'] : __( 'System', 'mp-commerce-fulfillment' );
 			$when  = human_time_diff( strtotime( (string) $event['created_at'] ) ) . ' ' . __( 'ago', 'mp-commerce-fulfillment' );
 			$label = DocumentEventLabels::describe( (string) $event['event_type'], (array) ( $event['payload'] ?? array() ) );
-			$body  = null !== $label ? $label : (string) $event['event_type'];
+			if ( null === $label ) {
+				$label = NotificationEventLabels::describe( (string) $event['event_type'], (array) ( $event['payload'] ?? array() ) );
+			}
+			$body = null !== $label ? $label : (string) $event['event_type'];
 
 			echo $this->renderer->timeline_item( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				'dashicons-clock',
@@ -977,9 +981,10 @@ final class WorkspacePage implements Page {
 	 */
 	private function render_shipment_card( Shipment $shipment, array $packages ): void {
 		printf(
-			'<div class="mpcf-workspace__shipment" data-mpcf-shipment-id="%d" data-mpcf-shipment-service="%s">',
+			'<div class="mpcf-workspace__shipment" data-mpcf-shipment-id="%d" data-mpcf-shipment-service="%s" data-mpcf-shipment-status="%s">',
 			(int) $shipment->id(),
-			esc_attr( $shipment->service() )
+			esc_attr( $shipment->service() ),
+			esc_attr( $shipment->status() )
 		);
 
 		echo '<label>' . esc_html__( 'Carrier', 'mp-commerce-fulfillment' ) . '</label>';
@@ -1000,6 +1005,18 @@ final class WorkspacePage implements Page {
 			esc_attr( (string) $shipment->tracking()->number() ),
 			esc_attr__( 'Tracking number', 'mp-commerce-fulfillment' )
 		);
+
+		if ( in_array( $shipment->status(), array( Shipment::STATUS_SHIPPED, Shipment::STATUS_DELIVERED ), true ) ) {
+			echo '<div class="mpcf-workspace__notification" data-mpcf-notification-panel>';
+			echo '<p class="description" data-mpcf-notification-status>' . esc_html__( 'Notification status: loading…', 'mp-commerce-fulfillment' ) . '</p>';
+			if ( current_user_can( Capabilities::MANAGE_SHIPMENTS ) ) {
+				printf(
+					'<button type="button" class="button" data-mpcf-notify-shipment>%s</button>',
+					esc_html__( 'Send tracking notification', 'mp-commerce-fulfillment' )
+				);
+			}
+			echo '</div>';
+		}
 
 		echo '<h4>' . esc_html__( 'Packages', 'mp-commerce-fulfillment' ) . '</h4>';
 		printf(
