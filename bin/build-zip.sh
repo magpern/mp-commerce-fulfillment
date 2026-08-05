@@ -32,6 +32,7 @@ cp -R "$ROOT/src" "$BUILD/src"
 cp -R "$ROOT/vendor" "$BUILD/vendor"
 [ -d "$ROOT/languages" ] && cp -R "$ROOT/languages" "$BUILD/languages"
 [ -d "$ROOT/assets" ] && cp -R "$ROOT/assets" "$BUILD/assets"
+[ -d "$ROOT/templates" ] && cp -R "$ROOT/templates" "$BUILD/templates"
 
 # Belt-and-suspenders (ADR-0006): the copy list above never names a Node
 # artifact, so this should never fire — but a future edit to this script
