@@ -539,6 +539,7 @@ final class PhotosController extends AbstractRestController {
 			'limit_reached'         => array( 'mpcf_photo_limit_reached', 422 ),
 			'storage_failed'        => array( 'mpcf_photo_storage_failed', 500 ),
 			'photo_content_missing' => array( 'mpcf_photo_content_missing', 422 ),
+			'photo_purged'          => array( 'mpcf_photo_purged', 422 ),
 			'version_conflict'      => array( 'mpcf_version_conflict', 409 ),
 		);
 
