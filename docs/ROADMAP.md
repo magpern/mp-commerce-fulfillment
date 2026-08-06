@@ -70,7 +70,8 @@ actual state before work starts.
    approval). M6-A–D: foundation, REST/guard, Workspace/settings, retention
    purge + CS Detail gallery. Evidence: `docs/M6_RELEASE_REPORT.md`,
    `docs/ARCHITECTURE_PLAN.md` Part VIII.10–VIII.13.
-7. **M7 — Barcode & scan mode** — not started.
+7. **M7 — Barcode & scan mode** — in progress on `feature/m7-barcode-scan`
+   (definitive plan: `docs/ARCHITECTURE_PLAN.md` Part IX). Target `v0.7.0`.
 8. **M8 — Batch picking** — not started.
 9. **M9 — Analytics I** — not started.
 10. **M10 — Hardening & operational maturity** — not started.
