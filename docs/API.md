@@ -40,10 +40,11 @@ role-based access control applies either way.
   standard form-encoded body — WordPress's REST server accepts either).
   Every response body is JSON.
 - **Optimistic-lock `version`.** Every fulfillment-scoped mutation
-  (`POST .../transitions`, `PUT .../items`) requires the fulfillment's
-  current `version` in the request body. A mismatch — someone else changed
-  the fulfillment since you last read it — returns `409
-  mpcf_version_conflict` and changes nothing. Shipment/package routes
+  (`POST .../transitions`, `PUT .../items`, `POST .../photos`,
+  `DELETE /photos/{id}`) requires the fulfillment's current `version` in
+  the request body. A mismatch — someone else changed the fulfillment
+  since you last read it — returns `409 mpcf_version_conflict` and
+  changes nothing. Shipment/package routes
   (`PATCH/DELETE /shipments/{id}`, `PATCH/DELETE /packages/{id}`, …) and
   `PUT/DELETE /fulfillments/{id}/assignment` do not require a
   caller-supplied `version` — their own optimistic lock is enforced
@@ -112,6 +113,12 @@ route surfaced it.
 | GET | `/documents` | `mpcf_render_documents` |
 | GET | `/documents/{document_id}/content` | `mpcf_render_documents` |
 | POST | `/documents/{document_id}/reprint` | `mpcf_render_documents` |
+| GET | `/fulfillments/{id}/photos` | `mpcf_view_queue` |
+| POST | `/fulfillments/{id}/photos` | `mpcf_capture_photos` |
+| GET | `/photos/{photo_id}` | `mpcf_view_queue` |
+| GET | `/photos/{photo_id}/content` | `mpcf_view_queue` |
+| GET | `/photos/{photo_id}/thumb` | `mpcf_view_queue` |
+| DELETE | `/photos/{photo_id}` | `mpcf_delete_photos` |
 | GET | `/carriers` | `mpcf_view_queue` |
 | POST | `/shipments/{id}/notify` | `mpcf_manage_shipments` |
 | GET | `/shipments/{id}/notification-status` | `mpcf_view_queue` |
@@ -338,6 +345,80 @@ raw `text/html; charset=UTF-8` (not a JSON envelope).
 Streams the exact stored HTML and appends `document.reprinted` (payload
 includes `source_document_id`). Does **not** create a new document row.
 `200`: `{ "html": "...", "document_id": 7, "source_document_id": 7, ... }`.
+
+### Package photos (M6-B)
+
+Protected operational evidence under `uploads/mpcf/photos/…` (ADR-0004).
+Never WP Media Library. Metadata responses never include storage paths —
+only relative REST stream routes (`content` / `thumbnail`).
+
+Photo-specific error codes (in addition to the five stable codes above):
+
+| Code | HTTP | Meaning |
+|---|---|---|
+| `mpcf_photo_not_found` | 404 | Missing or soft-deleted metadata GET |
+| `mpcf_photo_deleted` | 404 | Soft-deleted content/thumb stream |
+| `mpcf_photo_invalid_kind` | 400 | Kind not in `contents`\|`package` |
+| `mpcf_photo_invalid_upload` | 400 | Bad/empty/unprocessable upload |
+| `mpcf_photo_package_mismatch` | 400 | Package not on this fulfillment |
+| `mpcf_photo_limit_reached` | 422 | Active photo cap reached |
+| `mpcf_photo_content_missing` | 422 | Metadata exists but bytes unreadable |
+| `mpcf_photo_storage_failed` | 500 | Persistence failure |
+
+When `photos_required` is on, `packing → packed` returns
+`422 mpcf_guard_rejected` with `data.guard = photo_required` until ≥1
+**active** `kind=package` photo exists (contents photos do not satisfy).
+
+#### `GET /fulfillments/{id}/photos`
+
+Optional query: `package_id`, `kind`. Active photos only, sorted by
+`package_id` then `sequence`. `200`: `{ "photos": [ … ] }`.
+
+#### `POST /fulfillments/{id}/photos`
+
+Multipart: `file` (required), `package_id`, `kind`, `version` (required).
+Capability `mpcf_capture_photos`. `201`:
+
+```json
+{
+  "photo": {
+    "id": 3,
+    "fulfillment_id": 42,
+    "package_id": 1,
+    "kind": "package",
+    "mime": "image/jpeg",
+    "bytes": 48210,
+    "width": 1600,
+    "height": 1200,
+    "sha256": "…",
+    "processing_version": 1,
+    "sequence": 1,
+    "captured_by": 7,
+    "created_at": "2026-08-06T10:00:00+00:00",
+    "content": "/mpcf/v1/photos/3/content",
+    "thumbnail": "/mpcf/v1/photos/3/thumb"
+  },
+  "version": 6,
+  "photo_requirement_satisfied": true,
+  "transitions": [ "…" ]
+}
+```
+
+#### `GET /photos/{photo_id}`
+
+Active metadata only. Soft-deleted or missing → `404 mpcf_photo_not_found`.
+
+#### `GET /photos/{photo_id}/content` / `…/thumb`
+
+Capability-gated raw JPEG streams (`Content-Type`, `Content-Disposition:
+inline`, `X-Content-Type-Options: nosniff`). Soft-deleted →
+`404 mpcf_photo_deleted`.
+
+#### `DELETE /photos/{photo_id}`
+
+Body/param `version` required. Capability `mpcf_delete_photos` (Lead+).
+Soft-delete is idempotent (no second audit / no version bump when already
+deleted). `200`: `{ "photo": {…}, "version": N, "photo_requirement_satisfied": bool, "transitions": […] }`.
 
 ### `GET /carriers`
 

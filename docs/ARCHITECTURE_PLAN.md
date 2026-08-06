@@ -2396,7 +2396,23 @@ unprocessed originals; inbound domain work.
 | Config | Internal `PhotoConfig` defaults only (no settings UI) |
 | Tests | Domain/unit/service/store/processor/guards + media schema integration; CI unit+integration install `gd` |
 
-**Explicitly not shipped (M6-B+):** REST/stream, Workspace/Detail UI, settings UI, `TransitionContextFactory` / packing guard wiring, retention purge job, browser tests, version bump, release.
+**Explicitly not shipped in M6-A (delivered in M6-B+):** REST/stream, Workspace/Detail UI, settings UI, `TransitionContextFactory` / packing guard wiring, retention purge job, browser tests, version bump, release.
 
 **Algorithm note (v1):** changing decode/resize/quality/thumb parameters without bumping `PROCESSING_VERSION` is forbidden; reprocess-in-place is forbidden (replace = new capture).
 
+## VIII.11 M6-B delivery record
+
+**Status:** REST + packing-guard wiring complete on `feature/m6-package-photography` (not merged; no `v0.6.0`).
+
+**Shipped in M6-B:**
+
+| Area | Outcome |
+|---|---|
+| Settings | `SCHEMA_VERSION` **7**; `photos_required` (default `false`); accessor `Settings::photos_required()` |
+| Service | Versioned `capture_with_version` / `soft_delete_with_version` (+ `PhotoMutationResult`); `list_active`, `get_active`, `read_bytes` (no paths in responses) |
+| REST | `PhotosController`: list/capture/metadata/content/thumb/soft-delete; stream via `rest_pre_serve_request`; delete capped to `mpcf_delete_photos` |
+| Guard | `TransitionContextFactory` reads `photos_required` + `PhotoService::requirement_satisfied`; Engine `PhotoRequiredGuard` remains context-flag pure |
+| Composition | `Plugin` builds one `PhotoService` and passes it to factory + REST |
+| Tests | Unit (resource/factory/settings/service/guards) + integration REST/concurrency/guard matrix |
+
+**Explicitly not shipped (M6-C+):** Workspace capture/gallery UI, settings UI, CS Detail gallery, retention purge job, browser tests, version bump, release.
