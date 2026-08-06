@@ -7,6 +7,11 @@ everything between "paid" and "delivered" — while WooCommerce stays
 authoritative for products, checkout, payment, customers and the order
 record.
 
+**Current release candidate:** 0.6.0 (Milestone 6 — Package photography).
+Draft PR on `feature/m6-package-photography`; not tagged/published pending
+Product Owner approval. See `docs/M6_RELEASE_REPORT.md` and
+`docs/ARCHITECTURE_PLAN.md` Part VIII.
+
 **Current release:** 0.0.1 (Milestone 0 — bootstrap). **Milestone 1**
 (fulfillment core — intake, workflow engine, Queue/Detail/Dashboard
 screens, audit trail, WooCommerce status bridge) is implemented and

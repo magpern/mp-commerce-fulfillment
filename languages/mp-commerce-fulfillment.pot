@@ -2,7 +2,7 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Commerce Fulfillment 0.5.0\n"
+"Project-Id-Version: Commerce Fulfillment 0.6.0\n"
 "Report-Msgid-Bugs-To: https://github.com/magpern/mp-commerce-fulfillment/issues\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -249,105 +249,156 @@ msgstr ""
 msgid "This fulfillment no longer exists."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:216
+#: src/Admin/FulfillmentDetailPage.php:217
 msgid "Fulfillment for order"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:218
+#: src/Admin/FulfillmentDetailPage.php:219
 msgid "Customer:"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:219
+#: src/Admin/FulfillmentDetailPage.php:220
 msgid "Items:"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:222
+#: src/Admin/FulfillmentDetailPage.php:223
 msgid "State:"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:227
+#: src/Admin/FulfillmentDetailPage.php:228
 #: src/Admin/WorkspacePage.php:584
 msgid "View order"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:241
+#: src/Admin/FulfillmentDetailPage.php:242
 msgid "Transitions"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:250
+#: src/Admin/FulfillmentDetailPage.php:251
 msgid "No transitions are available."
 msgstr ""
 
 #. translators: %s: target state label
-#: src/Admin/FulfillmentDetailPage.php:315
+#: src/Admin/FulfillmentDetailPage.php:316
 #, php-format
 msgid "Why is this fulfillment moving to \"%s\"?"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:332
+#: src/Admin/FulfillmentDetailPage.php:337
+#: src/Admin/WorkspacePage.php:1150
+msgid "Package photos"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:340
+msgid "No package photos for this fulfillment."
+msgstr ""
+
+#. translators: 1: package sequence, 2: package id
+#: src/Admin/FulfillmentDetailPage.php:356
+#, php-format
+msgid "Package %1$d (id %2$d)"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:365
+#: src/Admin/PhotoEventLabels.php:89
+#: src/Admin/WorkspacePage.php:1138
+msgid "Sealed package"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:366
+#: src/Admin/PhotoEventLabels.php:85
+#: src/Admin/WorkspacePage.php:1137
+msgid "Contents"
+msgstr ""
+
+#. translators: %s: photo kind
+#: src/Admin/FulfillmentDetailPage.php:379
+#, php-format
+msgid "Preview %s photo"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:383
+msgid "Loading…"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:388
+msgid "Photo retained as audit metadata; image removed by retention policy."
+msgstr ""
+
+#. translators: %d: WordPress user id
+#: src/Admin/FulfillmentDetailPage.php:397
+#, php-format
+msgid "Captured by user #%d"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:404
+msgid "Integrity: bytes purged; SHA-256 retained in audit metadata."
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:426
 msgid "Audit trail"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:339
+#: src/Admin/FulfillmentDetailPage.php:433
 #: src/Admin/WorkspacePage.php:793
 msgid "System"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:340
+#: src/Admin/FulfillmentDetailPage.php:434
 #: src/Admin/WorkspacePage.php:794
 msgid "ago"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:372
+#: src/Admin/FulfillmentDetailPage.php:466
 msgid "Audit trail pagination"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:410
+#: src/Admin/FulfillmentDetailPage.php:510
 msgid "Fulfillment created from order."
 msgstr ""
 
 #. translators: 1: origin state, 2: destination state, 3: optional reason
-#: src/Admin/FulfillmentDetailPage.php:418
+#: src/Admin/FulfillmentDetailPage.php:518
 #, php-format
 msgid "Moved from \"%1$s\" to \"%2$s\".%3$s"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:438
+#: src/Admin/FulfillmentDetailPage.php:538
 #: src/Admin/WorkspacePage.php:1163
 msgid "Notes"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:442
+#: src/Admin/FulfillmentDetailPage.php:542
 #: src/Admin/WorkspacePage.php:1167
 msgid "pinned"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:446
-#: src/Admin/PhotoEventLabels.php:77
+#: src/Admin/FulfillmentDetailPage.php:546
+#: src/Admin/PhotoEventLabels.php:92
 #: src/Admin/WorkspacePage.php:1171
 msgid "Unknown"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:455
+#: src/Admin/FulfillmentDetailPage.php:555
 #: src/Admin/WorkspacePage.php:1182
 msgid "Add note"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:477
+#: src/Admin/FulfillmentDetailPage.php:577
 #: src/Admin/QueuePage.php:327
 msgid "Fulfillment not found."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:484
+#: src/Admin/FulfillmentDetailPage.php:584
 #: src/Admin/QueuePage.php:334
 msgid "You are not allowed to make this change."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:502
+#: src/Admin/FulfillmentDetailPage.php:602
 msgid "You are not allowed to add notes."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:506
+#: src/Admin/FulfillmentDetailPage.php:606
 msgid "A note cannot be empty."
 msgstr ""
 
@@ -433,7 +484,7 @@ msgid "Order status"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:185
-#: src/Plugin.php:485
+#: src/Plugin.php:505
 msgid "Fulfillment"
 msgstr ""
 
@@ -565,14 +616,16 @@ msgstr ""
 msgid "Package photo deleted (%s)."
 msgstr ""
 
-#: src/Admin/PhotoEventLabels.php:70
-#: src/Admin/WorkspacePage.php:1137
-msgid "Contents"
+#. translators: 1: photo kind label (Sealed package|Contents), 2: package id
+#: src/Admin/PhotoEventLabels.php:62
+#, php-format
+msgid "Package photo bytes purged by retention (%1$s) for package %2$d."
 msgstr ""
 
-#: src/Admin/PhotoEventLabels.php:74
-#: src/Admin/WorkspacePage.php:1138
-msgid "Sealed package"
+#. translators: %s: photo kind label (Sealed package|Contents)
+#: src/Admin/PhotoEventLabels.php:70
+#, php-format
+msgid "Package photo bytes purged by retention (%s)."
 msgstr ""
 
 #: src/Admin/QueuePage.php:158
@@ -770,7 +823,7 @@ msgid "Package photography"
 msgstr ""
 
 #: src/Admin/SettingsPage.php:229
-msgid "Evidence photos captured in the packing workspace. Retention is configured here; automatic purge arrives in a later release."
+msgid "Evidence photos captured in the packing workspace. Image bytes older than the retention window are removed automatically; metadata and audit history are kept."
 msgstr ""
 
 #: src/Admin/SettingsPage.php:236
@@ -810,7 +863,7 @@ msgid "Retention (months)"
 msgstr ""
 
 #: src/Admin/SettingsPage.php:289
-msgid "How long soft-deleted photos are kept before an automatic purge (1–120). Purge itself is not run from this screen."
+msgid "Age after which image bytes are purged (0 = keep forever; 1–120 months). Soft-deleted and active photos are both eligible. Metadata and audit events are always retained. There is no purge-now control."
 msgstr ""
 
 #: src/Admin/SettingsPage.php:309
@@ -1213,10 +1266,6 @@ msgstr ""
 
 #: src/Admin/WorkspacePage.php:1139
 msgid "Drop images here or choose files"
-msgstr ""
-
-#: src/Admin/WorkspacePage.php:1150
-msgid "Package photos"
 msgstr ""
 
 #: src/Admin/WorkspacePage.php:1151

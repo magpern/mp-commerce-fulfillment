@@ -2432,3 +2432,25 @@ unprocessed originals; inbound domain work.
 | Tests | Settings/PhotoConfig/PhotoEventLabels unit; Settings/Workspace/Assets integration; `tests/browser/photos.spec.js` |
 
 **Explicitly not shipped (M6-D):** Retention purge job, CS Fulfillment Detail gallery, docs reconcile for release, version bump, `v0.6.0` RC.
+
+## VIII.13 M6-D delivery record
+
+**Status:** Retention purge + CS Detail gallery + `v0.6.0` RC on
+`feature/m6-package-photography` (draft PR; **not tagged/published**).
+
+**Shipped in M6-D:**
+
+| Area | Outcome |
+|---|---|
+| Eligibility | `PhotoRetentionEligibility` (UTC; retention `0` = never; inclusive cutoff) |
+| Purge | `PhotoRetentionService::purge_batch()` — remove bytes, clear paths, set `purged_at`, append `photo.purged`; idempotent missing-file recovery; FS failure skips `purged_at` |
+| Schedule | `PhotoRetentionScheduler` — Action Scheduler group `mpcf`, daily, batch 50, transient overlap lock |
+| CS gallery | Fulfillment Detail package-grouped read-only gallery; purged metadata copy; protected preview via REST |
+| API resource | `purged` + `has_bytes` on photo JSON (still no paths) |
+| Settings | `photos_retention_months` allows `0` (indefinite) |
+| Release | Version triad `0.6.0`; `docs/M6_RELEASE_REPORT.md` |
+
+**Residual risk:** filesystem delete and DB/audit are not one atomic transaction; retries reconcile missing files then mark purged.
+
+**Explicitly not shipped:** M7 barcode/scan; returns photography; purge-now UI; Site Health disk warning (M9); production deploy/tag.
+

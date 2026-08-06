@@ -127,7 +127,9 @@ queued-to-shipped path (acceptance criterion 1), a 30-keystroke focus-retention
 session testing M2-R9, and an `@axe-core/playwright` accessibility scan of
 the workspace at 1440/1024/800px breakpoints (criterion 8); M6-C adds
 `tests/browser/photos.spec.js` for file-input upload, requirement status,
-lightbox Escape close, and Lead delete against the packing workspace.
+preview, and lead soft-delete. M6-D adds integration coverage for the
+Fulfillment Detail CS gallery (active / soft-deleted hidden / purged
+metadata) and unit coverage for retention eligibility and purge batches.
 The two-browser-context
 409 conflict, offline/retry interception, and queue-cursor navigation are
 deliberately not yet covered — a scope decision recorded here rather than

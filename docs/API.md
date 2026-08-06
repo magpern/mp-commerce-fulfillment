@@ -363,6 +363,7 @@ Photo-specific error codes (in addition to the five stable codes above):
 | `mpcf_photo_package_mismatch` | 400 | Package not on this fulfillment |
 | `mpcf_photo_limit_reached` | 422 | Active photo cap reached |
 | `mpcf_photo_content_missing` | 422 | Metadata exists but bytes unreadable |
+| `mpcf_photo_purged` | 422 | Bytes removed by retention (`purged_at` set / paths cleared) |
 | `mpcf_photo_storage_failed` | 500 | Persistence failure |
 
 When `photos_required` is on, `packing → packed` returns
@@ -395,6 +396,8 @@ Capability `mpcf_capture_photos`. `201`:
     "sequence": 1,
     "captured_by": 7,
     "created_at": "2026-08-06T10:00:00+00:00",
+    "purged": false,
+    "has_bytes": true,
     "content": "/mpcf/v1/photos/3/content",
     "thumbnail": "/mpcf/v1/photos/3/thumb"
   },
