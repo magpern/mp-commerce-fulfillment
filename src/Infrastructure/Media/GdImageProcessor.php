@@ -68,7 +68,8 @@ final class GdImageProcessor implements ImageProcessor {
 	 * Builds the processor.
 	 *
 	 * @param int $max_edge_px Longest-edge limit (defaults to {@see DEFAULT_MAX_EDGE}).
-	 * @throws RuntimeException When the GD extension is unavailable.
+	 * @throws InvalidArgumentException When max_edge_px is invalid.
+	 * @throws RuntimeException         When the GD extension is unavailable.
 	 */
 	public function __construct( int $max_edge_px = self::DEFAULT_MAX_EDGE ) {
 		if ( ! extension_loaded( 'gd' ) ) {
@@ -83,8 +84,10 @@ final class GdImageProcessor implements ImageProcessor {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Decodes, normalizes, resizes, and encodes source bytes into canonical + thumb JPEGs.
 	 *
+	 * @param string $source_bytes  Raw upload bytes.
+	 * @param string $declared_mime Client-declared MIME type.
 	 * @throws InvalidArgumentException When the source is rejected.
 	 * @throws RuntimeException         When processing fails.
 	 */
@@ -96,7 +99,7 @@ final class GdImageProcessor implements ImageProcessor {
 		$mime = strtolower( trim( explode( ';', $declared_mime, 2 )[0] ) );
 
 		if ( ! in_array( $mime, self::ACCEPTED_MIMES, true ) ) {
-			throw new InvalidArgumentException( sprintf( 'Unsupported image MIME "%s".', $declared_mime ) );
+			throw new InvalidArgumentException( sprintf( 'Unsupported image MIME "%s".', esc_html( $declared_mime ) ) );
 		}
 
 		if ( '' === $source_bytes ) {
@@ -123,7 +126,7 @@ final class GdImageProcessor implements ImageProcessor {
 		$detected = strtolower( (string) $info['mime'] );
 
 		if ( ! in_array( $detected, self::ACCEPTED_MIMES, true ) ) {
-			throw new InvalidArgumentException( sprintf( 'Detected MIME "%s" is not accepted.', $detected ) );
+			throw new InvalidArgumentException( sprintf( 'Detected MIME "%s" is not accepted.', esc_html( $detected ) ) );
 		}
 
 		$image = @imagecreatefromstring( $source_bytes ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Reject malformed payloads cleanly.
@@ -148,7 +151,7 @@ final class GdImageProcessor implements ImageProcessor {
 			$width  = imagesx( $image );
 			$height = imagesy( $image );
 
-			$canonical   = $this->encode_jpeg( $image, self::CANONICAL_QUALITY );
+			$canonical    = $this->encode_jpeg( $image, self::CANONICAL_QUALITY );
 			$thumb_source = $this->duplicate_image( $image );
 			$thumb_img    = $this->resize_longest_edge( $thumb_source, self::THUMB_MAX_EDGE );
 			$thumb        = $this->encode_jpeg( $thumb_img, self::THUMB_QUALITY );
@@ -183,7 +186,7 @@ final class GdImageProcessor implements ImageProcessor {
 			return $image;
 		}
 
-		$exif = @exif_read_data( 'data://image/jpeg;base64,' . base64_encode( $source_bytes ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- EXIF is optional; missing/corrupt tags must not fail capture.
+		$exif = @exif_read_data( 'data://image/jpeg;base64,' . base64_encode( $source_bytes ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- EXIF is optional; base64 wraps bytes for the data URI only.
 
 		if ( ! is_array( $exif ) || ! isset( $exif['Orientation'] ) ) {
 			return $image;
@@ -253,6 +256,7 @@ final class GdImageProcessor implements ImageProcessor {
 	 *
 	 * @param \GdImage $image Source image.
 	 * @return \GdImage
+	 * @throws RuntimeException When duplication fails.
 	 */
 	private function duplicate_image( $image ) {
 		$width  = imagesx( $image );
@@ -284,19 +288,20 @@ final class GdImageProcessor implements ImageProcessor {
 	 * @param \GdImage $image    Source image.
 	 * @param int      $max_edge Maximum longest edge.
 	 * @return \GdImage
+	 * @throws RuntimeException When resize allocation or resampling fails.
 	 */
 	private function resize_longest_edge( $image, int $max_edge ) {
-		$width  = imagesx( $image );
-		$height = imagesy( $image );
+		$width   = imagesx( $image );
+		$height  = imagesy( $image );
 		$longest = max( $width, $height );
 
 		if ( $longest <= $max_edge ) {
 			return $image;
 		}
 
-		$scale  = $max_edge / $longest;
-		$new_w  = max( 1, (int) round( $width * $scale ) );
-		$new_h  = max( 1, (int) round( $height * $scale ) );
+		$scale   = $max_edge / $longest;
+		$new_w   = max( 1, (int) round( $width * $scale ) );
+		$new_h   = max( 1, (int) round( $height * $scale ) );
 		$resized = imagecreatetruecolor( $new_w, $new_h );
 
 		if ( false === $resized ) {
@@ -329,7 +334,7 @@ final class GdImageProcessor implements ImageProcessor {
 	 */
 	private function encode_jpeg( $image, int $quality ): string {
 		ob_start();
-		$ok = imagejpeg( $image, null, $quality );
+		$ok    = imagejpeg( $image, null, $quality );
 		$bytes = (string) ob_get_clean();
 
 		if ( ! $ok || '' === $bytes ) {

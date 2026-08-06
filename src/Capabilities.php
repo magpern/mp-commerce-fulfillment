@@ -122,8 +122,8 @@ final class Capabilities {
 	/**
 	 * Grants any capability from the list that the role does not already hold.
 	 *
-	 * @param string       $role_name    Role key.
-	 * @param list<string> $capabilities Capabilities to ensure.
+	 * @param string             $role_name    Role key.
+	 * @param array<int, string> $capabilities Capabilities to ensure.
 	 */
 	private static function grant_missing( string $role_name, array $capabilities ): void {
 		$role = get_role( $role_name );

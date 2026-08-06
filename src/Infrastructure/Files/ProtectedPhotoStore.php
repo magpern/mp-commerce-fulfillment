@@ -75,8 +75,13 @@ final class ProtectedPhotoStore implements PhotoStorage {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Writes canonical + thumbnail bytes atomically and returns paths.
 	 *
+	 * @param int               $fulfillment_id  Fulfillment id (path component).
+	 * @param string            $canonical_bytes Canonical JPEG bytes.
+	 * @param string            $thumb_bytes     Thumbnail JPEG bytes.
+	 * @param string            $extension       File extension without dot (e.g. "jpg").
+	 * @param DateTimeImmutable $now             Capture timestamp (year/month path).
 	 * @throws RuntimeException When the write cannot be completed safely.
 	 */
 	public function write_pair(
@@ -131,7 +136,7 @@ final class ProtectedPhotoStore implements PhotoStorage {
 			throw $e;
 		}
 
-		$resolved      = $this->absolute_path( $relative );
+		$resolved       = $this->absolute_path( $relative );
 		$thumb_resolved = $this->absolute_path( $thumb_rel );
 
 		if ( null === $resolved || null === $thumb_resolved ) {
@@ -152,7 +157,9 @@ final class ProtectedPhotoStore implements PhotoStorage {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Deletes a relative artifact when it belongs to the photo root.
+	 *
+	 * @param string $relative_path Relative path under uploads basedir.
 	 */
 	public function delete_relative( string $relative_path ): bool {
 		$absolute = $this->absolute_path( $relative_path );
@@ -165,7 +172,9 @@ final class ProtectedPhotoStore implements PhotoStorage {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Resolves a relative path to an absolute path under the photo root.
+	 *
+	 * @param string $relative_path Relative path under uploads basedir.
 	 */
 	public function absolute_path( string $relative_path ): ?string {
 		$relative_path = ltrim( str_replace( '\\', '/', $relative_path ), '/' );
@@ -209,7 +218,9 @@ final class ProtectedPhotoStore implements PhotoStorage {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Whether the relative path is under the protected photo root.
+	 *
+	 * @param string $relative_path Relative path under uploads basedir.
 	 */
 	public function belongs_to_photo_root( string $relative_path ): bool {
 		return null !== $this->absolute_path( $relative_path );

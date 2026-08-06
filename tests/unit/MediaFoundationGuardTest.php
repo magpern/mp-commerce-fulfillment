@@ -42,7 +42,7 @@ final class MediaFoundationGuardTest extends TestCase {
 	}
 
 	public function test_only_photo_service_in_application_calls_media_repository_mutations(): void {
-		$app_root = dirname( __DIR__, 2 ) . '/src/Application';
+		$app_root   = dirname( __DIR__, 2 ) . '/src/Application';
 		$violations = array();
 
 		$iterator = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $app_root, FilesystemIterator::SKIP_DOTS ) );
@@ -87,7 +87,7 @@ final class MediaFoundationGuardTest extends TestCase {
 	}
 
 	public function test_domain_media_has_no_woocommerce_or_wpdb_tokens(): void {
-		$dir = dirname( __DIR__, 2 ) . '/src/Domain/Media';
+		$dir      = dirname( __DIR__, 2 ) . '/src/Domain/Media';
 		$iterator = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS ) );
 
 		foreach ( $iterator as $file ) {

@@ -1,6 +1,6 @@
 <?php
 /**
- * mpcf_media schema migration integration tests.
+ * Schema migration integration tests for mpcf_media.
  *
  * @package MPCommerceFulfillment
  */

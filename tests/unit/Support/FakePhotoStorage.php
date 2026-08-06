@@ -50,7 +50,14 @@ final class FakePhotoStorage implements PhotoStorage {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Writes canonical + thumbnail bytes atomically and returns paths.
+	 *
+	 * @param int               $fulfillment_id  Fulfillment id (path component).
+	 * @param string            $canonical_bytes Canonical JPEG bytes.
+	 * @param string            $thumb_bytes     Thumbnail JPEG bytes.
+	 * @param string            $extension       File extension without dot (e.g. "jpg").
+	 * @param DateTimeImmutable $now             Capture timestamp (year/month path).
+	 * @throws RuntimeException When the write is rejected or simulated to fail.
 	 */
 	public function write_pair(
 		int $fulfillment_id,

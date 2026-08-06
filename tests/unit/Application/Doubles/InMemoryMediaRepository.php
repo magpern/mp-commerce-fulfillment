@@ -150,8 +150,8 @@ final class InMemoryMediaRepository implements MediaRepository {
 			return true;
 		}
 
-		$data               = $existing->to_array();
-		$data['deleted_at'] = $now;
+		$data                    = $existing->to_array();
+		$data['deleted_at']      = $now;
 		$this->rows[ $photo_id ] = PhotoRecord::from_array( $data );
 
 		return true;

@@ -128,16 +128,16 @@ final class PhotoService {
 		Clock $clock,
 		?PhotoConfig $config = null
 	) {
-		$this->media         = $media;
-		$this->storage       = $storage;
-		$this->processor     = $processor;
-		$this->fulfillments  = $fulfillments;
-		$this->packages      = $packages;
-		$this->shipments     = $shipments;
-		$this->events        = $events;
-		$this->dispatcher    = $dispatcher;
-		$this->clock         = $clock;
-		$this->config        = $config ?? PhotoConfig::defaults();
+		$this->media        = $media;
+		$this->storage      = $storage;
+		$this->processor    = $processor;
+		$this->fulfillments = $fulfillments;
+		$this->packages     = $packages;
+		$this->shipments    = $shipments;
+		$this->events       = $events;
+		$this->dispatcher   = $dispatcher;
+		$this->clock        = $clock;
+		$this->config       = $config ?? PhotoConfig::defaults();
 	}
 
 	/**
@@ -149,7 +149,8 @@ final class PhotoService {
 	 * @param string $source_bytes   Raw upload bytes.
 	 * @param string $declared_mime  Client-declared MIME.
 	 * @param Actor  $actor          Who captured the photo.
-	 * @throws InvalidArgumentException|RuntimeException On validation or persistence failure.
+	 * @throws InvalidArgumentException On validation failure.
+	 * @throws RuntimeException         On persistence failure.
 	 */
 	public function capture(
 		int $fulfillment_id,
@@ -294,6 +295,7 @@ final class PhotoService {
 	 * @param int   $photo_id Photo id.
 	 * @param Actor $actor    Who deleted the photo.
 	 * @throws InvalidArgumentException When the photo is missing.
+	 * @throws RuntimeException         When the photo cannot be reloaded after delete.
 	 */
 	public function soft_delete( int $photo_id, Actor $actor ): PhotoRecord {
 		$photo = $this->media->get( $photo_id );

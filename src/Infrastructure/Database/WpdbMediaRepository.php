@@ -22,7 +22,9 @@ use MPCF\Domain\Repository\MediaRepository;
 final class WpdbMediaRepository implements MediaRepository {
 
 	/**
-	 * {@inheritDoc}
+	 * Inserts a brand-new photo and returns its assigned id.
+	 *
+	 * @param PhotoRecord $record A record built by {@see PhotoRecord::create()}.
 	 */
 	public function insert( PhotoRecord $record ): int {
 		global $wpdb;
@@ -54,7 +56,9 @@ final class WpdbMediaRepository implements MediaRepository {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Loads one photo by id, or null when missing.
+	 *
+	 * @param int $photo_id Photo id.
 	 */
 	public function get( int $photo_id ): ?PhotoRecord {
 		global $wpdb;
@@ -67,13 +71,18 @@ final class WpdbMediaRepository implements MediaRepository {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Lists photos for a fulfillment, oldest sequence first.
+	 *
+	 * @param int  $fulfillment_id  Fulfillment id.
+	 * @param bool $include_deleted Whether to include soft-deleted rows.
+	 * @return list<PhotoRecord>
 	 */
 	public function list_for_fulfillment( int $fulfillment_id, bool $include_deleted = false ): array {
 		global $wpdb;
 
 		$table = Schema::table( Schema::MEDIA );
-		$sql   = "SELECT * FROM {$table} WHERE fulfillment_id = %d";
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed schema literal.
+		$sql = "SELECT * FROM {$table} WHERE fulfillment_id = %d";
 
 		if ( ! $include_deleted ) {
 			$sql .= ' AND deleted_at IS NULL';
@@ -88,13 +97,18 @@ final class WpdbMediaRepository implements MediaRepository {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Lists photos for a package, oldest sequence first.
+	 *
+	 * @param int  $package_id      Package id.
+	 * @param bool $include_deleted Whether to include soft-deleted rows.
+	 * @return list<PhotoRecord>
 	 */
 	public function list_for_package( int $package_id, bool $include_deleted = false ): array {
 		global $wpdb;
 
 		$table = Schema::table( Schema::MEDIA );
-		$sql   = "SELECT * FROM {$table} WHERE package_id = %d";
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed schema literal.
+		$sql = "SELECT * FROM {$table} WHERE package_id = %d";
 
 		if ( ! $include_deleted ) {
 			$sql .= ' AND deleted_at IS NULL';
@@ -109,7 +123,9 @@ final class WpdbMediaRepository implements MediaRepository {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Count of active (non-deleted) photos for a fulfillment.
+	 *
+	 * @param int $fulfillment_id Fulfillment id.
 	 */
 	public function count_active_for_fulfillment( int $fulfillment_id ): int {
 		global $wpdb;
@@ -117,12 +133,14 @@ final class WpdbMediaRepository implements MediaRepository {
 		$table = Schema::table( Schema::MEDIA );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed schema literal.
 		$sql = "SELECT COUNT(*) FROM {$table} WHERE fulfillment_id = %d AND deleted_at IS NULL";
-
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql is a fixed literal with placeholders only.
 		return (int) $wpdb->get_var( $wpdb->prepare( $sql, $fulfillment_id ) );
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Count of active package-kind photos for a fulfillment.
+	 *
+	 * @param int $fulfillment_id Fulfillment id.
 	 */
 	public function count_active_package_photos( int $fulfillment_id ): int {
 		global $wpdb;
@@ -130,12 +148,14 @@ final class WpdbMediaRepository implements MediaRepository {
 		$table = Schema::table( Schema::MEDIA );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed schema literal.
 		$sql = "SELECT COUNT(*) FROM {$table} WHERE fulfillment_id = %d AND kind = %s AND deleted_at IS NULL";
-
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql is a fixed literal with placeholders only.
 		return (int) $wpdb->get_var( $wpdb->prepare( $sql, $fulfillment_id, PhotoKind::PACKAGE ) );
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Next 1-indexed sequence value for a fulfillment.
+	 *
+	 * @param int $fulfillment_id Fulfillment id.
 	 */
 	public function next_sequence( int $fulfillment_id ): int {
 		global $wpdb;
@@ -143,13 +163,17 @@ final class WpdbMediaRepository implements MediaRepository {
 		$table = Schema::table( Schema::MEDIA );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed schema literal.
 		$sql = "SELECT MAX(seq) FROM {$table} WHERE fulfillment_id = %d";
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql is a fixed literal with placeholders only.
 		$max = $wpdb->get_var( $wpdb->prepare( $sql, $fulfillment_id ) );
 
 		return ( null === $max || '' === $max ) ? 1 : ( (int) $max + 1 );
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Soft-deletes a photo by setting `deleted_at`. Idempotent.
+	 *
+	 * @param int               $photo_id Photo id.
+	 * @param DateTimeImmutable $now      Soft-delete timestamp.
 	 */
 	public function soft_delete( int $photo_id, DateTimeImmutable $now ): bool {
 		global $wpdb;
@@ -166,13 +190,9 @@ final class WpdbMediaRepository implements MediaRepository {
 
 		$table = Schema::table( Schema::MEDIA );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed schema literal.
-		$wpdb->query(
-			$wpdb->prepare(
-				"UPDATE {$table} SET deleted_at = %s WHERE id = %d AND deleted_at IS NULL",
-				$now->format( 'Y-m-d H:i:s' ),
-				$photo_id
-			)
-		);
+		$sql = "UPDATE {$table} SET deleted_at = %s WHERE id = %d AND deleted_at IS NULL";
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql is a fixed literal with placeholders only.
+		$wpdb->query( $wpdb->prepare( $sql, $now->format( 'Y-m-d H:i:s' ), $photo_id ) );
 
 		return true;
 	}

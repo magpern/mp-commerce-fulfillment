@@ -157,6 +157,7 @@ final class PhotoRecord {
 	 * @param DateTimeImmutable      $created_at          Capture time.
 	 * @param DateTimeImmutable|null $deleted_at          Soft-delete time.
 	 * @param DateTimeImmutable|null $purged_at           Retention-purge time.
+	 * @throws InvalidArgumentException When field values are invalid.
 	 */
 	private function __construct(
 		?int $id,
