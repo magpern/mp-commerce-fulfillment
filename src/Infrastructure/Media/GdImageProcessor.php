@@ -69,13 +69,8 @@ final class GdImageProcessor implements ImageProcessor {
 	 *
 	 * @param int $max_edge_px Longest-edge limit (defaults to {@see DEFAULT_MAX_EDGE}).
 	 * @throws InvalidArgumentException When max_edge_px is invalid.
-	 * @throws RuntimeException         When the GD extension is unavailable.
 	 */
 	public function __construct( int $max_edge_px = self::DEFAULT_MAX_EDGE ) {
-		if ( ! extension_loaded( 'gd' ) ) {
-			throw new RuntimeException( 'The GD extension is required for package photo processing.' );
-		}
-
 		if ( $max_edge_px < 1 ) {
 			throw new InvalidArgumentException( 'max_edge_px must be at least 1.' );
 		}

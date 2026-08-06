@@ -32,6 +32,7 @@ use MPCF\Api\Rest\ItemsController;
 use MPCF\Api\Rest\NotesController;
 use MPCF\Api\Rest\NotificationsController;
 use MPCF\Api\Rest\PackagesController;
+use MPCF\Api\Rest\PhotosController;
 use MPCF\Api\Rest\RestApi;
 use MPCF\Api\Rest\ShipmentsController;
 use MPCF\Application\AssignmentService;
@@ -42,6 +43,7 @@ use MPCF\Application\IntakeService;
 use MPCF\Application\NoteService;
 use MPCF\Application\OrderOverviewService;
 use MPCF\Application\PackingService;
+use MPCF\Application\Photos\PhotoService;
 use MPCF\Application\QueueService;
 use MPCF\Application\ShipmentAutoShipSubscriber;
 use MPCF\Application\ShippingService;
@@ -50,25 +52,26 @@ use MPCF\Application\WorkflowService;
 use MPCF\Cli\BackfillCommand;
 use MPCF\Documents\HtmlRenderer;
 use MPCF\Documents\TemplateRegistry;
-use MPCF\Infrastructure\Files\ProtectedDocumentStore;
 use MPCF\Domain\Workflow\StandardWorkflow;
 use MPCF\Domain\Workflow\WorkflowDefinition;
 use MPCF\Engine\GuardRegistry;
 use MPCF\Engine\WorkflowEngine;
 use MPCF\Infrastructure\Carriers\BundledCarrierRegistry;
-use MPCF\Infrastructure\Notifications\EmailChannel;
-use MPCF\Woo\TrackingEmailExtension;
-use MPCF\Woo\WooCustomerEmailLookup;
 use MPCF\Infrastructure\Database\Migrator;
 use MPCF\Infrastructure\Database\WpdbDocumentRepository;
 use MPCF\Infrastructure\Database\WpdbEventRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentItemRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
+use MPCF\Infrastructure\Database\WpdbMediaRepository;
 use MPCF\Infrastructure\Database\WpdbNoteRepository;
 use MPCF\Infrastructure\Database\WpdbPackageItemRepository;
 use MPCF\Infrastructure\Database\WpdbPackageRepository;
 use MPCF\Infrastructure\Database\WpdbSearchQuery;
 use MPCF\Infrastructure\Database\WpdbShipmentRepository;
+use MPCF\Infrastructure\Files\ProtectedDocumentStore;
+use MPCF\Infrastructure\Files\ProtectedPhotoStore;
+use MPCF\Infrastructure\Media\GdImageProcessor;
+use MPCF\Infrastructure\Notifications\EmailChannel;
 use MPCF\Infrastructure\SystemClock;
 use MPCF\Vendor\Mpds\ComponentRenderer;
 use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
@@ -78,6 +81,8 @@ use MPCF\Woo\IntakeHooks;
 use MPCF\Woo\RefundObserver;
 use MPCF\Woo\StatusBridge;
 use MPCF\Woo\StoreUnits;
+use MPCF\Woo\TrackingEmailExtension;
+use MPCF\Woo\WooCustomerEmailLookup;
 use MPCF\Woo\WooOrderSource;
 use MPCF\Woo\WorkspaceFlags;
 
@@ -176,6 +181,18 @@ final class Plugin {
 		$settings     = new Settings();
 		$definition   = StandardWorkflow::definition();
 
+		$photo_service = new PhotoService(
+			new WpdbMediaRepository(),
+			new ProtectedPhotoStore(),
+			new GdImageProcessor(),
+			$fulfillments,
+			$packages,
+			$shipments,
+			$events,
+			$dispatcher,
+			$clock
+		);
+
 		$workflow_service = new WorkflowService(
 			$fulfillments,
 			$events,
@@ -183,10 +200,10 @@ final class Plugin {
 			$dispatcher,
 			$clock,
 			array( StandardWorkflow::NAME => $definition ),
-			new TransitionContextFactory( $items, $shipments, $packages, $settings )
+			new TransitionContextFactory( $items, $shipments, $packages, $settings, $photo_service )
 		);
 
-		$this->wire_services( $fulfillments, $items, $events, $shipments, $packages, $dispatcher, $clock, $settings, $definition, $workflow_service );
+		$this->wire_services( $fulfillments, $items, $events, $shipments, $packages, $dispatcher, $clock, $settings, $definition, $workflow_service, $photo_service );
 
 		// Architecture Plan §5.4: menu/screens/assets are gated to is_admin()
 		// contexts only — a front-end or WP-CLI request never needs them.
@@ -223,6 +240,7 @@ final class Plugin {
 	 * @param Settings                      $settings     Plugin settings, shared with {@see wire_admin()}.
 	 * @param WorkflowDefinition            $definition   The governing workflow, shared with {@see wire_admin()}.
 	 * @param WorkflowService               $workflow_service The one {@see WorkflowService}, built in {@see init()} against `$dispatcher` and shared with {@see wire_admin()} — the fix that makes an admin-initiated transition reach `$dispatcher`'s subscribers, including the status bridge subscribed just below.
+	 * @param PhotoService                  $photo_service    Package photography orchestrator, shared with the REST surface.
 	 */
 	private function wire_services(
 		WpdbFulfillmentRepository $fulfillments,
@@ -234,7 +252,8 @@ final class Plugin {
 		SystemClock $clock,
 		Settings $settings,
 		WorkflowDefinition $definition,
-		WorkflowService $workflow_service
+		WorkflowService $workflow_service,
+		PhotoService $photo_service
 	): void {
 		$orders = new WooOrderSource();
 
@@ -351,6 +370,7 @@ final class Plugin {
 				new CarriersController( $carriers ),
 				new NotificationsController( $notification_service ),
 				new DocumentsController( $document_service, $document_history, $workflow_service, $detail_service ),
+				new PhotosController( $photo_service, $workflow_service, $detail_service ),
 			)
 		) )->register();
 	}

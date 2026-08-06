@@ -259,12 +259,78 @@ final class PhotoService {
 	}
 
 	/**
+	 * Captures a photo and bumps the fulfillment optimistic-lock version.
+	 *
+	 * Checks `$expected_version` before expensive processing. After a
+	 * successful insert, calls {@see FulfillmentRepository::touch()}; if
+	 * touch loses a race the photo remains (operational evidence) and a
+	 * {@see RuntimeException} with message `version_conflict` is thrown.
+	 *
+	 * @param int    $fulfillment_id   Owning fulfillment.
+	 * @param int    $package_id       Owning package.
+	 * @param string $kind             Allow-listed kind.
+	 * @param string $source_bytes     Raw upload bytes.
+	 * @param string $declared_mime    Client-declared MIME.
+	 * @param Actor  $actor            Who captured the photo.
+	 * @param int    $expected_version Caller's fulfillment version.
+	 * @throws InvalidArgumentException On validation failure or version mismatch.
+	 * @throws RuntimeException         On persistence failure or post-insert version race.
+	 */
+	public function capture_with_version(
+		int $fulfillment_id,
+		int $package_id,
+		string $kind,
+		string $source_bytes,
+		string $declared_mime,
+		Actor $actor,
+		int $expected_version
+	): PhotoMutationResult {
+		$fulfillment = $this->fulfillments->find( $fulfillment_id );
+
+		if ( null === $fulfillment ) {
+			throw new InvalidArgumentException( 'Fulfillment not found.' );
+		}
+
+		if ( $fulfillment->version() !== $expected_version ) {
+			throw new InvalidArgumentException( 'version_conflict' );
+		}
+
+		$photo = $this->capture( $fulfillment_id, $package_id, $kind, $source_bytes, $declared_mime, $actor );
+
+		if ( ! $this->fulfillments->touch( $fulfillment_id, $expected_version ) ) {
+			throw new RuntimeException( 'version_conflict' );
+		}
+
+		return new PhotoMutationResult(
+			$photo,
+			$expected_version + 1,
+			$this->requirement_satisfied( $fulfillment_id )
+		);
+	}
+
+	/**
 	 * Loads one photo by id.
 	 *
 	 * @param int $photo_id Photo id.
 	 */
 	public function get( int $photo_id ): ?PhotoRecord {
 		return $this->media->get( $photo_id );
+	}
+
+	/**
+	 * Loads an active (non-deleted) photo, or null for missing/deleted
+	 * (404 metadata policy).
+	 *
+	 * @param int $photo_id Photo id.
+	 */
+	public function get_active( int $photo_id ): ?PhotoRecord {
+		$photo = $this->media->get( $photo_id );
+
+		if ( null === $photo || $photo->is_deleted() ) {
+			return null;
+		}
+
+		return $photo;
 	}
 
 	/**
@@ -276,6 +342,47 @@ final class PhotoService {
 	 */
 	public function list_for_fulfillment( int $fulfillment_id, bool $include_deleted = false ): array {
 		return $this->media->list_for_fulfillment( $fulfillment_id, $include_deleted );
+	}
+
+	/**
+	 * Lists active photos for a fulfillment, optionally filtered.
+	 *
+	 * @param int         $fulfillment_id Fulfillment id.
+	 * @param int|null    $package_id     Optional package filter.
+	 * @param string|null $kind           Optional kind filter.
+	 * @return list<PhotoRecord>
+	 * @throws InvalidArgumentException When `$kind` is not allow-listed.
+	 */
+	public function list_active( int $fulfillment_id, ?int $package_id = null, ?string $kind = null ): array {
+		if ( null !== $kind ) {
+			PhotoKind::assert_valid( $kind );
+		}
+
+		$photos = $this->media->list_for_fulfillment( $fulfillment_id, false );
+		$out    = array();
+
+		foreach ( $photos as $photo ) {
+			if ( null !== $package_id && $photo->package_id() !== $package_id ) {
+				continue;
+			}
+
+			if ( null !== $kind && $photo->kind() !== $kind ) {
+				continue;
+			}
+
+			$out[] = $photo;
+		}
+
+		usort(
+			$out,
+			static function ( PhotoRecord $a, PhotoRecord $b ): int {
+				$by_package = $a->package_id() <=> $b->package_id();
+
+				return 0 !== $by_package ? $by_package : ( $a->seq() <=> $b->seq() );
+			}
+		);
+
+		return $out;
 	}
 
 	/**
@@ -331,6 +438,116 @@ final class PhotoService {
 		}
 
 		return $reloaded;
+	}
+
+	/**
+	 * Soft-deletes a photo and bumps the fulfillment version.
+	 *
+	 * Already-deleted photos are idempotent: no new event, no touch, current
+	 * fulfillment version returned.
+	 *
+	 * @param int   $photo_id          Photo id.
+	 * @param Actor $actor             Who deleted the photo.
+	 * @param int   $expected_version  Caller's fulfillment version.
+	 * @throws InvalidArgumentException When missing or version mismatches.
+	 * @throws RuntimeException         On post-delete version race.
+	 */
+	public function soft_delete_with_version( int $photo_id, Actor $actor, int $expected_version ): PhotoMutationResult {
+		$photo = $this->media->get( $photo_id );
+
+		if ( null === $photo ) {
+			throw new InvalidArgumentException( 'Photo not found.' );
+		}
+
+		$fulfillment = $this->fulfillments->find( $photo->fulfillment_id() );
+
+		if ( null === $fulfillment ) {
+			throw new InvalidArgumentException( 'Fulfillment not found.' );
+		}
+
+		if ( $fulfillment->version() !== $expected_version ) {
+			throw new InvalidArgumentException( 'version_conflict' );
+		}
+
+		if ( $photo->is_deleted() ) {
+			return new PhotoMutationResult(
+				$photo,
+				$fulfillment->version(),
+				$this->requirement_satisfied( $photo->fulfillment_id() )
+			);
+		}
+
+		$deleted = $this->soft_delete( $photo_id, $actor );
+
+		if ( ! $this->fulfillments->touch( $photo->fulfillment_id(), $expected_version ) ) {
+			throw new RuntimeException( 'version_conflict' );
+		}
+
+		return new PhotoMutationResult(
+			$deleted,
+			$expected_version + 1,
+			$this->requirement_satisfied( $photo->fulfillment_id() )
+		);
+	}
+
+	/**
+	 * Reads canonical or thumbnail bytes for streaming. Never returns paths.
+	 *
+	 * @param int    $photo_id Photo id.
+	 * @param string $which    `content` or `thumb`.
+	 * @return array{ok:bool,code?:string,message?:string,bytes?:string,mime?:string,filename?:string,photo?:PhotoRecord}
+	 */
+	public function read_bytes( int $photo_id, string $which ): array {
+		$photo = $this->media->get( $photo_id );
+
+		if ( null === $photo ) {
+			return array(
+				'ok'      => false,
+				'code'    => 'photo_not_found',
+				'message' => 'Photo not found.',
+			);
+		}
+
+		if ( $photo->is_deleted() ) {
+			return array(
+				'ok'      => false,
+				'code'    => 'photo_deleted',
+				'message' => 'Photo has been deleted.',
+			);
+		}
+
+		$relative = 'thumb' === $which ? $photo->thumb_path() : $photo->file_path();
+		$absolute = $this->storage->absolute_path( $relative );
+
+		if ( null === $absolute || ! is_readable( $absolute ) ) {
+			return array(
+				'ok'      => false,
+				'code'    => 'photo_content_missing',
+				'message' => 'Photo file is missing from storage.',
+			);
+		}
+
+		$bytes = file_get_contents( $absolute ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Trusted path from PhotoStorage::absolute_path under the protected photo root.
+
+		if ( false === $bytes ) {
+			return array(
+				'ok'      => false,
+				'code'    => 'photo_content_missing',
+				'message' => 'Photo file is missing from storage.',
+			);
+		}
+
+		$is_thumb = 'thumb' === $which;
+
+		return array(
+			'ok'       => true,
+			'bytes'    => $bytes,
+			'mime'     => $is_thumb ? 'image/jpeg' : $photo->mime(),
+			'filename' => $is_thumb
+				? 'mpcf-photo-' . $photo_id . '-thumb.jpg'
+				: 'mpcf-photo-' . $photo_id . '.jpg',
+			'photo'    => $photo,
+		);
 	}
 
 	/**

@@ -41,12 +41,14 @@ final class Settings {
 	 * sender/reply/footer/subject/introduction/signature keys. Carrier
 	 * default remains `default_carrier_id`; registry fallback to `other`
 	 * is applied by NotificationConfigurationService, not here (purity).
+	 * 7: `photos_required` (M6-B / Part VIII) — when true, packing→packed
+	 * requires ≥1 active kind=package photo via PhotoRequiredGuard.
 	 * Each bump is purely informational (`sanitize()` always rebuilds the
 	 * canonical shape from `defaults()`, so there is no destructive
 	 * migration step to write for a purely additive change like any of
 	 * these).
 	 */
-	public const SCHEMA_VERSION = 6;
+	public const SCHEMA_VERSION = 7;
 
 	/**
 	 * Inbound cancel/refund behavior: move the fulfillment straight to
@@ -178,6 +180,12 @@ final class Settings {
 			'notification_email_subject'      => 'Your order has shipped',
 			'notification_email_introduction' => '',
 			'notification_email_signature'    => '',
+
+			/*
+			 * When true, packing→packed requires ≥1 active kind=package
+			 * photo (Part VIII / PhotoRequiredGuard). Default off.
+			 */
+			'photos_required'                 => false,
 		);
 	}
 
@@ -217,6 +225,7 @@ final class Settings {
 		);
 		$out['notification_email_introduction'] = self::sanitize_multiline_text( $raw['notification_email_introduction'] ?? '', 2000 );
 		$out['notification_email_signature']    = self::sanitize_multiline_text( $raw['notification_email_signature'] ?? '', 2000 );
+		$out['photos_required']                 = ! empty( $raw['photos_required'] );
 
 		return $out;
 	}
@@ -470,6 +479,14 @@ final class Settings {
 	 */
 	public function notification_email_signature(): string {
 		return (string) $this->get()['notification_email_signature'];
+	}
+
+	/**
+	 * Whether packing→packed requires ≥1 active kind=package photo
+	 * (Part VIII / {@see \MPCF\Engine\Guard\PhotoRequiredGuard}).
+	 */
+	public function photos_required(): bool {
+		return (bool) $this->get()['photos_required'];
 	}
 
 	/**
