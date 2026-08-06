@@ -90,6 +90,13 @@ final class ScanResolver {
 			case BarcodePayload::TYPE_PRODUCT:
 				return $this->resolve_product( $payload, $items );
 
+			case BarcodePayload::TYPE_WAVE:
+				return ScanResolution::rejected(
+					'wrong_mode',
+					'Wave barcodes are only used in Wave Scan Mode.',
+					$payload
+				);
+
 			default:
 				return ScanResolution::rejected( 'malformed_payload', 'Unknown barcode type.', $payload );
 		}

@@ -11,6 +11,7 @@ namespace MPCF\Domain\Scan;
 
 /**
  * Architecture Plan Part IX — Picking vs Packing Scan Mode.
+ * Part X adds Wave Picking Scan Mode (extends M7; does not replace it).
  */
 final class ScanMode {
 
@@ -18,13 +19,15 @@ final class ScanMode {
 
 	public const PACKING = 'packing';
 
+	public const WAVE_PICKING = 'wave_picking';
+
 	/**
 	 * Whether `$mode` is a supported scan mode.
 	 *
 	 * @param string $mode Candidate mode.
 	 */
 	public static function is_valid( string $mode ): bool {
-		return self::PICKING === $mode || self::PACKING === $mode;
+		return in_array( $mode, array( self::PICKING, self::PACKING, self::WAVE_PICKING ), true );
 	}
 
 	/**
@@ -34,7 +37,7 @@ final class ScanMode {
 	 * @throws \InvalidArgumentException When the mode is unknown.
 	 */
 	public static function required_state( string $mode ): string {
-		if ( self::PICKING === $mode ) {
+		if ( self::PICKING === $mode || self::WAVE_PICKING === $mode ) {
 			return 'picking';
 		}
 
@@ -52,7 +55,7 @@ final class ScanMode {
 	 * @throws \InvalidArgumentException When the mode is unknown.
 	 */
 	public static function quantity_field( string $mode ): string {
-		if ( self::PICKING === $mode ) {
+		if ( self::PICKING === $mode || self::WAVE_PICKING === $mode ) {
 			return 'qty_picked';
 		}
 
