@@ -1,9 +1,21 @@
-# M7 Release Report — Barcode & Scan Mode (`v0.7.0` RC)
+# M7 Release Report — Barcode & Scan Mode (`v0.7.0`)
 
-**Branch:** `feature/m7-barcode-scan`  
 **Baseline:** `v0.6.0` / `main` @ `3e3266b`  
 **Schema:** settings **8**, migrator target **6** (unchanged)  
-**Status:** Release candidate — **not merged, tagged, published, or production-deployed**. M8 not started.
+**Status:** **Published** on GitHub. Production **not** deployed. **M7 closed.** **M8 not started.**
+
+## Publication evidence
+
+| Item | Value |
+|---|---|
+| Final merged commit | `e16e32d` (`Merge pull request #5 from magpern/feature/m7-barcode-scan`) |
+| Tag | `v0.7.0` → `e16e32d` |
+| GitHub Release | https://github.com/magpern/mp-commerce-fulfillment/releases/tag/v0.7.0 |
+| Published asset | `mp-commerce-fulfillment-0.7.0.zip` |
+| Local ZIP SHA-256 | `143abf7a40bc94df94ebbb8abbff1cf07e6675e762a94e26833f1a8a6037d503` |
+| Published ZIP SHA-256 | `143abf7a40bc94df94ebbb8abbff1cf07e6675e762a94e26833f1a8a6037d503` |
+| Release workflow | **Not run** — GitHub Actions major outage ([incident qcvjkzcs7j74](https://www.githubstatus.com/incidents/qcvjkzcs7j74)); release created manually via `gh release create` with release-audited local ZIP |
+| PR CI gate | **Waived** for the same Actions outage (PO authorization 2026-08-06); local PHPCS/unit/integration/POT/release-audit + bounded live smoke green |
 
 ## Decisions (repository-grounded)
 
@@ -40,7 +52,15 @@ Exercised via unit/integration assertions and live bind-mount on
 **Release blockers fixed during M7:** ScanResolution method name collision;
 autoload bootstrap require for correction-store double; pack-after-pick test
 version after in-memory state save; Scan Mode panel visibility (enter buttons
-always visible).
+always visible); Scan Mode enter-button sync after AJAX stage change; scan-sink
+keystroke buffer accumulation (`buffer +=`).
+
+## Final live smoke (2026-08-06)
+
+Bounded REST smoke on isolated fixture fulfillments: pick ×1 / repeated qty /
+over-scan 422 / unknown 422 / stale 409 no replay / pack after pick /
+pack-before-pick 422 / undo / `MPCF:I:` resolve / `MPCF:F:` parse / WC stock
+unchanged during scan ops. `MPCF_VERSION=0.7.0`, `mpcf_db_version=6`.
 
 ## Performance (dev dogfood)
 
@@ -52,16 +72,16 @@ measured **~26 ms** wall time inside `wp eval` on the WordPress container
 
 | Artifact | Value |
 |---|---|
-| ZIP | `dist/mp-commerce-fulfillment-0.7.0.zip` |
-| SHA-256 | `005e6ea92097adb8378d498e3eda4ad26dab56892ce694e302439d9fe64d019a` |
+| ZIP | `mp-commerce-fulfillment-0.7.0.zip` |
+| SHA-256 (local = published) | `143abf7a40bc94df94ebbb8abbff1cf07e6675e762a94e26833f1a8a6037d503` |
 | Release audit | passed |
 | Version triad | `0.7.0` |
 
 ## Explicit confirmations
 
-- `v0.7.0` not merged/tagged/published
-- Production not deployed
-- M8 not started
+- M7 **closed**; `v0.7.0` merged, tagged, and published on GitHub
+- Production **not** deployed
+- M8 **not** started
 - No inventory/receiving coupling
 
 **Deferred (Important polish / Future):** mandatory camera scanning; EAN
