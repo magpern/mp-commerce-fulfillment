@@ -52,10 +52,10 @@ final class PhotoRetentionResult {
 	/**
 	 * Builds a batch result.
 	 *
-	 * @param int             $examined Candidates considered.
-	 * @param int             $purged   Successfully purged.
-	 * @param int             $skipped  Skipped.
-	 * @param int             $failed   Failed.
+	 * @param int               $examined Candidates considered.
+	 * @param int               $purged   Successfully purged.
+	 * @param int               $skipped  Skipped.
+	 * @param int               $failed   Failed.
 	 * @param array<int,string> $failures Bounded failure messages.
 	 */
 	public function __construct( int $examined, int $purged, int $skipped, int $failed, array $failures = array() ) {
