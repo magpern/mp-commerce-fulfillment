@@ -432,7 +432,7 @@ msgid "Order status"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:185
-#: src/Plugin.php:461
+#: src/Plugin.php:481
 msgid "Fulfillment"
 msgstr ""
 
