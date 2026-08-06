@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace MPCF\Application;
 
+use MPCF\Application\Photos\PhotoService;
 use MPCF\Domain\Repository\FulfillmentItemRepository;
 use MPCF\Domain\Repository\PackageRepository;
 use MPCF\Domain\Repository\ShipmentRepository;
@@ -25,16 +26,18 @@ use MPCF\Settings;
  * that asks it — {@see \MPCF\Application\WorkflowService} calls this and
  * nowhere else builds a {@see TransitionContext} from real data.
  *
- * `photo_requirement_satisfied` stays hardcoded `true`: no photo capture
- * model exists until Milestone 5. `tracking_requirement_satisfied` now
- * reflects the `require_tracking_before_ship` setting (F21) — satisfied
- * whenever that setting is off, or whenever any of the fulfillment's
- * shipments has a recorded tracking number when it is on. Injecting
+ * `photo_requirement_satisfied` reflects the `photos_required` setting
+ * (Part VIII / M6-B): satisfied whenever that setting is off, or whenever
+ * {@see PhotoService::requirement_satisfied()} reports ≥1 active
+ * kind=package photo when it is on (and PhotoService is wired). Injecting
  * {@see Settings} here does not reintroduce a platform-integration
  * dependency into this layer (invariant I6): `Settings` alone owns the
  * underlying options read/write, and this file never touches that
- * directly — it only reads one already-sanitized boolean off it, the
- * same way it reads booleans off repository results.
+ * directly — it only reads already-sanitized booleans off it, the same
+ * way it reads booleans off repository results.
+ *
+ * `tracking_requirement_satisfied` reflects `require_tracking_before_ship`
+ * (F21) the same way.
  */
 final class TransitionContextFactory {
 
@@ -60,11 +63,19 @@ final class TransitionContextFactory {
 	private PackageRepository $packages;
 
 	/**
-	 * Plugin settings, for `require_tracking_before_ship`.
+	 * Plugin settings, for `require_tracking_before_ship` / `photos_required`.
 	 *
 	 * @var Settings
 	 */
 	private Settings $settings;
+
+	/**
+	 * Package photography queries (optional until wired; null treats photos
+	 * as unsatisfied when `photos_required` is on).
+	 *
+	 * @var PhotoService|null
+	 */
+	private ?PhotoService $photos;
 
 	/**
 	 * Builds the factory.
@@ -72,13 +83,21 @@ final class TransitionContextFactory {
 	 * @param FulfillmentItemRepository $items     Line item persistence.
 	 * @param ShipmentRepository        $shipments Shipment persistence.
 	 * @param PackageRepository         $packages  Package persistence.
-	 * @param Settings                  $settings  Plugin settings, for `require_tracking_before_ship`.
+	 * @param Settings                  $settings  Plugin settings.
+	 * @param PhotoService|null         $photos    Package photography queries.
 	 */
-	public function __construct( FulfillmentItemRepository $items, ShipmentRepository $shipments, PackageRepository $packages, Settings $settings ) {
+	public function __construct(
+		FulfillmentItemRepository $items,
+		ShipmentRepository $shipments,
+		PackageRepository $packages,
+		Settings $settings,
+		?PhotoService $photos = null
+	) {
 		$this->items     = $items;
 		$this->shipments = $shipments;
 		$this->packages  = $packages;
 		$this->settings  = $settings;
+		$this->photos    = $photos;
 	}
 
 	/**
@@ -89,11 +108,14 @@ final class TransitionContextFactory {
 	public function build( int $fulfillment_id ): TransitionContext {
 		$shipments = $this->shipments->find_for_fulfillment( $fulfillment_id );
 
+		$photo_ok = ! $this->settings->photos_required()
+			|| ( null !== $this->photos && $this->photos->requirement_satisfied( $fulfillment_id ) );
+
 		return new TransitionContext(
 			$this->items->find_for_fulfillment( $fulfillment_id ),
 			$this->any_package_has_a_spec( $shipments ),
 			array() !== $shipments,
-			true,
+			$photo_ok,
 			! $this->settings->require_tracking_before_ship() || array() === $shipments || $this->any_shipment_has_tracking( $shipments )
 		);
 	}
