@@ -176,6 +176,13 @@ function refreshStageChrome( state, transitions ) {
 
 	refreshStageBanner( state, transitions );
 
+	if (
+		window.MpcfWorkspace &&
+		typeof window.MpcfWorkspace.syncScanModeButtons === 'function'
+	) {
+		window.MpcfWorkspace.syncScanModeButtons();
+	}
+
 	var disclosure = document.querySelector( '[data-mpcf-shipment-disclosure]' );
 
 	if ( disclosure && state ) {

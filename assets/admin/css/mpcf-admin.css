@@ -372,3 +372,52 @@ body.mpcf-operator-mode #wpfooter {
 	background: #f6f7f7;
 	font-size: 0.9rem;
 }
+
+/* Workspace Scan Mode (M7). */
+.mpcf-workspace__scan-mode {
+	margin-top: 1.25rem;
+	padding-top: 1rem;
+	border-top: 1px solid #c3c4c7;
+}
+
+.mpcf-workspace__scan-mode-title {
+	margin: 0 0 0.35rem;
+	font-size: 1.1rem;
+}
+
+.mpcf-workspace__scan-mode-help {
+	margin: 0 0 0.75rem;
+	color: #50575e;
+}
+
+.mpcf-workspace__scan-mode-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 0.75rem;
+}
+
+.mpcf-workspace__scan-mode-status[data-mpcf-scan-mode-status-state="success"] {
+	font-weight: 600;
+}
+
+.mpcf-workspace__scan-mode-status[data-mpcf-scan-mode-status-state="error"]::before {
+	content: "Error: ";
+	font-weight: 600;
+}
+
+.mpcf-workspace__scan-mode-status[data-mpcf-scan-mode-status-state="warning"]::before {
+	content: "Warning: ";
+	font-weight: 600;
+}
+
+.mpcf-workspace__scan-mode-recent {
+	margin: 0.25rem 0 0;
+	padding-left: 1.25rem;
+}
+
+.mpcf-workspace__scan-mode[data-mpcf-scan-mode-active] {
+	outline: 2px solid #2271b1;
+	outline-offset: 4px;
+	padding: 0.75rem;
+}

@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace MPCF\Engine\DocumentAssembler;
 
+use MPCF\Domain\Barcode\BarcodePayload;
 use MPCF\Domain\Document\DocumentModel;
 use MPCF\Domain\Fulfillment;
 use MPCF\Domain\FulfillmentItem;
@@ -65,7 +66,7 @@ final class PickingListAssembler {
 			$store_name,
 			array_map( array( self::class, 'item_line' ), array_values( $items ) ),
 			array(),
-			$fulfillment->order_number_snapshot(),
+			self::fulfillment_barcode( $fulfillment ),
 			$fulfillment->state(),
 			$template_version,
 			$branding,
@@ -80,21 +81,25 @@ final class PickingListAssembler {
 	 *
 	 * @param FulfillmentItem $item Item snapshot.
 	 * @return array{
+	 *     item_id: int|null,
 	 *     sku: string,
 	 *     name: string,
 	 *     qty_ordered: int,
 	 *     qty_to_pick: int,
 	 *     qty_picked: int,
 	 *     qty_remaining: int,
-	 *     location_snapshot: string|null
+	 *     location_snapshot: string|null,
+	 *     barcode_payload: string|null
 	 * }
 	 */
 	private static function item_line( FulfillmentItem $item ): array {
 		$ordered   = $item->qty_ordered();
 		$picked    = $item->qty_picked();
 		$remaining = max( 0, $ordered - $picked );
+		$item_id   = $item->id();
 
 		return array(
+			'item_id'           => $item_id,
 			'sku'               => $item->sku_snapshot(),
 			'name'              => $item->name_snapshot(),
 			'qty_ordered'       => $ordered,
@@ -102,6 +107,23 @@ final class PickingListAssembler {
 			'qty_picked'        => $picked,
 			'qty_remaining'     => $remaining,
 			'location_snapshot' => $item->location_snapshot(),
+			'barcode_payload'   => null !== $item_id ? BarcodePayload::item( (int) $item_id )->encode() : null,
 		);
+	}
+
+	/**
+	 * Scannable fulfillment identity for Code 128.
+	 *
+	 * @param Fulfillment $fulfillment Persisted fulfillment.
+	 * @throws \InvalidArgumentException When the fulfillment has no positive id.
+	 */
+	private static function fulfillment_barcode( Fulfillment $fulfillment ): string {
+		$id = (int) $fulfillment->id();
+
+		if ( $id <= 0 ) {
+			throw new \InvalidArgumentException( 'Fulfillment must be persisted before assembling a scannable barcode.' );
+		}
+
+		return BarcodePayload::fulfillment( $id )->encode();
 	}
 }

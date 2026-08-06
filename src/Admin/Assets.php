@@ -121,6 +121,7 @@ final class Assets {
 		wp_enqueue_script_module( 'mpcf-shipment', MPCF_PLUGIN_URL . 'assets/admin/js/shipment.js', array(), MPCF_VERSION );
 		wp_enqueue_script_module( 'mpcf-documents', MPCF_PLUGIN_URL . 'assets/admin/js/documents.js', array(), MPCF_VERSION );
 		wp_enqueue_script_module( 'mpcf-photos', MPCF_PLUGIN_URL . 'assets/admin/js/photos.js', array(), MPCF_VERSION );
+		wp_enqueue_script_module( 'mpcf-scan', MPCF_PLUGIN_URL . 'assets/admin/js/scan.js', array(), MPCF_VERSION );
 		wp_enqueue_script_module( 'mpcf-shortcuts', MPCF_PLUGIN_URL . 'assets/admin/js/shortcuts.js', array(), MPCF_VERSION );
 
 		// Script modules have no `wp_add_inline_script()` counterpart —

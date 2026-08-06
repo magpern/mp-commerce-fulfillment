@@ -56,10 +56,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The PHP floor, the current development version and one minor
-        # ahead of it. Unit tests never load WordPress, so this is the PHP
-        # axis in isolation.
-        php: ['8.1', '8.3', '8.4']
+        # The PHP floor and the tested-up-to version. Unit tests never load
+        # WordPress, so this is the PHP axis in isolation. The middle minor
+        # (e.g. 8.3) is omitted — integration already covers that axis, and
+        # pure unit failures unique to a middle minor are rare.
+        php: ['8.1', '8.4']
     steps:
       - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2

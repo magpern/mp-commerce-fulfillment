@@ -24,7 +24,10 @@ use PHPUnit\Framework\TestCase;
 final class PackingSlipAssemblerTest extends TestCase {
 
 	private function fulfillment(): Fulfillment {
-		return Fulfillment::intake( 1001, 'woocommerce', 1, 'standard', 'packing', '#1001', 'Jane Doe', 1, new DateTimeImmutable() );
+		$data       = Fulfillment::intake( 1001, 'woocommerce', 1, 'standard', 'packing', '#1001', 'Jane Doe', 1, new DateTimeImmutable() )->to_array();
+		$data['id'] = 42;
+
+		return Fulfillment::from_array( $data );
 	}
 
 	public function test_order_number_and_customer_name_come_from_the_fulfillments_own_snapshot_not_the_order(): void {
@@ -80,12 +83,13 @@ final class PackingSlipAssemblerTest extends TestCase {
 		);
 	}
 
-	public function test_barcode_payload_is_the_fulfillments_order_number(): void {
+	public function test_barcode_payload_is_namespaced_fulfillment_id(): void {
 		$order = OrderSnapshot::create( 1001, 'woocommerce', '#1001', 'Jane Doe', 'processing', array() );
 
 		$model = PackingSlipAssembler::assemble( $this->fulfillment(), $order, array(), array(), 'Acme Store' );
 
-		self::assertSame( '#1001', $model->barcode_payload() );
+		self::assertSame( 'MPCF:F:42', $model->barcode_payload() );
+		self::assertSame( '#1001', $model->order_number() );
 	}
 
 	public function test_doc_type_and_store_name_and_fulfillment_id(): void {

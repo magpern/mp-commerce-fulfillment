@@ -22,12 +22,15 @@ use PHPUnit\Framework\TestCase;
 final class PickingListAssemblerTest extends TestCase {
 
 	public function test_items_preserve_fulfillment_line_order(): void {
-		$fulfillment = Fulfillment::intake( 10, 'woocommerce', 1, 'standard', 'picking', '#10', 'A', 1, new DateTimeImmutable() );
+		$data        = Fulfillment::intake( 10, 'woocommerce', 1, 'standard', 'picking', '#10', 'A', 1, new DateTimeImmutable() )->to_array();
+		$data['id']  = 7;
+		$fulfillment = Fulfillment::from_array( $data );
 		$order       = OrderSnapshot::create( 10, 'woocommerce', '#10', 'A', 'processing', array(), array(), 'Handle with care' );
 
 		$first  = FulfillmentItem::from_array(
 			array(
-				'fulfillment_id'    => 1,
+				'id'                => 101,
+				'fulfillment_id'    => 7,
 				'order_item_id'     => 1,
 				'product_id'        => 1,
 				'variation_id'      => 0,
@@ -41,7 +44,8 @@ final class PickingListAssemblerTest extends TestCase {
 		);
 		$second = FulfillmentItem::from_array(
 			array(
-				'fulfillment_id'    => 1,
+				'id'                => 102,
+				'fulfillment_id'    => 7,
 				'order_item_id'     => 2,
 				'product_id'        => 2,
 				'variation_id'      => 0,
@@ -62,6 +66,8 @@ final class PickingListAssemblerTest extends TestCase {
 		self::assertSame( 1, $model->items()[0]['qty_picked'] );
 		self::assertSame( 2, $model->items()[0]['qty_remaining'] );
 		self::assertSame( 'B-2', $model->items()[0]['location_snapshot'] );
+		self::assertSame( 'MPCF:I:101', $model->items()[0]['barcode_payload'] );
+		self::assertSame( 'MPCF:F:7', $model->barcode_payload() );
 		self::assertSame( 'Handle with care', $model->customer_instructions() );
 		self::assertSame( PickingListAssembler::DOC_TYPE, $model->doc_type() );
 		self::assertSame( array(), $model->packages() );

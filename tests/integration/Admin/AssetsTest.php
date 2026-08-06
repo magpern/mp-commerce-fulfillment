@@ -65,7 +65,7 @@ final class AssetsTest extends WP_UnitTestCase {
 
 		$html = $this->render_enqueued_script_modules();
 
-		foreach ( array( 'mpcf-workspace', 'mpcf-packing', 'mpcf-shipment', 'mpcf-documents', 'mpcf-photos', 'mpcf-shortcuts' ) as $module_id ) {
+		foreach ( array( 'mpcf-workspace', 'mpcf-packing', 'mpcf-shipment', 'mpcf-documents', 'mpcf-photos', 'mpcf-scan', 'mpcf-shortcuts' ) as $module_id ) {
 			self::assertStringContainsString( "id=\"{$module_id}-js-module\"", $html );
 		}
 
@@ -90,7 +90,7 @@ final class AssetsTest extends WP_UnitTestCase {
 
 		$html = $this->render_enqueued_script_modules();
 
-		foreach ( array( 'mpcf-workspace', 'mpcf-packing', 'mpcf-shipment', 'mpcf-documents', 'mpcf-photos', 'mpcf-shortcuts' ) as $module_id ) {
+		foreach ( array( 'mpcf-workspace', 'mpcf-packing', 'mpcf-shipment', 'mpcf-documents', 'mpcf-photos', 'mpcf-scan', 'mpcf-shortcuts' ) as $module_id ) {
 			self::assertStringContainsString( 'type="module"', $html );
 			self::assertStringContainsString( "id=\"{$module_id}-js-module\"", $html, "{$module_id} must be registered as a real script module, not a classic script." );
 			self::assertFalse( wp_script_is( $module_id, 'registered' ), "{$module_id} must not also sit in the classic wp_scripts() registry." );

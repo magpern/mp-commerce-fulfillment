@@ -84,7 +84,7 @@ final class DocumentModel {
 	private array $packages;
 
 	/**
-	 * Code 128 barcode payload (the order number).
+	 * Code 128 barcode payload (`MPCF:F:{fulfillment_id}`).
 	 *
 	 * @var string
 	 */
@@ -150,7 +150,7 @@ final class DocumentModel {
 	 * @param string                           $store_name            Store name.
 	 * @param array<int, array<string, mixed>> $items                 Line items.
 	 * @param array<int, array<string, mixed>> $packages              Package summaries.
-	 * @param string                           $barcode_payload       Code 128 barcode payload.
+	 * @param string                           $barcode_payload       Code 128 barcode payload (`MPCF:F:{id}`).
 	 * @param string                           $fulfillment_state     Fulfillment state snapshot.
 	 * @param string                           $template_version      Template version.
 	 * @param array<string, mixed>             $branding              Branding snapshot.
@@ -306,7 +306,7 @@ final class DocumentModel {
 	}
 
 	/**
-	 * Code 128 barcode payload (the order number).
+	 * Code 128 barcode payload (`MPCF:F:{fulfillment_id}`).
 	 */
 	public function barcode_payload(): string {
 		return $this->barcode_payload;

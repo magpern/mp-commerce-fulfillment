@@ -217,6 +217,43 @@ Packing Workspace's checklist relies on (§IV.10).
 }
 ```
 
+### `POST /fulfillments/{id}/scan`
+
+Capability: `mpcf_process_fulfillments`. Architecture Plan Part IX.11.
+
+Body:
+
+```json
+{
+  "action": "resolve|pick|pack|undo",
+  "payload": "SKU-1 or MPCF:I:501",
+  "version": 5,
+  "active_package_id": 3
+}
+```
+
+- `resolve` — parse/match only (no quantity mutation; `version` optional).
+- `pick` / `pack` — +1 to `qty_picked` / `qty_packed` when stage matches;
+  requires `version`. Packing never exceeds picked. Over-scan → 422.
+- `undo` — server-authoritative decrement of the operator's last successful
+  scan for this fulfillment (transient memory; no scan-session table).
+- Stale `version` → `409 mpcf_version_conflict` (client must not auto-replay).
+- Package barcodes (`MPCF:P:{id}`) switch active package context only —
+  they do not rewrite `mpcf_package_items` allocation.
+
+```json
+{
+  "result": "quantity_incremented",
+  "message": "Quantity incremented.",
+  "version": 6,
+  "stage_complete": false,
+  "item": { "id": 501, "qty_picked": 1, "...": "..." },
+  "items": [ "..." ],
+  "progress": { "ordered": 3, "processed": 1, "remaining": 2 },
+  "transitions": [ "..." ]
+}
+```
+
 ### `GET /fulfillments/{id}/notes`
 
 ```json

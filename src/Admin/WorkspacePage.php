@@ -752,6 +752,44 @@ final class WorkspacePage implements Page {
 		);
 
 		echo $this->renderer->scan_input( 'scan', array( 'aria-label' => __( 'Barcode scanner input', 'mp-commerce-fulfillment' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+		$this->render_scan_mode_panel( $fulfillment );
+	}
+
+	/**
+	 * Bounded Scan Mode panel (Part IX.13) — does not replace the checklist.
+	 *
+	 * @param Fulfillment $fulfillment Current fulfillment.
+	 */
+	private function render_scan_mode_panel( Fulfillment $fulfillment ): void {
+		$state = $fulfillment->state();
+
+		echo '<section class="mpcf-workspace__scan-mode" data-mpcf-scan-mode>';
+		echo '<h2 class="mpcf-workspace__scan-mode-title">' . esc_html__( 'Scan Mode', 'mp-commerce-fulfillment' ) . '</h2>';
+		echo '<p class="mpcf-workspace__scan-mode-help">' . esc_html__( 'Use a keyboard-wedge barcode scanner, or type a SKU into the scan field and press Enter.', 'mp-commerce-fulfillment' ) . '</p>';
+		echo '<div class="mpcf-workspace__scan-mode-actions">';
+		printf(
+			'<button type="button" class="button button-primary" data-mpcf-scan-mode-enter="picking"%s>%s</button>',
+			'picking' === $state ? '' : ' disabled',
+			esc_html__( 'Enter Picking Scan Mode', 'mp-commerce-fulfillment' )
+		);
+		printf(
+			'<button type="button" class="button button-primary" data-mpcf-scan-mode-enter="packing"%s>%s</button>',
+			'packing' === $state ? '' : ' disabled',
+			esc_html__( 'Enter Packing Scan Mode', 'mp-commerce-fulfillment' )
+		);
+		echo '<button type="button" class="button" data-mpcf-scan-mode-undo hidden>' . esc_html__( 'Undo last scan', 'mp-commerce-fulfillment' ) . '</button>';
+		echo '<button type="button" class="button" data-mpcf-scan-mode-exit hidden>' . esc_html__( 'Exit Scan Mode', 'mp-commerce-fulfillment' ) . '</button>';
+		echo '<button type="button" class="button" data-mpcf-scan-mode-sound aria-pressed="false" hidden>' . esc_html__( 'Sound off', 'mp-commerce-fulfillment' ) . '</button>';
+		echo '</div>';
+		echo '<div class="mpcf-workspace__scan-mode-live" data-mpcf-scan-mode-live hidden>';
+		echo '<p class="mpcf-workspace__scan-mode-status" data-mpcf-scan-mode-status data-mpcf-scan-mode-status-state="ready" aria-live="polite">' . esc_html__( 'Ready', 'mp-commerce-fulfillment' ) . '</p>';
+		echo '<p class="mpcf-workspace__scan-mode-result" data-mpcf-scan-mode-result aria-live="polite"></p>';
+		echo '<p class="mpcf-workspace__scan-mode-progress" data-mpcf-scan-mode-progress></p>';
+		echo '<h3 class="mpcf-workspace__scan-mode-recent-title">' . esc_html__( 'Recent scans', 'mp-commerce-fulfillment' ) . '</h3>';
+		echo '<ul class="mpcf-workspace__scan-mode-recent" data-mpcf-scan-mode-recent></ul>';
+		echo '</div>';
+		echo '</section>';
 	}
 
 	/**
@@ -795,6 +833,9 @@ final class WorkspacePage implements Page {
 			$label = DocumentEventLabels::describe( (string) $event['event_type'], (array) ( $event['payload'] ?? array() ) );
 			if ( null === $label ) {
 				$label = PhotoEventLabels::describe( (string) $event['event_type'], (array) ( $event['payload'] ?? array() ) );
+			}
+			if ( null === $label ) {
+				$label = ScanEventLabels::describe( (string) $event['event_type'], (array) ( $event['payload'] ?? array() ) );
 			}
 			if ( null === $label ) {
 				$label = NotificationEventLabels::describe( (string) $event['event_type'], (array) ( $event['payload'] ?? array() ) );

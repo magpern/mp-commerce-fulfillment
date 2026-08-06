@@ -170,7 +170,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			return;
 		}
 
-		if ( isFormField( event.target ) || modalIsOpen() ) {
+		if ( isFormField( event.target ) || modalIsOpen() || ( window.MpcfWorkspace && window.MpcfWorkspace.scanModeActive ) ) {
 			return;
 		}
 

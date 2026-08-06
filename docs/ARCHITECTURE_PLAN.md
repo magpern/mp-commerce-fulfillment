@@ -734,7 +734,7 @@ Nonces on all cookie-authenticated mutations; capability + ownership checks serv
 
 ### 19.2 CI
 
-GitHub Actions, UMC's proven shape: `phpcs` (hard gate) · `pot` check · `unit` matrix (PHP 8.1 / current stable / next) · `integration` legs: **floor** (PHP 8.1 / WP 6.5 / WC 8.2.x), **current** (current stable PHP/WP/WC, pinned coordinates with a why-comment, guarded against drift), **ceiling** (`continue-on-error`) — per the PO's floor-plus-current-stable mandate · `build` (zip artifact) · `release-audit`. Release workflow: tag `vX.Y.Z` → header/tag parity check → build → GitHub release. Local dev/test tooling is Docker-only (dedicated `mpcf-test-runner` image + `mariadb:11.4` on an internal network, never published ports), documented in the gitignored `CLAUDE.local.md`, following the sibling plugins' template.
+GitHub Actions, UMC's proven shape: `phpcs` (hard gate) · `pot` check · `unit` matrix (PHP 8.1 / tested-up-to) · `integration` legs: **floor** (PHP 8.1 / WP 6.5 / WC 8.2.x), **current** (current stable PHP/WP/WC, pinned coordinates with a why-comment, guarded against drift), **ceiling** (`continue-on-error`) — per the PO's floor-plus-current-stable mandate · `build` (zip artifact) · `release-audit`. Release workflow: tag `vX.Y.Z` → header/tag parity check → build → GitHub release. Local dev/test tooling is Docker-only (dedicated `mpcf-test-runner` image + `mariadb:11.4` on an internal network, never published ports), documented in the gitignored `CLAUDE.local.md`, following the sibling plugins' template.
 
 ### 19.3 Per-milestone definition of done
 
@@ -933,7 +933,7 @@ Every checkpoint verified against Part I; discrepancies found and their resoluti
 | HPOS requirements | ✅ | `FeaturesUtil` declarations (`custom_order_tables`, `cart_checkout_blocks`) from the main file at M0; `LegacyOrderStorageGuardTest` active from M0; I2 reworded (below). |
 | MPDS extraction | ✅ after re-scoping | M0 = extract what exists in UMC today (tokens with the four dead-var/alpha fixes, current component set, UGC's standalone shell generalized, sticky-save/disclosure/clipboard JS, contract tests, manifest). Deferred out of M0: **all** §8.4 new components (data table, filter bar, drawer, modal, timeline, stepper, toast, kbd, scan input) — they land with M1/M2 which need them — and the visual gallery page (nice-to-have, not critical path). |
 | Build tooling | ✅ | `bin/build-zip.sh`, `bin/make-pot.sh` adapted from UMC; `bin/sync-mpds.sh` new; minimal `bin/release-audit.sh` (version parity + zip content + docs presence) so the CI job exists from day one. |
-| CI expectations | ✅ | §19.2 shape: phpcs · pot · unit (8.1/8.3/8.4) · integration legs floor (PHP 8.1/WP 6.5/WC 8.2.x) + current (pinned current stable, why-comment) + ceiling (`continue-on-error`) · build · release-audit. `CiMatrixGuardTest` + `CompatibilityMatrixTest` bind the matrix to `docs/COMPATIBILITY.md`. |
+| CI expectations | ✅ | §19.2 shape: phpcs · pot · unit (8.1/8.4) · integration legs floor (PHP 8.1/WP 6.5/WC 8.2.x) + current (pinned current stable, why-comment) + ceiling (`continue-on-error`) · build · release-audit. `CiMatrixGuardTest` + `CompatibilityMatrixTest` bind the matrix to `docs/COMPATIBILITY.md`. |
 | PersistedKeys strategy | ✅ | M0 inventory is small and *true*: options (`mpcf_settings`, `mpcf_db_version`), capabilities + the two roles, uninstall policy. Guard tests bind it to `docs/PERSISTED_DATA.md` and `uninstall.php` from the first commit, so the discipline exists before the first table does. |
 | Documentation obligations | ✅ | M0 ships: this document as `docs/ARCHITECTURE_PLAN.md`, `ROADMAP.md`, `COMPATIBILITY.md`, `PERSISTED_DATA.md`, `HOOKS.md` (truthfully near-empty, with the "deliberately NOT hooked" section), `TEST_STRATEGY.md`, `docs/adr/0001–0005` + `README.md` index, repo `CLAUDE.md` (invariants + code rules + workflow) and gitignored `CLAUDE.local.md` (Docker-only tooling, from AIM's template). Deferred to their milestones: `API.md` (M2), `SECURITY.md`/`PRIVACY.md` (M5/M9), `PERFORMANCE_BASELINES.md` (M9). |
 
@@ -2454,3 +2454,297 @@ unprocessed originals; inbound domain work.
 
 **Explicitly not shipped:** M7 barcode/scan; returns photography; purge-now UI; Site Health disk warning (M9); production deploy/tag.
 
+
+
+---
+
+
+# Part IX — M7 Barcode & Scan Mode (definitive execution plan)
+
+**Milestone purpose:** Let an operator complete picking and packing accurately
+using a USB/Bluetooth keyboard-wedge barcode scanner, integrated into the
+existing Workspace — not a separate application. Manual controls remain
+available. ADR-0007 ownership is unchanged: no inventory/receiving/stock
+coupling; location snapshots remain immutable pick hints only.
+
+**Baseline:** `v0.6.0` on green `main` (schema settings **8**, migrator target
+**6**). Target release: `v0.7.0`. **No new tables.** Schema bump only if a
+genuine M7 persistence need appears (none expected).
+
+**Product Owner decisions (binding for M7):**
+
+| # | Decision | Choice |
+|---|---|---|
+| 1 | Scan modes | **Picking Scan Mode** and **Packing Scan Mode** only, inside Workspace |
+| 2 | Mutation entry | Sole Application entry: `ScanService` composing `PackingService` |
+| 3 | Primary input | Keyboard-wedge → existing MPDS scan sink (`data-mpcf-scan`) + focused field |
+| 4 | Camera | Progressive enhancement only (`BarcodeDetector` if present); **not** required |
+| 5 | Quantities | +1 per successful item scan; absolute write via `PackingService` |
+| 6 | Package scans | Identification / active-package switch only — **no** live per-package qty allocation redesign |
+| 7 | Correction | Server-authoritative **undo last scan** via short-lived per-operator transient (no scan-session table) |
+| 8 | Capabilities | Reuse `mpcf_process_fulfillments` — no new caps |
+| 9 | Barcode render | Pure-PHP Code 128 SVG — **zero** runtime Composer deps |
+| 10 | Document payload | System barcodes encode `MPCF:F:{fulfillment_id}`; human-readable order number remains visible |
+
+## IX.1 Identifiers that may be scanned
+
+| Kind | Example | Effect |
+|---|---|---|
+| MPCF fulfillment | `MPCF:F:{id}` | Identify / open context; not a qty mutation by itself |
+| MPCF item | `MPCF:I:{fulfillment_item_id}` | Resolve exactly one line on this fulfillment |
+| MPCF package | `MPCF:P:{package_id}` | Switch Workspace active package when package belongs to fulfillment |
+| MPCF product | `MPCF:PR:{product_id}` | Resolve among this fulfillment's lines (exact product_id; reject if >1 or variation required) |
+| MPCF variation | `MPCF:V:{variation_id}` | Resolve among this fulfillment's lines (exact variation_id) |
+| Plain SKU | merchant label text | Exact case-sensitive match on `sku_snapshot` among current fulfillment lines |
+| Order number (legacy text) | `#1001` / `1001` | Resolve as fulfillment identity only when scanning **to open** from documents/queue helpers; **not** used as item qty payload |
+
+Plain product SKU scans remain first-class so merchants need not re-label stock.
+There is **no** EAN/GTIN column on `FulfillmentItem` today — M7 does not add one
+and does **not** read external inventory plugins for barcode master data.
+
+## IX.2 Barcode payload format (versionable)
+
+```
+MPCF:<TYPE>:<VALUE>
+```
+
+- Prefix `MPCF` (literal, uppercase).
+- `<TYPE>` one of: `F` | `I` | `P` | `PR` | `V`.
+- `<VALUE>` positive decimal integer, no leading zeros required, no table names,
+  no secrets, no PII.
+- Optional future: `MPCF:1:F:{id}` — if a leading numeric segment appears after
+  `MPCF`, treat it as format version; M7 parser accepts versionless form as v1.
+- Max payload length enforced at the API boundary (256 chars after trim).
+- Human-readable fallback: always display the encoded string (and order number
+  beside fulfillment barcodes on documents).
+
+Parser rejects: wrong prefix, unknown type, non-integer value, empty value,
+embedded whitespace inside the triple, values ≤ 0.
+
+## IX.3 Scan resolution order (deterministic)
+
+Against **only** the current fulfillment's items (never global product search):
+
+1. Parse as namespaced `MPCF:I:{item_id}` → exact item id on this fulfillment.
+2. Else parse as `MPCF:V:{variation_id}` → exact `variation_id` match(es).
+3. Else parse as `MPCF:PR:{product_id}` → exact `product_id` where `variation_id = 0`
+   preferred for simple lines; if any matching line has `variation_id > 0` and
+   another also matches product_id alone, reject as **ambiguous / variation required**.
+4. Else exact `sku_snapshot` match (trimmed payload, case-sensitive).
+5. Else parse as `MPCF:F:` / `MPCF:P:` → identity/navigation outcomes (not item resolve).
+6. Else **no match**.
+
+Reject (operator-readable codes, no silent choice):
+
+| Code | When |
+|---|---|
+| `unknown_barcode` | No match |
+| `ambiguous_sku` | >1 line shares the SKU / product key |
+| `item_not_on_fulfillment` | Valid `MPCF:I` / `V` / `PR` id not on this fulfillment |
+| `variation_required` | Parent/simple product key when variation lines are the only matches |
+| `malformed_payload` | Bad `MPCF:…` shape |
+| `wrong_fulfillment` | `MPCF:F` id ≠ current Workspace fulfillment |
+
+## IX.4 Picking Scan Mode
+
+**Eligible states:** `picking` only (qty field `qty_picked`). Terminal /
+exception / packing / shipped / etc. → `wrong_stage`.
+
+**Flow:** Enter mode → focus scan sink → scan item → `ScanService::scan_pick`
+→ `picked += 1` via absolute `PackingService::update_quantities` → feedback.
+
+**Over-scan:** if `qty_picked >= qty_ordered`, **no mutation**, code `over_scan`.
+
+**Stage complete signal:** response flag when every line `qty_picked === qty_ordered`
+(does not auto-transition; operator still uses existing primary action).
+
+## IX.5 Packing Scan Mode
+
+**Eligible states:** `packing` only (qty field `qty_packed`).
+
+**Rules per scan:**
+
+- `qty_packed += 1`
+- Reject `over_scan` if next value would exceed `qty_ordered`
+- Reject `not_yet_picked` if next value would exceed `qty_picked` (stricter than
+  domain clamp — Scan Mode enforces pick-before-pack even though
+  `FulfillmentItem::record_packed` historically clamps only to ordered)
+
+**Package association:** Client may send `active_package_id`. Server validates
+ownership (package → shipment → fulfillment). Package barcode (`MPCF:P:`)
+returns `package_switched` without qty change. Item scans do **not** write
+`mpcf_package_items` — allocation remains shipment-create snapshot (M2). Document
+this boundary in API.md / release report.
+
+## IX.6 Duplicate-scan / unexpected-item / quantity
+
+- Duplicate physical units = repeated successful +1 scans (intentional; **not** HTTP-idempotent).
+- Unexpected = `unknown_barcode` / `item_not_on_fulfillment` / `ambiguous_sku`.
+- Manual qty entry remains outside Scan Mode via existing checklist controls.
+- Client holds a request lock so one completed wedge scan → one HTTP POST.
+
+## IX.7 Optimistic concurrency
+
+Same fulfillment `version` token as `PUT …/items`. Stale → **409**
+`mpcf_version_conflict`. Client refreshes authoritative state and does **not**
+auto-replay the scan. Operator sees “not recorded”.
+
+## IX.8 Scanner input handling
+
+Reuse MPDS `scan-sink.js` (50 ms quiet period, Enter/Tab terminators,
+`data-mpcf-scan` event). M7 Workspace module:
+
+- Subscribes only while Scan Mode is active.
+- Strips surrounding whitespace.
+- Suppresses Workspace letter shortcuts while Scan Mode active (fixes Part IV
+  letter-vs-wedge collision for the active mode).
+- Escape exits Scan Mode safely (no mutation).
+- Explicit focused sink remains the reliable fallback.
+
+No hardware SDKs.
+
+## IX.9 Mobile camera (optional)
+
+If `window.BarcodeDetector` exists, Workspace may offer a small “Use camera”
+control that feeds the same resolve/pick/pack path. Absence must not block M7.
+No large JS barcode libraries.
+
+## IX.10 ScanService operations
+
+| Op | Behavior |
+|---|---|
+| `resolve_scan` | Parse + resolve; no mutation; returns match metadata |
+| `scan_pick` | Stage check → resolve → over-scan check → PackingService +1 picked → audit |
+| `scan_pack` | Stage check → package ownership if provided → resolve → pick/pack ceilings → +1 packed → audit |
+| `undo_last_scan` | Load transient last successful scan for `(user_id, fulfillment_id)`; decrement by 1 if still eligible; clear/advance transient |
+| `get_scan_state` | Optional: progress summary (remaining, recent from client; server returns items + version) |
+
+Undo transient TTL ≈ 30 minutes; stores `{mode, item_id, resulting_qty, version_after, package_id?}`.
+If undo target no longer matches current qty (concurrent edit), reject `undo_unavailable`
+and clear transient — operator uses manual minus.
+
+## IX.11 REST contract (smallest coherent)
+
+```
+POST /mpcf/v1/fulfillments/{id}/scan
+```
+
+Body:
+
+```json
+{
+  "action": "resolve|pick|pack|undo",
+  "payload": "string",
+  "version": 12,
+  "active_package_id": 3
+}
+```
+
+- Cap: `mpcf_process_fulfillments`
+- `undo` ignores payload (uses transient)
+- Success envelope: `result` (status code string), `message`, `item`?, `items`?,
+  `version`, `transitions`, `stage_complete`?, `active_package_id`?, `progress`?
+- Failures: existing `failure_error` mapping (`version_conflict` → 409, etc.)
+
+Thin `ScanController` → `ScanService` only.
+
+## IX.12 Audit events
+
+Prefer scan-specific events (bounded, high ops value):
+
+| Event | When |
+|---|---|
+| `scan.item_picked` | Successful pick scan |
+| `scan.item_packed` | Successful pack scan |
+| `scan.corrected` | Successful undo |
+
+Payload: `item_id`, `product_id`, `variation_id`, `mode`, `qty_picked` or
+`qty_packed` (resulting), `package_id`?, `source` (`mpcf_payload`|`sku`),
+`actor` via chain. **No** raw rejection spam events (`scan.rejected` deferred —
+toasts suffice). Quantity still also flows through `items.picked` /
+`items.packed` via PackingService (one coalesced absolute batch per scan).
+
+Timeline labels via `ScanEventLabels`.
+
+## IX.13 Workspace UX states
+
+Scan Mode panel (bounded, not a Workspace redesign):
+
+- Enter Picking / Enter Packing (enabled by current state)
+- Status: Ready / Success / Warning / Error (text + non-color attribute)
+- Current result line, progress (picked/packed vs ordered), remaining
+- Recent scans (client ring buffer)
+- Undo last scan
+- Exit / Escape
+- Optional sound: local, toggleable, never sole feedback
+
+## IX.14 Barcode generation (documents)
+
+- `Documents\Barcode\Code128Encoder` → SVG path/bars (Code 128B), deterministic
+- Helper renders SVG + human-readable text
+- Picking list + packing slip: encode `MPCF:F:{fulfillment_id}`; show order
+  number as secondary text
+- Optional per-line `MPCF:I:{item_id}` micro-barcode on picking list when
+  item id present (SKU remains human text)
+- No remote API; documents remain HTML; no PDF requirement; no tracking pixels
+
+Assembler change: `barcode_payload()` becomes `MPCF:F:{id}` (tests updated).
+Order number remains `order_number()` on the model for headers.
+
+## IX.15 Performance targets (measure in dogfood; do not invent claims)
+
+- Resolve restricted to in-memory fulfillment item list (no N+1 product lookup)
+- No full-page reload
+- Dev target: typical scan HTTP < 300 ms wall time on this VPS (record actuals)
+
+## IX.16 Security / structural guards
+
+Capability; fulfillment access; workflow stage; payload length/format;
+SKU resolution scoped to fulfillment; version token; package ownership;
+no stock mutation; no `wc-inventory-overview` tables; no raw SQL in
+controllers; quantity never trusted from client (server computes +1);
+`RestBoundaryGuard` / inventory coupling guards unchanged or extended.
+
+## IX.17 Explicit non-goals
+
+Inventory/receiving/stock/cycle-count scanning; warehouse location master
+data; carrier-label scanning; photography scanning; OCR; RFID; hardware
+SDKs; offline mode; mobile app; M8 batch picking; Mission Control redesign;
+live per-package packed-qty allocation UI; EAN master-data table; mandatory
+camera scanning.
+
+## IX.18 Milestone packages
+
+| Package | Delivers | Does not |
+|---|---|---|
+| **M7-A** | Part IX; payload VO/parser; resolver pure rules; Code128 SVG; document template integration; unit tests | REST mutations, Workspace Scan Mode panel |
+| **M7-B** | `ScanService`; REST; concurrency; audit; undo transient; unit/integration | Workspace UI |
+| **M7-C** | Scan Mode panel; wedge wiring; feedback; package switch UX; browser tests | Version bump |
+| **M7-D** | Dogfood; blocker fixes; docs; `0.7.0` RC ZIP/audit; draft PR | Merge/tag/publish/deploy; M8 |
+
+## IX.19 Stop conditions (runtime)
+
+Stop and report if: inventory/receiving data required; stock mutation needed;
+package allocation redesign required; large barcode dependency required;
+camera becomes mandatory; scan-session DB table required; M8/Mission Control
+becomes necessary; another agent dirties the tree; CI needs broad unrelated
+fixes.
+
+## IX.20 Numbering reconciliation note
+
+Part IV prose historically labeled barcode semantics as “M6”. Authoritative
+sequence is ROADMAP + §20 + Parts VIII/IX: photography = M6, barcode = M7.
+
+## IX.21 M7 delivery record (feature branch RC)
+
+**Status:** M7-A–D complete on `feature/m7-barcode-scan` as release candidate
+`v0.7.0` (draft PR; **not merged/tagged/published** pending PO approval).
+
+| Package | Outcome |
+|---|---|
+| M7-A | Part IX; `BarcodePayload` / `ScanResolver`; Code 128 SVG; documents encode `MPCF:F:{id}` (+ item `MPCF:I:{id}` on picking list) |
+| M7-B | `ScanService` + transient undo store; `POST …/scan`; audits `scan.item_picked` / `scan.item_packed` / `scan.corrected` |
+| M7-C | Workspace Scan Mode panel + `scan.js` keyboard-wedge; shortcut suppression; browser `scan-mode.spec.js` |
+| M7-D | Docs reconcile; version triad `0.7.0`; ZIP + release audit; dogfood evidence in `docs/M7_RELEASE_REPORT.md` |
+
+**Schema:** unchanged (settings **8**, migrator target **6**). **No** inventory/receiving coupling.
