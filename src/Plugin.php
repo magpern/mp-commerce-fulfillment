@@ -33,6 +33,7 @@ use MPCF\Api\Rest\NotesController;
 use MPCF\Api\Rest\NotificationsController;
 use MPCF\Api\Rest\PackagesController;
 use MPCF\Api\Rest\PhotosController;
+use MPCF\Api\Rest\ScanController;
 use MPCF\Api\Rest\RestApi;
 use MPCF\Api\Rest\ShipmentsController;
 use MPCF\Application\AssignmentService;
@@ -47,6 +48,7 @@ use MPCF\Application\Photos\PhotoConfig;
 use MPCF\Application\Photos\PhotoRetentionService;
 use MPCF\Application\Photos\PhotoService;
 use MPCF\Application\QueueService;
+use MPCF\Application\Scan\ScanService;
 use MPCF\Application\ShipmentAutoShipSubscriber;
 use MPCF\Application\ShippingService;
 use MPCF\Application\TransitionContextFactory;
@@ -54,6 +56,7 @@ use MPCF\Application\WorkflowService;
 use MPCF\Cli\BackfillCommand;
 use MPCF\Documents\HtmlRenderer;
 use MPCF\Documents\TemplateRegistry;
+use MPCF\Domain\Scan\ScanResolver;
 use MPCF\Domain\Workflow\StandardWorkflow;
 use MPCF\Domain\Workflow\WorkflowDefinition;
 use MPCF\Engine\GuardRegistry;
@@ -75,6 +78,7 @@ use MPCF\Infrastructure\Files\ProtectedPhotoStore;
 use MPCF\Infrastructure\Media\GdImageProcessor;
 use MPCF\Infrastructure\Notifications\EmailChannel;
 use MPCF\Infrastructure\Scheduling\PhotoRetentionScheduler;
+use MPCF\Infrastructure\Scan\TransientScanCorrectionStore;
 use MPCF\Infrastructure\SystemClock;
 use MPCF\Vendor\Mpds\ComponentRenderer;
 use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
@@ -345,6 +349,19 @@ final class Plugin {
 		// (§IV.15 criterion 2).
 		$notes_repository = new WpdbNoteRepository();
 		$detail_service   = new FulfillmentDetailService( $fulfillments, $items, $events, $notes_repository, new WpdbMediaRepository(), $shipments, $packages );
+		$packing_service  = new PackingService( $fulfillments, $items, $events, $dispatcher, $clock );
+		$scan_service     = new ScanService(
+			$fulfillments,
+			$items,
+			$packing_service,
+			new ScanResolver(),
+			$packages,
+			$shipments,
+			new TransientScanCorrectionStore(),
+			$events,
+			$dispatcher,
+			$clock
+		);
 
 		$document_repo    = new WpdbDocumentRepository();
 		$document_store   = new ProtectedDocumentStore();
@@ -381,7 +398,7 @@ final class Plugin {
 					$definition
 				),
 				new ItemsController(
-					new PackingService( $fulfillments, $items, $events, $dispatcher, $clock ),
+					$packing_service,
 					$workflow_service
 				),
 				new NotesController( new NoteService( $notes_repository, $clock ) ),
@@ -392,6 +409,7 @@ final class Plugin {
 				new NotificationsController( $notification_service ),
 				new DocumentsController( $document_service, $document_history, $workflow_service, $detail_service ),
 				new PhotosController( $photo_service, $workflow_service, $detail_service ),
+				new ScanController( $scan_service, $workflow_service ),
 			)
 		) )->register();
 	}
