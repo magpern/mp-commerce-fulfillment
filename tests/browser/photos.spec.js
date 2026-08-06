@@ -41,7 +41,10 @@ async function advanceToPackingWithPackage( page ) {
 	await page.keyboard.press( 'Shift+A' );
 	await page.keyboard.press( 'Control+Enter' );
 
-	// Now in packing: complete lines + package so only photo_required remains.
+	await expect( primary ).toHaveText( /^Packing$/ );
+	await page.keyboard.press( 'Control+Enter' );
+
+	// Now packing: primary offers Packed (may be disabled once photo_required applies).
 	await expect( primary ).toHaveText( /^Packed$/ );
 	await stepper.waitFor( { state: 'attached' } );
 	await page.keyboard.press( 'Shift+A' );
