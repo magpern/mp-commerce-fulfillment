@@ -58,14 +58,15 @@ final class GdImageProcessorTest extends TestCase {
 		$processor->process( 'definitely-not-an-image', 'image/jpeg' );
 	}
 
-	public function test_constructor_requires_gd(): void {
+	public function test_process_requires_gd(): void {
 		if ( extension_loaded( 'gd' ) ) {
 			self::assertInstanceOf( GdImageProcessor::class, new GdImageProcessor() );
 			return;
 		}
 
+		$processor = new GdImageProcessor();
 		$this->expectException( RuntimeException::class );
-		new GdImageProcessor();
+		$processor->process( 'x', 'image/jpeg' );
 	}
 
 	/**

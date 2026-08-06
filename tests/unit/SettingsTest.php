@@ -120,7 +120,8 @@ final class SettingsTest extends TestCase {
 		self::assertFalse( $defaults['auto_advance_after_ship'] );
 		self::assertSame( '', $defaults['default_carrier_id'] );
 		self::assertFalse( $defaults['require_tracking_before_ship'] );
-		self::assertSame( 6, Settings::SCHEMA_VERSION );
+		self::assertFalse( $defaults['photos_required'] );
+		self::assertSame( 7, Settings::SCHEMA_VERSION );
 	}
 
 	public function test_sanitize_coerces_auto_advance_after_ship_truthy_and_falsy_values(): void {
@@ -135,6 +136,13 @@ final class SettingsTest extends TestCase {
 		self::assertTrue( Settings::sanitize( array( 'require_tracking_before_ship' => true ) )['require_tracking_before_ship'] );
 		self::assertFalse( Settings::sanitize( array( 'require_tracking_before_ship' => 0 ) )['require_tracking_before_ship'] );
 		self::assertFalse( Settings::sanitize( array() )['require_tracking_before_ship'] );
+	}
+
+	public function test_sanitize_coerces_photos_required_truthy_and_falsy_values(): void {
+		self::assertTrue( Settings::sanitize( array( 'photos_required' => '1' ) )['photos_required'] );
+		self::assertTrue( Settings::sanitize( array( 'photos_required' => true ) )['photos_required'] );
+		self::assertFalse( Settings::sanitize( array( 'photos_required' => 0 ) )['photos_required'] );
+		self::assertFalse( Settings::sanitize( array() )['photos_required'] );
 	}
 
 	public function test_sanitize_coerces_default_carrier_id_to_a_string_with_no_whitelist(): void {
@@ -152,12 +160,14 @@ final class SettingsTest extends TestCase {
 				'auto_advance_after_ship'      => true,
 				'default_carrier_id'           => 'postnord',
 				'require_tracking_before_ship' => true,
+				'photos_required'              => true,
 			)
 		);
 
 		self::assertTrue( $settings->auto_advance_after_ship() );
 		self::assertSame( 'postnord', $settings->default_carrier_id() );
 		self::assertTrue( $settings->require_tracking_before_ship() );
+		self::assertTrue( $settings->photos_required() );
 	}
 
 	public function test_sanitize_upgrades_a_pre_workspace_settings_array_while_preserving_its_own_values(): void {
@@ -173,6 +183,7 @@ final class SettingsTest extends TestCase {
 		self::assertFalse( $sanitized['auto_advance_after_ship'] );
 		self::assertSame( '', $sanitized['default_carrier_id'] );
 		self::assertFalse( $sanitized['require_tracking_before_ship'] );
+		self::assertFalse( $sanitized['photos_required'] );
 	}
 
 	public function test_sanitize_coerces_invalid_input_instead_of_throwing(): void {

@@ -69,11 +69,27 @@ final class MediaFoundationGuardTest extends TestCase {
 		self::assertSame( array(), $violations, 'Only PhotoService may call MediaRepository insert/soft_delete.' );
 	}
 
-	public function test_photos_controller_and_admin_photo_ui_do_not_exist_yet(): void {
+	public function test_photos_controller_exists_and_admin_has_no_photo_ui_yet(): void {
 		$root = dirname( __DIR__, 2 ) . '/src';
 
-		self::assertFileDoesNotExist( $root . '/Api/Rest/PhotosController.php' );
+		self::assertFileExists( $root . '/Api/Rest/PhotosController.php' );
 		self::assertFileDoesNotExist( $root . '/Admin/PhotosPage.php' );
+		self::assertFileDoesNotExist( $root . '/Admin/PhotoGalleryPage.php' );
+		self::assertFileDoesNotExist( $root . '/Application/Photos/RetentionPurgeService.php' );
+
+		$controller = (string) file_get_contents( $root . '/Api/Rest/PhotosController.php' );
+		self::assertStringContainsString( 'PhotoService', $controller );
+		self::assertStringNotContainsString( 'MediaRepository', $controller );
+		self::assertStringNotContainsString( 'ProtectedPhotoStore', $controller );
+		self::assertStringNotContainsString( 'WpdbMediaRepository', $controller );
+		self::assertDoesNotMatchRegularExpression( '/\b(wpdb|\$wpdb)\b/', $controller );
+		self::assertStringNotContainsString( "'file_path'", $controller );
+		self::assertStringNotContainsString( "'thumb_path'", $controller );
+		self::assertStringNotContainsString( '->file_path(', $controller );
+		self::assertStringNotContainsString( '->thumb_path(', $controller );
+		self::assertStringContainsString( 'Capabilities::DELETE_PHOTOS', $controller );
+		self::assertStringContainsString( 'capture_with_version', $controller );
+		self::assertStringContainsString( 'soft_delete_with_version', $controller );
 
 		$iterator = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $root . '/Admin', FilesystemIterator::SKIP_DOTS ) );
 		foreach ( $iterator as $file ) {

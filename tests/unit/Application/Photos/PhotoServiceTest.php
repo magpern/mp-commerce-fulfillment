@@ -236,11 +236,118 @@ final class PhotoServiceTest extends TestCase {
 		$ctx['service']->capture( $ctx['fulfillment_id'], $ctx['package_id'], PhotoKind::CONTENTS, 'b', 'image/jpeg', Actor::system() );
 	}
 
+	public function test_capture_with_version_bumps_fulfillment_version(): void {
+		$ctx          = $this->seed_context();
+		$fulfillments = $ctx['fulfillments'];
+		$before       = $fulfillments->find( $ctx['fulfillment_id'] )->version();
+
+		$result = $ctx['service']->capture_with_version(
+			$ctx['fulfillment_id'],
+			$ctx['package_id'],
+			PhotoKind::PACKAGE,
+			'raw',
+			'image/jpeg',
+			Actor::user( 1, 'Op' ),
+			$before
+		);
+
+		self::assertSame( $before + 1, $result->version() );
+		self::assertTrue( $result->requirement_satisfied() );
+		self::assertSame( $before + 1, $fulfillments->find( $ctx['fulfillment_id'] )->version() );
+	}
+
+	public function test_capture_with_version_rejects_stale_version_before_write(): void {
+		$ctx = $this->seed_context();
+
+		$this->expectException( InvalidArgumentException::class );
+		$this->expectExceptionMessage( 'version_conflict' );
+		$ctx['service']->capture_with_version(
+			$ctx['fulfillment_id'],
+			$ctx['package_id'],
+			PhotoKind::PACKAGE,
+			'raw',
+			'image/jpeg',
+			Actor::system(),
+			999
+		);
+	}
+
+	public function test_soft_delete_with_version_is_idempotent_without_touch(): void {
+		$ctx          = $this->seed_context();
+		$fulfillments = $ctx['fulfillments'];
+		$version      = $fulfillments->find( $ctx['fulfillment_id'] )->version();
+
+		$captured = $ctx['service']->capture_with_version(
+			$ctx['fulfillment_id'],
+			$ctx['package_id'],
+			PhotoKind::PACKAGE,
+			'raw',
+			'image/jpeg',
+			Actor::user( 2, 'Lead' ),
+			$version
+		);
+
+		$deleted = $ctx['service']->soft_delete_with_version(
+			(int) $captured->photo()->id(),
+			Actor::user( 2, 'Lead' ),
+			$captured->version()
+		);
+		self::assertTrue( $deleted->photo()->is_deleted() );
+		self::assertSame( $captured->version() + 1, $deleted->version() );
+
+		$again = $ctx['service']->soft_delete_with_version(
+			(int) $captured->photo()->id(),
+			Actor::user( 2, 'Lead' ),
+			$deleted->version()
+		);
+		self::assertSame( $deleted->version(), $again->version(), 'Idempotent delete must not bump version.' );
+		self::assertCount( 2, array_column( $ctx['events']->timeline_for_fulfillment( $ctx['fulfillment_id'] ), 'event_type' ) );
+	}
+
+	public function test_list_active_filters_and_sorts_deterministically(): void {
+		$ctx = $this->seed_context();
+		$ctx['service']->capture( $ctx['fulfillment_id'], $ctx['package_id'], PhotoKind::CONTENTS, 'a', 'image/jpeg', Actor::system() );
+		$ctx['service']->capture( $ctx['fulfillment_id'], $ctx['package_id'], PhotoKind::PACKAGE, 'b', 'image/jpeg', Actor::system() );
+
+		$packages = $ctx['service']->list_active( $ctx['fulfillment_id'], null, PhotoKind::PACKAGE );
+		self::assertCount( 1, $packages );
+		self::assertSame( PhotoKind::PACKAGE, $packages[0]->kind() );
+
+		$by_package = $ctx['service']->list_active( $ctx['fulfillment_id'], $ctx['package_id'] );
+		self::assertCount( 2, $by_package );
+		self::assertTrue( $by_package[0]->seq() <= $by_package[1]->seq() );
+	}
+
+	public function test_get_active_and_read_bytes_respect_deleted_policy(): void {
+		$ctx   = $this->seed_context();
+		$photo = $ctx['service']->capture(
+			$ctx['fulfillment_id'],
+			$ctx['package_id'],
+			PhotoKind::PACKAGE,
+			'raw',
+			'image/jpeg',
+			Actor::system()
+		);
+		$id    = (int) $photo->id();
+
+		$content = $ctx['service']->read_bytes( $id, 'content' );
+		self::assertTrue( $content['ok'] );
+		self::assertArrayNotHasKey( 'path', $content );
+		self::assertSame( 'image/jpeg', $content['mime'] );
+
+		$ctx['service']->soft_delete( $id, Actor::system() );
+		self::assertNull( $ctx['service']->get_active( $id ) );
+
+		$deleted = $ctx['service']->read_bytes( $id, 'content' );
+		self::assertFalse( $deleted['ok'] );
+		self::assertSame( 'photo_deleted', $deleted['code'] );
+	}
+
 	/**
 	 * Seeds fulfillment → shipment → package with a PhotoService.
 	 *
 	 * @param PhotoConfig|null $config Optional config override.
-	 * @return array{fulfillment_id:int,package_id:int,events:InMemoryEventRepository,service:PhotoService}
+	 * @return array{fulfillment_id:int,package_id:int,events:InMemoryEventRepository,service:PhotoService,fulfillments:InMemoryFulfillmentRepository}
 	 */
 	private function seed_context( ?PhotoConfig $config = null ): array {
 		$fulfillments = new InMemoryFulfillmentRepository();
@@ -271,6 +378,7 @@ final class PhotoServiceTest extends TestCase {
 			'package_id'     => $pid,
 			'events'         => $events,
 			'service'        => $service,
+			'fulfillments'   => $fulfillments,
 		);
 	}
 
