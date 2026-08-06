@@ -4,7 +4,7 @@ Tags: woocommerce, fulfillment, warehouse, shipping, picking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.7.0
+Stable tag: 0.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,13 @@ Performance Order Storage (HPOS).
 3. WooCommerce 8.2+ must be installed and active.
 
 == Changelog ==
+
+= 0.8.0 =
+* Feat: Wave & Batch Picking — wave aggregate, membership, lifecycle REST (M8-A).
+* Feat: Combined wave picking list document and MPCF:W barcode type (M8-B).
+* Feat: Wave Scan Mode with FIFO multi-order SKU allocation and undo (M8-C).
+* Feat: Wave Workspace UI and Queue create-wave entry point (M8-D).
+* Docs: Part X outcomes and M8 release-candidate report.
 
 = 0.7.0 =
 * Feat: Barcode payload format (MPCF:F/I/P/PR/V) and deterministic scan resolver (M7-A).

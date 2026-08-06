@@ -139,6 +139,24 @@ Quantity writes still also emit `items.picked` / `items.packed` via
 `PackingService`. Undo memory uses a per-operator transient
 (`mpcf_scan_undo_{user}_{fulfillment}`, TTL 30 minutes) — not a table.
 
+## M8 Wave & Batch Picking
+
+M8 adds no public WordPress filters. Wave mutations use `/mpcf/v1/waves…`.
+Global audit events (via `DomainEvent::global_event`):
+
+| Event type | When |
+|---|---|
+| `wave.created` | Draft wave created |
+| `wave.activated` | Wave activated |
+| `wave.paused` / `wave.resumed` | Pause / resume |
+| `wave.completed` / `wave.abandoned` | Terminal lifecycle |
+| `wave.member_added` / `wave.member_removed` | Membership changes |
+| `wave.member_picked` | Member fulfillment reached `picked` under the wave |
+
+Wave scans reuse `scan.item_picked` / `scan.corrected` with payload fields
+`wave_id` and `allocation_fulfillment_id`. Wave undo uses transient
+`mpcf_wave_scan_undo_{user}_{wave}` (TTL 30 minutes).
+
 All other v1.0 extension surfaces (`mpcf_workflows`, `mpcf_event` +
 per-type actions, `mpcf_intake_should_create`) remain documented in
 `docs/ARCHITECTURE_PLAN.md` §16.2 as future milestones.

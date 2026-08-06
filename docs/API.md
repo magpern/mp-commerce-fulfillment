@@ -529,8 +529,7 @@ event trail).
 
 ## What is not exposed, and why
 
-- **No batch-picking engine routes** (M8). Queue bulk picking-list print is
-  an admin form action (cap 25), not a REST batch domain.
+- **No packing-inside-wave routes** — Wave Scan Mode ends at `picked`; packing stays per-fulfillment Workspace (Part X).
 - **No PDF download routes** — canonical stored format is HTML; PDF remains deferred.
 - **No `mpcf_workflows` filter routes** — the workflow definition is still
   evolving; freezing an API surface around it now would be premature (§16.2).
@@ -545,3 +544,26 @@ event trail).
 - **No REST response caching** — a warehouse queue that shows stale data
   is worse than a slow one (§IV.10).
 - **No document delete route** — documents are immutable historical artifacts.
+
+## Waves (M8 / Part X)
+
+Capability for lifecycle/scan: `mpcf_process_fulfillments`. Documents:
+`mpcf_render_documents`. Wave `version` is required on mutating lifecycle
+and scan actions (409 on conflict). Exclusive owner enforced server-side
+(`wave_owned`).
+
+| Method | Route | Purpose |
+|---|---|---|
+| `POST` | `/waves` | Create draft (`warehouse_id`, optional `fulfillment_ids`, `title`) |
+| `GET` | `/waves` | List open waves (`mine`, `warehouse_id`) |
+| `GET` | `/waves/{id}` | Wave + progress + walk |
+| `POST` | `/waves/{id}/members` | Add fulfillments (`fulfillment_ids`, `version`) |
+| `DELETE` | `/waves/{id}/members/{fulfillment_id}` | Remove member (`version`) |
+| `POST` | `/waves/{id}/activate` | draft→active |
+| `POST` | `/waves/{id}/pause` | active→paused |
+| `POST` | `/waves/{id}/resume` | paused→active |
+| `POST` | `/waves/{id}/complete` | complete (`force` optional) |
+| `POST` | `/waves/{id}/abandon` | abandon (releases membership; does not cancel) |
+| `GET` | `/waves/{id}/walk` | Combined walk model |
+| `POST` | `/waves/{id}/scan` | Wave pick scan (`action=resolve\|pick\|undo`) |
+| `POST` | `/waves/{id}/documents` | Render `wave_picking_list` HTML |
