@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace MPCF\Engine\DocumentAssembler;
 
+use MPCF\Domain\Barcode\BarcodePayload;
 use MPCF\Domain\Document\DocumentModel;
 use MPCF\Domain\Fulfillment;
 use MPCF\Domain\FulfillmentItem;
@@ -73,7 +74,7 @@ final class PackingSlipAssembler {
 			$store_name,
 			array_map( array( self::class, 'item_line' ), $items ),
 			array_map( array( self::class, 'package_summary' ), $packages ),
-			$fulfillment->order_number_snapshot(),
+			self::fulfillment_barcode( $fulfillment ),
 			$fulfillment->state(),
 			$template_version,
 			$branding,
@@ -115,5 +116,21 @@ final class PackingSlipAssembler {
 			'height_mm'       => $spec->height_mm(),
 			'tracking_number' => $package->tracking_number(),
 		);
+	}
+
+	/**
+	 * Scannable fulfillment identity for Code 128.
+	 *
+	 * @param Fulfillment $fulfillment Persisted fulfillment.
+	 * @throws \InvalidArgumentException When the fulfillment has no positive id.
+	 */
+	private static function fulfillment_barcode( Fulfillment $fulfillment ): string {
+		$id = (int) $fulfillment->id();
+
+		if ( $id <= 0 ) {
+			throw new \InvalidArgumentException( 'Fulfillment must be persisted before assembling a scannable barcode.' );
+		}
+
+		return BarcodePayload::fulfillment( $id )->encode();
 	}
 }

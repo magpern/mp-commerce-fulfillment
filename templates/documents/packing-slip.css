@@ -157,6 +157,24 @@ body {
 	letter-spacing: 0.3em;
 }
 
+.mpcf-barcode-block {
+	display: inline-block;
+	text-align: center;
+}
+
+.mpcf-barcode-block svg {
+	display: block;
+	margin: 0 auto;
+	max-width: 100%;
+	height: auto;
+}
+
+.mpcf-barcode-human {
+	font-family: "Courier New", Courier, monospace;
+	font-size: 9pt;
+	margin-top: 1mm;
+}
+
 .mpcf-slip-footer {
 	margin-top: 10mm;
 	padding-top: 3mm;

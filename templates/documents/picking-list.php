@@ -113,7 +113,19 @@ $mpcf_rendered_at   = $model->rendered_at();
 		<tbody>
 			<?php foreach ( $model->items() as $mpcf_item ) : ?>
 				<tr>
-					<td><?php echo esc_html( (string) ( $mpcf_item['sku'] ?? '' ) ); ?></td>
+					<td>
+						<?php echo esc_html( (string) ( $mpcf_item['sku'] ?? '' ) ); ?>
+						<?php if ( ! empty( $mpcf_item['barcode_payload'] ) ) : ?>
+							<div class="mpcf-pick-item-barcode">
+								<?php
+								echo \MPCF\Documents\Barcode\DocumentBarcodeMarkup::render_block( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Markup helper escapes payload/text; SVG is deterministic.
+									(string) $mpcf_item['barcode_payload'],
+									(string) ( $mpcf_item['sku'] ?? '' )
+								);
+								?>
+							</div>
+						<?php endif; ?>
+					</td>
 					<td><?php echo esc_html( (string) ( $mpcf_item['name'] ?? '' ) ); ?></td>
 					<td><?php echo esc_html( (string) ( $mpcf_item['location_snapshot'] ?? '' ) ); ?></td>
 					<td class="mpcf-pick-qty"><?php echo esc_html( (string) ( $mpcf_item['qty_ordered'] ?? 0 ) ); ?></td>
@@ -126,7 +138,12 @@ $mpcf_rendered_at   = $model->rendered_at();
 	</table>
 
 	<div class="mpcf-pick-barcode">
-		<div class="mpcf-pick-barcode-payload"><?php echo esc_html( $model->barcode_payload() ); ?></div>
+		<?php
+		echo \MPCF\Documents\Barcode\DocumentBarcodeMarkup::render_block( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Markup helper escapes payload/text; SVG is deterministic.
+			$model->barcode_payload(),
+			$model->order_number()
+		);
+		?>
 	</div>
 
 	<?php if ( '' !== $mpcf_footer ) : ?>

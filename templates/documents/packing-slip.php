@@ -161,7 +161,12 @@ $mpcf_rendered_at   = $model->rendered_at();
 	<?php endif; ?>
 
 	<div class="mpcf-slip-barcode">
-		<div class="mpcf-slip-barcode-payload"><?php echo esc_html( $model->barcode_payload() ); ?></div>
+		<?php
+		echo \MPCF\Documents\Barcode\DocumentBarcodeMarkup::render_block( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Markup helper escapes payload/text; SVG is deterministic.
+			$model->barcode_payload(),
+			$model->order_number()
+		);
+		?>
 	</div>
 
 	<?php if ( '' !== $mpcf_footer ) : ?>
