@@ -125,7 +125,7 @@ final class SettingsTest extends TestCase {
 		self::assertSame( 12582912, $defaults['photos_max_upload_bytes'] );
 		self::assertSame( 2000, $defaults['photos_max_edge_px'] );
 		self::assertSame( 12, $defaults['photos_retention_months'] );
-		self::assertSame( 8, Settings::SCHEMA_VERSION );
+		self::assertSame( 9, Settings::SCHEMA_VERSION );
 	}
 
 	public function test_sanitize_coerces_auto_advance_after_ship_truthy_and_falsy_values(): void {

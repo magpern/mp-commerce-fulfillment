@@ -50,9 +50,11 @@ final class Settings {
 	 * informational (`sanitize()` always rebuilds the
 	 * canonical shape from `defaults()`, so there is no destructive
 	 * migration step to write for a purely additive change like any of
-	 * these).
+	 * these). **M8 raises to 9:** `wave_max_members` (default `25`, clamp
+	 * 1–100) and optional `wave_idle_pause_minutes` (default `0` = off,
+	 * clamp 0–240).
 	 */
-	public const SCHEMA_VERSION = 8;
+	public const SCHEMA_VERSION = 9;
 
 	/**
 	 * Inbound cancel/refund behavior: move the fulfillment straight to
@@ -200,6 +202,13 @@ final class Settings {
 			'photos_max_upload_bytes'         => 12582912,
 			'photos_max_edge_px'              => 2000,
 			'photos_retention_months'         => 12,
+
+			/*
+			 * Wave picking (M8 / Part X): max members per wave. Idle auto-
+			 * pause minutes are reserved (0 = off); optional M8-E.
+			 */
+			'wave_max_members'                => 25,
+			'wave_idle_pause_minutes'         => 0,
 		);
 	}
 
@@ -244,6 +253,8 @@ final class Settings {
 		$out['photos_max_upload_bytes']         = self::sanitize_int_range( $raw['photos_max_upload_bytes'] ?? null, 12582912, 1048576, 52428800 );
 		$out['photos_max_edge_px']              = self::sanitize_int_range( $raw['photos_max_edge_px'] ?? null, 2000, 500, 8000 );
 		$out['photos_retention_months']         = self::sanitize_int_range( $raw['photos_retention_months'] ?? null, 12, 0, 120 );
+		$out['wave_max_members']                = self::sanitize_int_range( $raw['wave_max_members'] ?? null, 25, 1, 100 );
+		$out['wave_idle_pause_minutes']         = self::sanitize_int_range( $raw['wave_idle_pause_minutes'] ?? null, 0, 0, 240 );
 
 		return $out;
 	}
@@ -560,6 +571,20 @@ final class Settings {
 	 */
 	public function photos_retention_months(): int {
 		return (int) $this->get()['photos_retention_months'];
+	}
+
+	/**
+	 * Maximum fulfillments per wave (M8 / Part X).
+	 */
+	public function wave_max_members(): int {
+		return (int) $this->get()['wave_max_members'];
+	}
+
+	/**
+	 * Idle auto-pause minutes for an active wave (0 = off).
+	 */
+	public function wave_idle_pause_minutes(): int {
+		return (int) $this->get()['wave_idle_pause_minutes'];
 	}
 
 	/**

@@ -82,6 +82,18 @@ final class Schema {
 	public const DOCUMENTS = 'mpcf_documents';
 
 	/**
+	 * Unprefixed table name for wave aggregates (Part X / M8), added by
+	 * step 7.
+	 */
+	public const WAVES = 'mpcf_waves';
+
+	/**
+	 * Unprefixed table name for wave memberships (Part X / M8), added by
+	 * step 7.
+	 */
+	public const WAVE_MEMBERS = 'mpcf_wave_members';
+
+	/**
 	 * Name of the unique index enforcing intake idempotency at the database
 	 * level (added by {@see \MPCF\Infrastructure\Database\Migrator}'s
 	 * second step — see {@see fulfillments_order_unique_index_ddl()}).
@@ -119,6 +131,8 @@ final class Schema {
 	 */
 	public static function all_tables(): array {
 		return array(
+			self::table( self::WAVE_MEMBERS ),
+			self::table( self::WAVES ),
 			self::table( self::NOTES ),
 			self::table( self::EVENTS ),
 			self::table( self::PACKAGE_ITEMS ),
@@ -327,6 +341,19 @@ final class Schema {
 	}
 
 	/**
+	 * `CREATE TABLE` statements for M8 wave tables (Migrator step 7), in
+	 * creation-safe order (waves before members).
+	 *
+	 * @return list<string>
+	 */
+	public static function wave_create_statements(): array {
+		return array(
+			self::waves_ddl(),
+			self::wave_members_ddl(),
+		);
+	}
+
+	/**
 	 * DDL for `mpcf_shipments` — the consignment (one carrier handover).
 	 * Architecture Plan §IV.6: indexed on `fulfillment_id` (the workspace's
 	 * only lookup path), `status` (a future tracking-sync sweep), and
@@ -459,6 +486,53 @@ final class Schema {
 			PRIMARY KEY  (id),
 			KEY fulfillment_id (fulfillment_id),
 			KEY doc_type (doc_type)
+		) ENGINE=InnoDB ROW_FORMAT=DYNAMIC {$charset_collate};";
+	}
+
+	/**
+	 * DDL for `mpcf_waves` — multi-fulfillment warehouse walk aggregate
+	 * (Architecture Plan Part X.2 / X.12).
+	 */
+	private static function waves_ddl(): string {
+		$table           = self::table( self::WAVES );
+		$charset_collate = self::charset_collate();
+
+		return "CREATE TABLE {$table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			warehouse_id BIGINT UNSIGNED NOT NULL DEFAULT 1,
+			owner_user_id BIGINT UNSIGNED NULL,
+			state VARCHAR(32) NOT NULL,
+			version INT UNSIGNED NOT NULL DEFAULT 1,
+			title VARCHAR(191) NOT NULL DEFAULT '',
+			settings_snapshot LONGTEXT NULL,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NOT NULL,
+			activated_at DATETIME NULL,
+			completed_at DATETIME NULL,
+			abandoned_at DATETIME NULL,
+			PRIMARY KEY  (id),
+			KEY state_warehouse_owner (state, warehouse_id, owner_user_id),
+			KEY updated_at (updated_at)
+		) ENGINE=InnoDB ROW_FORMAT=DYNAMIC {$charset_collate};";
+	}
+
+	/**
+	 * DDL for `mpcf_wave_members` — exclusive fulfillment membership in a
+	 * wave. Open-wave uniqueness is enforced in Application (MySQL lacks
+	 * portable partial unique indexes here).
+	 */
+	private static function wave_members_ddl(): string {
+		$table           = self::table( self::WAVE_MEMBERS );
+		$charset_collate = self::charset_collate();
+
+		return "CREATE TABLE {$table} (
+			wave_id BIGINT UNSIGNED NOT NULL,
+			fulfillment_id BIGINT UNSIGNED NOT NULL,
+			position SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			joined_at DATETIME NOT NULL,
+			picked_at DATETIME NULL,
+			PRIMARY KEY  (wave_id, fulfillment_id),
+			KEY fulfillment_id (fulfillment_id)
 		) ENGINE=InnoDB ROW_FORMAT=DYNAMIC {$charset_collate};";
 	}
 
