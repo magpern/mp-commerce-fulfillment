@@ -65,7 +65,11 @@ actual state before work starts.
    notification pipeline + EmailChannel (M5-C), completed-order tracking
    extension + Workspace/REST notify (M5-D), dogfood + RC prep (M5-E).
    Evidence: `docs/M5_RELEASE_REPORT.md`.
-6. **M6 — Package photography** — not started.
+6. **M6 — Package photography** — **release candidate `v0.6.0`** on
+   `feature/m6-package-photography` (not tagged/published pending PO
+   approval). M6-A–D: foundation, REST/guard, Workspace/settings, retention
+   purge + CS Detail gallery. Evidence: `docs/M6_RELEASE_REPORT.md`,
+   `docs/ARCHITECTURE_PLAN.md` Part VIII.10–VIII.13.
 7. **M7 — Barcode & scan mode** — not started.
 8. **M8 — Batch picking** — not started.
 9. **M9 — Analytics I** — not started.

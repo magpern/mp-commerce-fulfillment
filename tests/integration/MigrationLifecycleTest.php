@@ -99,7 +99,7 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 		self::assertSame( 1, $calls, 'maybe_migrate() must no-op once current_version() is already at target.' );
 	}
 
-	public function test_real_migrator_creates_every_table_and_reaches_target_five(): void {
+	public function test_real_migrator_creates_every_table_and_reaches_target_six(): void {
 		global $wpdb;
 
 		foreach ( Schema::all_tables() as $table ) {
@@ -109,8 +109,8 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 		$migrator = new Migrator();
 		$migrator->migrate();
 
-		self::assertSame( 5, $migrator->current_version() );
-		self::assertSame( 5, (int) get_option( Migrator::OPTION ) );
+		self::assertSame( 6, $migrator->current_version() );
+		self::assertSame( 6, (int) get_option( Migrator::OPTION ) );
 
 		foreach ( Schema::all_tables() as $table ) {
 			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
@@ -184,6 +184,6 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 		$again = new Migrator();
 		$again->migrate();
 
-		self::assertSame( 5, $again->current_version() );
+		self::assertSame( 6, $again->current_version() );
 	}
 }

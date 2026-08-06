@@ -62,6 +62,10 @@ final class SettingsPageTest extends WP_UnitTestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Notifications', $html );
+		self::assertStringContainsString( 'Package photography', $html );
+		self::assertStringContainsString( 'name="photos_required"', $html );
+		self::assertStringContainsString( 'name="photos_max_per_fulfillment"', $html );
+		self::assertStringContainsString( 'name="photos_max_upload_mb"', $html );
 		self::assertStringContainsString( 'name="notification_strategy"', $html );
 		self::assertStringContainsString( 'name="default_carrier_id"', $html );
 		self::assertStringContainsString( 'data-mpcf-sticky-root="settings"', $html );
@@ -150,5 +154,44 @@ final class SettingsPageTest extends WP_UnitTestCase {
 
 		$config = ( new NotificationConfigurationService( $this->settings, new BundledCarrierRegistry() ) )->get();
 		self::assertSame( 'other', $config->default_carrier_id() );
+	}
+
+	public function test_admin_save_persists_package_photography_settings(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_POST                     = array(
+			'mpcf_settings_nonce'             => wp_create_nonce( 'mpcf_save_settings' ),
+			'notification_strategy'           => NotificationStrategy::COMPLETED_EMAIL,
+			'default_carrier_id'              => '',
+			'notification_sender_name'        => '',
+			'notification_reply_to'           => '',
+			'notification_email_subject'      => 'Your order has shipped',
+			'notification_email_introduction' => '',
+			'notification_tracking_footer'    => '',
+			'notification_email_signature'    => '',
+			'documents_store_name'            => '',
+			'documents_address'               => '',
+			'documents_footer'                => '',
+			'documents_logo_attachment_id'    => '0',
+			'photos_required'                 => '1',
+			'photos_max_per_fulfillment'      => '6',
+			'photos_max_upload_mb'            => '8',
+			'photos_max_edge_px'              => '1800',
+			'photos_retention_months'         => '18',
+		);
+
+		ob_start();
+		$this->page->render();
+		$html = (string) ob_get_clean();
+
+		unset( $_POST, $_SERVER['REQUEST_METHOD'] );
+
+		self::assertStringContainsString( 'Settings saved.', $html );
+		self::assertTrue( $this->settings->photos_required() );
+		self::assertSame( 6, $this->settings->photos_max_per_fulfillment() );
+		self::assertSame( 8 * 1024 * 1024, $this->settings->photos_max_upload_bytes() );
+		self::assertSame( 1800, $this->settings->photos_max_edge_px() );
+		self::assertSame( 18, $this->settings->photos_retention_months() );
 	}
 }

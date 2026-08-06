@@ -2,7 +2,7 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Commerce Fulfillment 0.5.0\n"
+"Project-Id-Version: Commerce Fulfillment 0.6.0\n"
 "Report-Msgid-Bugs-To: https://github.com/magpern/mp-commerce-fulfillment/issues\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -113,7 +113,7 @@ msgstr ""
 #: src/Admin/DocumentsPage.php:62
 #: src/Admin/DocumentsPage.php:69
 #: src/Admin/ShellNavigation.php:52
-#: src/Admin/WorkspacePage.php:807
+#: src/Admin/WorkspacePage.php:829
 msgid "Documents"
 msgstr ""
 
@@ -233,7 +233,7 @@ msgid "Fulfillment Detail"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:173
-#: src/Admin/WorkspacePage.php:248
+#: src/Admin/WorkspacePage.php:260
 msgid "No fulfillment selected"
 msgstr ""
 
@@ -249,104 +249,156 @@ msgstr ""
 msgid "This fulfillment no longer exists."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:216
+#: src/Admin/FulfillmentDetailPage.php:217
 msgid "Fulfillment for order"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:218
+#: src/Admin/FulfillmentDetailPage.php:219
 msgid "Customer:"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:219
+#: src/Admin/FulfillmentDetailPage.php:220
 msgid "Items:"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:222
+#: src/Admin/FulfillmentDetailPage.php:223
 msgid "State:"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:227
-#: src/Admin/WorkspacePage.php:572
+#: src/Admin/FulfillmentDetailPage.php:228
+#: src/Admin/WorkspacePage.php:584
 msgid "View order"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:241
+#: src/Admin/FulfillmentDetailPage.php:242
 msgid "Transitions"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:250
+#: src/Admin/FulfillmentDetailPage.php:251
 msgid "No transitions are available."
 msgstr ""
 
 #. translators: %s: target state label
-#: src/Admin/FulfillmentDetailPage.php:315
+#: src/Admin/FulfillmentDetailPage.php:316
 #, php-format
 msgid "Why is this fulfillment moving to \"%s\"?"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:332
-msgid "Audit trail"
-msgstr ""
-
-#: src/Admin/FulfillmentDetailPage.php:339
-#: src/Admin/WorkspacePage.php:774
-msgid "System"
+#: src/Admin/FulfillmentDetailPage.php:337
+#: src/Admin/WorkspacePage.php:1150
+msgid "Package photos"
 msgstr ""
 
 #: src/Admin/FulfillmentDetailPage.php:340
-#: src/Admin/WorkspacePage.php:775
+msgid "No package photos for this fulfillment."
+msgstr ""
+
+#. translators: 1: package sequence, 2: package id
+#: src/Admin/FulfillmentDetailPage.php:356
+#, php-format
+msgid "Package %1$d (id %2$d)"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:365
+#: src/Admin/PhotoEventLabels.php:89
+#: src/Admin/WorkspacePage.php:1138
+msgid "Sealed package"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:366
+#: src/Admin/PhotoEventLabels.php:85
+#: src/Admin/WorkspacePage.php:1137
+msgid "Contents"
+msgstr ""
+
+#. translators: %s: photo kind
+#: src/Admin/FulfillmentDetailPage.php:379
+#, php-format
+msgid "Preview %s photo"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:383
+msgid "Loading…"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:388
+msgid "Photo retained as audit metadata; image removed by retention policy."
+msgstr ""
+
+#. translators: %d: WordPress user id
+#: src/Admin/FulfillmentDetailPage.php:397
+#, php-format
+msgid "Captured by user #%d"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:404
+msgid "Integrity: bytes purged; SHA-256 retained in audit metadata."
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:426
+msgid "Audit trail"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:433
+#: src/Admin/WorkspacePage.php:793
+msgid "System"
+msgstr ""
+
+#: src/Admin/FulfillmentDetailPage.php:434
+#: src/Admin/WorkspacePage.php:794
 msgid "ago"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:372
+#: src/Admin/FulfillmentDetailPage.php:466
 msgid "Audit trail pagination"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:410
+#: src/Admin/FulfillmentDetailPage.php:510
 msgid "Fulfillment created from order."
 msgstr ""
 
 #. translators: 1: origin state, 2: destination state, 3: optional reason
-#: src/Admin/FulfillmentDetailPage.php:418
+#: src/Admin/FulfillmentDetailPage.php:518
 #, php-format
 msgid "Moved from \"%1$s\" to \"%2$s\".%3$s"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:438
-#: src/Admin/WorkspacePage.php:1096
+#: src/Admin/FulfillmentDetailPage.php:538
+#: src/Admin/WorkspacePage.php:1163
 msgid "Notes"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:442
-#: src/Admin/WorkspacePage.php:1100
+#: src/Admin/FulfillmentDetailPage.php:542
+#: src/Admin/WorkspacePage.php:1167
 msgid "pinned"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:446
-#: src/Admin/WorkspacePage.php:1104
+#: src/Admin/FulfillmentDetailPage.php:546
+#: src/Admin/PhotoEventLabels.php:92
+#: src/Admin/WorkspacePage.php:1171
 msgid "Unknown"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:455
-#: src/Admin/WorkspacePage.php:1115
+#: src/Admin/FulfillmentDetailPage.php:555
+#: src/Admin/WorkspacePage.php:1182
 msgid "Add note"
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:477
+#: src/Admin/FulfillmentDetailPage.php:577
 #: src/Admin/QueuePage.php:327
 msgid "Fulfillment not found."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:484
+#: src/Admin/FulfillmentDetailPage.php:584
 #: src/Admin/QueuePage.php:334
 msgid "You are not allowed to make this change."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:502
+#: src/Admin/FulfillmentDetailPage.php:602
 msgid "You are not allowed to add notes."
 msgstr ""
 
-#: src/Admin/FulfillmentDetailPage.php:506
+#: src/Admin/FulfillmentDetailPage.php:606
 msgid "A note cannot be empty."
 msgstr ""
 
@@ -400,7 +452,7 @@ msgstr ""
 
 #: src/Admin/OrdersPage.php:153
 #: src/Admin/OrdersPage.php:301
-#: src/Admin/WorkspaceStageGuidance.php:162
+#: src/Admin/WorkspaceStageGuidance.php:163
 #: src/Application/OrdersNextAction.php:75
 #: src/Application/OrdersNextAction.php:76
 #: src/Application/OrdersNextAction.php:104
@@ -411,7 +463,7 @@ msgstr ""
 
 #: src/Admin/OrdersPage.php:154
 #: src/Admin/OrdersPage.php:305
-#: src/Admin/WorkspaceStageGuidance.php:186
+#: src/Admin/WorkspaceStageGuidance.php:187
 #: src/Application/OrdersNextAction.php:34
 #: src/Application/OrdersNextAction.php:110
 msgid "Cancelled"
@@ -432,7 +484,7 @@ msgid "Order status"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:185
-#: src/Plugin.php:461
+#: src/Plugin.php:505
 msgid "Fulfillment"
 msgstr ""
 
@@ -447,8 +499,8 @@ msgid "Operational state"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:188
-#: src/Admin/WorkspacePage.php:385
-#: src/Admin/WorkspacePage.php:391
+#: src/Admin/WorkspacePage.php:397
+#: src/Admin/WorkspacePage.php:403
 msgid "Next action"
 msgstr ""
 
@@ -476,68 +528,104 @@ msgid "Open order"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:294
-#: src/Admin/WorkspaceStageGuidance.php:120
+#: src/Admin/WorkspaceStageGuidance.php:121
 #: src/Application/OrdersNextAction.php:99
 msgid "Queued"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:295
-#: src/Admin/WorkspaceStageGuidance.php:126
+#: src/Admin/WorkspaceStageGuidance.php:127
 #: src/Application/OrdersNextAction.php:100
 msgid "Picking"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:296
-#: src/Admin/WorkspacePage.php:672
-#: src/Admin/WorkspaceStageGuidance.php:132
+#: src/Admin/WorkspacePage.php:684
+#: src/Admin/WorkspaceStageGuidance.php:133
 #: src/Application/OrdersNextAction.php:101
 #: templates/documents/picking-list.php:109
 msgid "Picked"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:297
-#: src/Admin/WorkspaceStageGuidance.php:138
+#: src/Admin/WorkspaceStageGuidance.php:139
 #: src/Application/OrdersNextAction.php:102
 msgid "Packing"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:298
-#: src/Admin/WorkspacePage.php:672
-#: src/Admin/WorkspaceStageGuidance.php:144
+#: src/Admin/WorkspacePage.php:684
+#: src/Admin/WorkspaceStageGuidance.php:145
 #: src/Application/OrdersNextAction.php:103
 #: templates/documents/packing-slip.php:121
 msgid "Packed"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:299
-#: src/Admin/WorkspacePage.php:454
-#: src/Admin/WorkspaceStageGuidance.php:150
+#: src/Admin/WorkspacePage.php:466
+#: src/Admin/WorkspaceStageGuidance.php:151
 #: src/Application/OrdersNextAction.php:104
 msgid "Shipped"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:300
-#: src/Admin/WorkspaceStageGuidance.php:156
+#: src/Admin/WorkspaceStageGuidance.php:157
 #: src/Application/OrdersNextAction.php:105
 msgid "Delivered"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:302
-#: src/Admin/WorkspaceStageGuidance.php:168
+#: src/Admin/WorkspaceStageGuidance.php:169
 #: src/Application/OrdersNextAction.php:107
 msgid "Problem"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:303
-#: src/Admin/WorkspaceStageGuidance.php:174
+#: src/Admin/WorkspaceStageGuidance.php:175
 #: src/Application/OrdersNextAction.php:108
 msgid "Waiting"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:304
-#: src/Admin/WorkspaceStageGuidance.php:180
+#: src/Admin/WorkspaceStageGuidance.php:181
 #: src/Application/OrdersNextAction.php:109
 msgid "Backordered"
+msgstr ""
+
+#. translators: 1: photo kind label (Sealed package|Contents), 2: package id
+#: src/Admin/PhotoEventLabels.php:32
+#, php-format
+msgid "Package photo captured (%1$s) for package %2$d."
+msgstr ""
+
+#. translators: %s: photo kind label (Sealed package|Contents)
+#: src/Admin/PhotoEventLabels.php:40
+#, php-format
+msgid "Package photo captured (%s)."
+msgstr ""
+
+#. translators: 1: photo kind label (Sealed package|Contents), 2: package id
+#: src/Admin/PhotoEventLabels.php:47
+#, php-format
+msgid "Package photo deleted (%1$s) for package %2$d."
+msgstr ""
+
+#. translators: %s: photo kind label (Sealed package|Contents)
+#: src/Admin/PhotoEventLabels.php:55
+#, php-format
+msgid "Package photo deleted (%s)."
+msgstr ""
+
+#. translators: 1: photo kind label (Sealed package|Contents), 2: package id
+#: src/Admin/PhotoEventLabels.php:62
+#, php-format
+msgid "Package photo bytes purged by retention (%1$s) for package %2$d."
+msgstr ""
+
+#. translators: %s: photo kind label (Sealed package|Contents)
+#: src/Admin/PhotoEventLabels.php:70
+#, php-format
+msgid "Package photo bytes purged by retention (%s)."
 msgstr ""
 
 #: src/Admin/QueuePage.php:158
@@ -597,7 +685,7 @@ msgstr ""
 #: src/Admin/QueuePage.php:458
 #: src/Admin/QueuePage.php:556
 #: src/Admin/QueuePage.php:722
-#: src/Admin/WorkspacePage.php:376
+#: src/Admin/WorkspacePage.php:388
 msgid "State"
 msgstr ""
 
@@ -677,144 +765,192 @@ msgstr ""
 msgid "Queue pagination"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:113
+#: src/Admin/SettingsPage.php:114
 msgid "Fulfillment Settings"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:120
+#: src/Admin/SettingsPage.php:121
 #: src/Admin/ShellNavigation.php:61
 msgid "Settings"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:147
+#: src/Admin/SettingsPage.php:148
 msgid "Settings saved."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:176
+#: src/Admin/SettingsPage.php:178
 msgid "Document branding"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:177
+#: src/Admin/SettingsPage.php:179
 msgid "Shown on packing slips and picking lists. Empty optional fields are omitted. Historical renders keep the branding captured at print time."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:183
+#: src/Admin/SettingsPage.php:185
 msgid "Store display name"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:185
+#: src/Admin/SettingsPage.php:187
 msgid "Leave blank to use the WordPress site name."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:191
+#: src/Admin/SettingsPage.php:193
 msgid "Address"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:193
+#: src/Admin/SettingsPage.php:195
 msgid "One line per row. Optional."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:198
+#: src/Admin/SettingsPage.php:200
 msgid "Footer / legal text"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:200
+#: src/Admin/SettingsPage.php:202
 msgid "Optional. Printed at the bottom of documents."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:205
+#: src/Admin/SettingsPage.php:207
 msgid "Logo attachment ID"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:207
+#: src/Admin/SettingsPage.php:209
 msgid "Optional Media Library attachment ID. Embedded into historical HTML as a data URI when the file is a small image; otherwise omitted (never stored as a public URL alone)."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:226
-msgid "Notifications"
+#: src/Admin/SettingsPage.php:228
+msgid "Package photography"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:227
-msgid "Configure how customers will learn about shipment tracking. Saving these settings does not send email — delivery starts in a later release."
+#: src/Admin/SettingsPage.php:229
+msgid "Evidence photos captured in the packing workspace. Image bytes older than the retention window are removed automatically; metadata and audit history are kept."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:234
-msgid "Notification strategy"
+#: src/Admin/SettingsPage.php:236
+msgid "Require sealed-package photo"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:235
-msgid "Choose whether tracking appears on the store completed-order email, a dedicated shipped email, both, or neither."
+#: src/Admin/SettingsPage.php:237
+msgid "When enabled, a sealed-package photo is required before packing can be marked packed. Contents photos remain optional evidence."
 msgstr ""
 
 #: src/Admin/SettingsPage.php:243
-msgid "Default carrier"
+msgid "Maximum photos per fulfillment"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:244
-msgid "Pre-selected in the packing workspace. Unknown values fall back to Other. Carrier definitions themselves cannot be edited here."
+#: src/Admin/SettingsPage.php:245
+msgid "Active photos across all packages for one fulfillment (1–100)."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:251
-msgid "Sender name"
+#: src/Admin/SettingsPage.php:261
+msgid "Maximum upload size (MB)"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:253
-msgid "Optional. Leave blank to use the store name at send time."
-msgstr ""
-
-#: src/Admin/SettingsPage.php:259
-msgid "Reply-to email"
-msgstr ""
-
-#: src/Admin/SettingsPage.php:260
-msgid "Optional. Invalid addresses are cleared on save."
-msgstr ""
-
-#: src/Admin/SettingsPage.php:266
-msgid "Default email subject"
-msgstr ""
-
-#: src/Admin/SettingsPage.php:268
-msgid "Used for the dedicated shipped email when that strategy is enabled."
+#: src/Admin/SettingsPage.php:263
+msgid "Raw upload size before processing (1–50 MiB). Stored as bytes."
 msgstr ""
 
 #: src/Admin/SettingsPage.php:274
-msgid "Email introduction"
+msgid "Maximum image edge (px)"
 msgstr ""
 
 #: src/Admin/SettingsPage.php:276
+msgid "Longest edge of the stored JPEG after resize (500–8000)."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:287
+msgid "Retention (months)"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:289
+msgid "Age after which image bytes are purged (0 = keep forever; 1–120 months). Soft-deleted and active photos are both eligible. Metadata and audit events are always retained. There is no purge-now control."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:309
+msgid "Notifications"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:310
+msgid "Configure how customers will learn about shipment tracking. Saving these settings does not send email — delivery starts in a later release."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:317
+msgid "Notification strategy"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:318
+msgid "Choose whether tracking appears on the store completed-order email, a dedicated shipped email, both, or neither."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:326
+msgid "Default carrier"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:327
+msgid "Pre-selected in the packing workspace. Unknown values fall back to Other. Carrier definitions themselves cannot be edited here."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:334
+msgid "Sender name"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:336
+msgid "Optional. Leave blank to use the store name at send time."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:342
+msgid "Reply-to email"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:343
+msgid "Optional. Invalid addresses are cleared on save."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:349
+msgid "Default email subject"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:351
+msgid "Used for the dedicated shipped email when that strategy is enabled."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:357
+msgid "Email introduction"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:359
 msgid "Optional paragraph shown above tracking details."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:281
+#: src/Admin/SettingsPage.php:364
 msgid "Tracking message footer"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:283
+#: src/Admin/SettingsPage.php:366
 msgid "Optional text under tracking links."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:288
+#: src/Admin/SettingsPage.php:371
 msgid "Email signature"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:290
+#: src/Admin/SettingsPage.php:373
 msgid "Optional closing signature."
 msgstr ""
 
-#: src/Admin/SettingsPage.php:303
+#: src/Admin/SettingsPage.php:386
 msgid "Completed-order email"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:304
+#: src/Admin/SettingsPage.php:387
 msgid "MPCF shipped email"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:305
+#: src/Admin/SettingsPage.php:388
 msgid "Both"
 msgstr ""
 
-#: src/Admin/SettingsPage.php:306
+#: src/Admin/SettingsPage.php:389
 msgid "Disabled"
 msgstr ""
 
@@ -826,335 +962,352 @@ msgstr ""
 msgid "Fulfillment sections"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:209
-#: src/Admin/WorkspacePage.php:216
+#: src/Admin/WorkspacePage.php:221
+#: src/Admin/WorkspacePage.php:228
 msgid "Packing Workspace"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:249
+#: src/Admin/WorkspacePage.php:261
 msgid "Open a fulfillment from the Queue to start packing."
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:421
+#: src/Admin/WorkspacePage.php:433
 msgid "This fulfillment has been shipped. No further warehouse action is required on this order."
 msgstr ""
 
 #. translators: %s: tracking number
-#: src/Admin/WorkspacePage.php:425
+#: src/Admin/WorkspacePage.php:437
 #, php-format
 msgid "This fulfillment has been shipped. Tracking: %s"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:440
-#: src/Admin/WorkspaceStageGuidance.php:152
-#: src/Admin/WorkspaceStageGuidance.php:158
-#: src/Admin/WorkspaceStageGuidance.php:164
-#: src/Admin/WorkspaceStageGuidance.php:188
+#: src/Admin/WorkspacePage.php:452
+#: src/Admin/WorkspaceStageGuidance.php:153
+#: src/Admin/WorkspaceStageGuidance.php:159
+#: src/Admin/WorkspaceStageGuidance.php:165
+#: src/Admin/WorkspaceStageGuidance.php:189
 msgid "Next order"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:449
+#: src/Admin/WorkspacePage.php:461
 msgid "Back to Queue"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:485
-#: src/Admin/WorkspacePage.php:1142
+#: src/Admin/WorkspacePage.php:497
+#: src/Admin/WorkspacePage.php:1209
 msgid "Keyboard shortcuts"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:505
+#: src/Admin/WorkspacePage.php:517
 msgid "Primary action"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:506
+#: src/Admin/WorkspacePage.php:518
 msgid "Move item focus down / up"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:507
+#: src/Admin/WorkspacePage.php:519
 msgid "Increment focused line"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:508
+#: src/Admin/WorkspacePage.php:520
 msgid "Decrement focused line"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:509
+#: src/Admin/WorkspacePage.php:521
 msgid "Complete focused line"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:510
+#: src/Admin/WorkspacePage.php:522
 msgid "Complete all lines"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:511
+#: src/Admin/WorkspacePage.php:523
 msgid "Toggle collapse-completed"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:512
+#: src/Admin/WorkspacePage.php:524
 msgid "Focus the scan sink"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:513
+#: src/Admin/WorkspacePage.php:525
 msgid "Focus tracking number"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:514
+#: src/Admin/WorkspacePage.php:526
 msgid "Focus package 1 weight"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:515
+#: src/Admin/WorkspacePage.php:527
 msgid "Focus new-note field"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:516
+#: src/Admin/WorkspacePage.php:528
 msgid "Open the Problem dialog"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:517
+#: src/Admin/WorkspacePage.php:529
 msgid "Print primary document (picking list or packing slip)"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:518
+#: src/Admin/WorkspacePage.php:530
 msgid "Previous / next fulfillment in the queue"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:519
+#: src/Admin/WorkspacePage.php:531
 msgid "This shortcut sheet"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:520
+#: src/Admin/WorkspacePage.php:532
 msgid "Close dialog, or return to scan sink"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:539
+#: src/Admin/WorkspacePage.php:551
 msgid "another operator"
 msgstr ""
 
 #. translators: %s: assignee display name
-#: src/Admin/WorkspacePage.php:545
+#: src/Admin/WorkspacePage.php:557
 #, php-format
 msgid "Assigned to %s"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:548
+#: src/Admin/WorkspacePage.php:560
 msgid "You can take over without losing any work already saved."
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:549
+#: src/Admin/WorkspacePage.php:561
 msgid "Take over"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:576
+#: src/Admin/WorkspacePage.php:588
 #: templates/documents/packing-slip.php:98
 msgid "Ship to"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:635
+#: src/Admin/WorkspacePage.php:647
 #: templates/documents/packing-slip.php:110
 #: templates/documents/picking-list.php:96
 msgid "Customer instructions"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:660
+#: src/Admin/WorkspacePage.php:672
 msgid "Start picking to enable quantity recording. Ordered amounts are shown below for reference."
 msgstr ""
 
 #. translators: %d: ordered qty
-#: src/Admin/WorkspacePage.php:675
-#: src/Admin/WorkspacePage.php:697
+#: src/Admin/WorkspacePage.php:687
+#: src/Admin/WorkspacePage.php:709
 #, php-format
 msgid "Ordered: %d"
 msgstr ""
 
 #. translators: 1: Picked or Packed label, 2: current qty
-#: src/Admin/WorkspacePage.php:676
+#: src/Admin/WorkspacePage.php:688
 #, php-format
 msgid "%1$s: %2$d"
 msgstr ""
 
 #. translators: %d: remaining qty
 #. translators: %d: remaining
-#: src/Admin/WorkspacePage.php:677
-#: src/Admin/WorkspacePage.php:699
+#: src/Admin/WorkspacePage.php:689
+#: src/Admin/WorkspacePage.php:711
 #, php-format
 msgid "Remaining: %d"
 msgstr ""
 
 #. translators: %s: item name
-#: src/Admin/WorkspacePage.php:689
+#: src/Admin/WorkspacePage.php:701
 #, php-format
 msgid "Quantity for %s"
 msgstr ""
 
 #. translators: %d: picked qty
-#: src/Admin/WorkspacePage.php:698
+#: src/Admin/WorkspacePage.php:710
 #, php-format
 msgid "Picked: %d"
 msgstr ""
 
 #. translators: 1: picked 2: ordered
-#: src/Admin/WorkspacePage.php:704
+#: src/Admin/WorkspacePage.php:716
 #, php-format
 msgid "Picked: %1$d / %2$d"
 msgstr ""
 
 #. translators: 1: packed 2: ordered
-#: src/Admin/WorkspacePage.php:705
+#: src/Admin/WorkspacePage.php:717
 #, php-format
 msgid "Packed: %1$d / %2$d"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:734
+#: src/Admin/WorkspacePage.php:746
 msgid "Complete all"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:739
+#: src/Admin/WorkspacePage.php:751
 msgid "Collapse completed"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:742
+#: src/Admin/WorkspacePage.php:754
 msgid "Barcode scanner input"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:765
+#: src/Admin/WorkspacePage.php:768
+#: src/Admin/WorkspaceStageGuidance.php:73
+msgid "A sealed-package photo is required before this fulfillment can be marked packed."
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:784
 msgid "Timeline"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:795
+#: src/Admin/WorkspacePage.php:817
 msgid "View full audit trail"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:813
+#: src/Admin/WorkspacePage.php:835
 msgid "No printable document is available in this stage."
 msgstr ""
 
 #. translators: %s: document type label
-#: src/Admin/WorkspacePage.php:831
+#: src/Admin/WorkspacePage.php:853
 #, php-format
 msgid "Print %s"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:869
+#: src/Admin/WorkspacePage.php:891
 msgid "Not printed yet"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:874
+#: src/Admin/WorkspacePage.php:896
 msgid "system"
 msgstr ""
 
 #. translators: 1: datetime, 2: user id or "system", 3: template version
-#: src/Admin/WorkspacePage.php:878
+#: src/Admin/WorkspacePage.php:900
 #, php-format
 msgid "Last printed %1$s by %2$s (template %3$s)"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:907
+#: src/Admin/WorkspacePage.php:929
 msgid "Shipment and packages"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:909
+#: src/Admin/WorkspacePage.php:931
 msgid "(later stage)"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:938
+#: src/Admin/WorkspacePage.php:960
 msgid "Enter a carrier or tracking number to create a shipment."
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:940
-#: src/Admin/WorkspacePage.php:941
-#: src/Admin/WorkspacePage.php:990
-#: src/Admin/WorkspacePage.php:991
+#: src/Admin/WorkspacePage.php:962
+#: src/Admin/WorkspacePage.php:963
+#: src/Admin/WorkspacePage.php:1013
+#: src/Admin/WorkspacePage.php:1014
 msgid "Carrier"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:942
+#: src/Admin/WorkspacePage.php:964
 msgid "— Select —"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:950
-#: src/Admin/WorkspacePage.php:951
-#: src/Admin/WorkspacePage.php:952
-#: src/Admin/WorkspacePage.php:1004
-#: src/Admin/WorkspacePage.php:1006
+#: src/Admin/WorkspacePage.php:972
+#: src/Admin/WorkspacePage.php:973
+#: src/Admin/WorkspacePage.php:974
+#: src/Admin/WorkspacePage.php:1027
+#: src/Admin/WorkspacePage.php:1029
 msgid "Tracking number"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:955
-#: src/Admin/WorkspacePage.php:1021
+#: src/Admin/WorkspacePage.php:977
+#: src/Admin/WorkspacePage.php:1044
 #: templates/documents/packing-slip.php:138
 msgid "Packages"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:964
-#: src/Admin/WorkspacePage.php:1036
+#: src/Admin/WorkspacePage.php:986
+#: src/Admin/WorkspacePage.php:1059
 msgid "Add package"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1011
+#: src/Admin/WorkspacePage.php:1034
 msgid "Notification status: loading…"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1015
+#: src/Admin/WorkspacePage.php:1038
 msgid "Send tracking notification"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1059
+#: src/Admin/WorkspacePage.php:1083
 msgid "Weight"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1063
+#: src/Admin/WorkspacePage.php:1087
 msgid "Length"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1067
+#: src/Admin/WorkspacePage.php:1091
 msgid "Width"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1071
+#: src/Admin/WorkspacePage.php:1095
 msgid "Height"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1082
-#: src/Admin/WorkspacePage.php:1083
+#: src/Admin/WorkspacePage.php:1106
+#: src/Admin/WorkspacePage.php:1107
 msgid "Colli tracking number"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1112
+#: src/Admin/WorkspacePage.php:1136
+msgid "Kind"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:1139
+msgid "Drop images here or choose files"
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:1151
+msgid "Contents photos are optional evidence. A Sealed package photo is required when the photo requirement setting is enabled."
+msgstr ""
+
+#: src/Admin/WorkspacePage.php:1179
 msgid "Add a note…"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1113
+#: src/Admin/WorkspacePage.php:1180
 msgid "Add a note"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1143
+#: src/Admin/WorkspacePage.php:1210
 msgid "? Shortcuts"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1235
+#: src/Admin/WorkspacePage.php:1302
 msgid "← Previous"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1243
+#: src/Admin/WorkspacePage.php:1310
 msgid "Next →"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1279
+#: src/Admin/WorkspacePage.php:1346
 msgid "Reason required"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1281
+#: src/Admin/WorkspacePage.php:1348
 msgid "This action is recorded on the audit trail. Add a reason:"
 msgstr ""
 
-#: src/Admin/WorkspacePage.php:1282
+#: src/Admin/WorkspacePage.php:1349
 msgid "Confirm"
 msgstr ""
 
 #: src/Admin/WorkspaceStageGuidance.php:49
-#: src/Admin/WorkspaceStageGuidance.php:170
-#: src/Admin/WorkspaceStageGuidance.php:176
-#: src/Admin/WorkspaceStageGuidance.php:182
+#: src/Admin/WorkspaceStageGuidance.php:171
+#: src/Admin/WorkspaceStageGuidance.php:177
+#: src/Admin/WorkspaceStageGuidance.php:183
 msgid "Continue"
 msgstr ""
 
@@ -1174,85 +1327,85 @@ msgstr ""
 msgid "Enter package weight and dimensions before marking this fulfillment as packed."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:73
+#: src/Admin/WorkspaceStageGuidance.php:74
 msgid "Add a shipment before shipping this fulfillment."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:74
+#: src/Admin/WorkspaceStageGuidance.php:75
 msgid "Enter a tracking number before shipping."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:83
+#: src/Admin/WorkspaceStageGuidance.php:84
 msgid "This action is not available yet."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:121
+#: src/Admin/WorkspaceStageGuidance.php:122
 msgid "Start picking to record the items you collect."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:122
+#: src/Admin/WorkspaceStageGuidance.php:123
 #: src/Application/OrdersNextAction.php:99
 msgid "Start picking"
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:127
+#: src/Admin/WorkspaceStageGuidance.php:128
 msgid "Record each item as it is picked."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:128
+#: src/Admin/WorkspaceStageGuidance.php:129
 msgid "Mark picked"
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:133
+#: src/Admin/WorkspaceStageGuidance.php:134
 msgid "Start packing the picked items."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:134
+#: src/Admin/WorkspaceStageGuidance.php:135
 #: src/Application/OrdersNextAction.php:101
 msgid "Start packing"
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:139
+#: src/Admin/WorkspaceStageGuidance.php:140
 msgid "Pack every picked item, then enter package weight and dimensions before marking packed."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:140
+#: src/Admin/WorkspaceStageGuidance.php:141
 msgid "Mark packed"
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:145
+#: src/Admin/WorkspaceStageGuidance.php:146
 msgid "Confirm shipment and tracking details, then ship the order."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:146
+#: src/Admin/WorkspaceStageGuidance.php:147
 msgid "Ship order"
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:151
+#: src/Admin/WorkspaceStageGuidance.php:152
 msgid "This fulfillment has been shipped."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:157
+#: src/Admin/WorkspaceStageGuidance.php:158
 msgid "This fulfillment has been delivered."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:163
+#: src/Admin/WorkspaceStageGuidance.php:164
 msgid "This fulfillment is complete. No further warehouse action is required."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:169
+#: src/Admin/WorkspaceStageGuidance.php:170
 msgid "Resolve the problem, then return this fulfillment to the workflow."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:175
+#: src/Admin/WorkspaceStageGuidance.php:176
 msgid "This fulfillment is waiting. Resume when the blocker is cleared."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:181
+#: src/Admin/WorkspaceStageGuidance.php:182
 msgid "Items are backordered. Resume when stock is available."
 msgstr ""
 
-#: src/Admin/WorkspaceStageGuidance.php:187
+#: src/Admin/WorkspaceStageGuidance.php:188
 msgid "This fulfillment was cancelled. No further warehouse action is required."
 msgstr ""
 
@@ -1315,11 +1468,11 @@ msgstr ""
 msgid "Draft"
 msgstr ""
 
-#: src/Capabilities.php:103
+#: src/Capabilities.php:106
 msgid "Warehouse Operator"
 msgstr ""
 
-#: src/Capabilities.php:107
+#: src/Capabilities.php:110
 msgid "Warehouse Lead"
 msgstr ""
 

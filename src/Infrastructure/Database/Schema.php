@@ -70,6 +70,12 @@ final class Schema {
 	public const PACKAGE_ITEMS = 'mpcf_package_items';
 
 	/**
+	 * Unprefixed table name for package photography evidence (Part VIII),
+	 * added by step 6.
+	 */
+	public const MEDIA = 'mpcf_media';
+
+	/**
 	 * Unprefixed table name for the document generation record (§10),
 	 * added by step 5.
 	 */
@@ -116,6 +122,7 @@ final class Schema {
 			self::table( self::NOTES ),
 			self::table( self::EVENTS ),
 			self::table( self::PACKAGE_ITEMS ),
+			self::table( self::MEDIA ),
 			self::table( self::PACKAGES ),
 			self::table( self::SHIPMENTS ),
 			self::table( self::DOCUMENTS ),
@@ -309,6 +316,17 @@ final class Schema {
 	}
 
 	/**
+	 * `CREATE TABLE` statement for M6 package photography (Migrator step 6).
+	 *
+	 * @return list<string>
+	 */
+	public static function media_create_statements(): array {
+		return array(
+			self::media_ddl(),
+		);
+	}
+
+	/**
 	 * DDL for `mpcf_shipments` — the consignment (one carrier handover).
 	 * Architecture Plan §IV.6: indexed on `fulfillment_id` (the workspace's
 	 * only lookup path), `status` (a future tracking-sync sweep), and
@@ -381,6 +399,42 @@ final class Schema {
 			PRIMARY KEY  (id),
 			KEY package_id (package_id),
 			KEY fulfillment_item_id (fulfillment_item_id)
+		) ENGINE=InnoDB ROW_FORMAT=DYNAMIC {$charset_collate};";
+	}
+
+	/**
+	 * DDL for `mpcf_media` — package photography evidence (Part VIII).
+	 * Soft-delete via `deleted_at`; retention purge (M6-D) sets `purged_at`
+	 * and clears bytes while preserving metadata. Relative paths only.
+	 */
+	private static function media_ddl(): string {
+		$table           = self::table( self::MEDIA );
+		$charset_collate = self::charset_collate();
+
+		return "CREATE TABLE {$table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			fulfillment_id BIGINT UNSIGNED NOT NULL,
+			package_id BIGINT UNSIGNED NOT NULL,
+			kind VARCHAR(32) NOT NULL,
+			file_path VARCHAR(255) NOT NULL,
+			thumb_path VARCHAR(255) NOT NULL,
+			mime VARCHAR(64) NOT NULL,
+			bytes INT UNSIGNED NOT NULL,
+			sha256 CHAR(64) NOT NULL,
+			processing_version SMALLINT UNSIGNED NOT NULL,
+			width INT UNSIGNED NOT NULL,
+			height INT UNSIGNED NOT NULL,
+			seq INT UNSIGNED NOT NULL,
+			captured_by BIGINT UNSIGNED NULL,
+			created_at DATETIME NOT NULL,
+			deleted_at DATETIME NULL,
+			purged_at DATETIME NULL,
+			PRIMARY KEY  (id),
+			KEY fulfillment_id (fulfillment_id),
+			KEY package_id (package_id),
+			KEY fulfillment_deleted (fulfillment_id, deleted_at),
+			KEY package_deleted (package_id, deleted_at),
+			KEY fulfillment_seq (fulfillment_id, seq)
 		) ENGINE=InnoDB ROW_FORMAT=DYNAMIC {$charset_collate};";
 	}
 

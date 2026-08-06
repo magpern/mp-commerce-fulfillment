@@ -14,12 +14,11 @@ use MPCF\Engine\TransitionContext;
 use MPCF\Engine\TransitionGuard;
 
 /**
- * Blocks `packing -> packed` when the photo-required setting is on and no
- * photo has been captured. Photo capture is a Milestone 5 feature; this
- * guard's condition is pre-resolved by the caller into
+ * Blocks `packing -> packed` when `photos_required` is on and no active
+ * kind=package photo has been captured. The condition is pre-resolved by
+ * {@see \MPCF\Application\TransitionContextFactory} into
  * `TransitionContext::photo_requirement_satisfied()` — the Engine layer
- * never reads a setting itself — so it is already effectively a no-op
- * until Milestone 5 ships a capture UI and turns the setting on.
+ * never reads a setting or PhotoService itself (M6; purity).
  */
 final class PhotoRequiredGuard implements TransitionGuard {
 
@@ -46,6 +45,6 @@ final class PhotoRequiredGuard implements TransitionGuard {
 	 * Human-readable reason to show when this guard blocks a transition.
 	 */
 	public function unmet_reason(): string {
-		return 'A package photo is required before packing is complete.';
+		return 'A sealed-package photo is required before this fulfillment can be marked packed.';
 	}
 }

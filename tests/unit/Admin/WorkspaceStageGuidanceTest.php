@@ -72,6 +72,10 @@ final class WorkspaceStageGuidanceTest extends TestCase {
 			'Enter package weight and dimensions before marking this fulfillment as packed.',
 			WorkspaceStageGuidance::operator_guard_message( 'package_spec_present', 'ignored' )
 		);
+		self::assertSame(
+			'A sealed-package photo is required before this fulfillment can be marked packed.',
+			WorkspaceStageGuidance::operator_guard_message( 'photo_required', 'ignored' )
+		);
 	}
 
 	public function test_operator_guard_message_falls_back_to_engine_text(): void {

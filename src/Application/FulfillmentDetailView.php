@@ -48,18 +48,33 @@ final class FulfillmentDetailView {
 	private array $notes;
 
 	/**
+	 * Active package photos grouped for CS retrieval (soft-deleted excluded).
+	 *
+	 * @var list<PackagePhotoEvidence>
+	 */
+	private array $photos;
+
+	/**
 	 * Builds the view.
 	 *
 	 * @param Fulfillment                      $fulfillment The fulfillment itself.
 	 * @param array<int, FulfillmentItem>      $items       Its line items.
 	 * @param array<int, array<string, mixed>> $timeline    Its full audit chain, oldest first.
 	 * @param array<int, Note>                 $notes       Its notes, pinned first.
+	 * @param array<int, PackagePhotoEvidence> $photos      Active package photos for CS gallery.
 	 */
-	public function __construct( Fulfillment $fulfillment, array $items, array $timeline, array $notes ) {
+	public function __construct(
+		Fulfillment $fulfillment,
+		array $items,
+		array $timeline,
+		array $notes,
+		array $photos = array()
+	) {
 		$this->fulfillment = $fulfillment;
 		$this->items       = $items;
 		$this->timeline    = $timeline;
 		$this->notes       = $notes;
+		$this->photos      = $photos;
 	}
 
 	/**
@@ -94,5 +109,35 @@ final class FulfillmentDetailView {
 	 */
 	public function notes(): array {
 		return $this->notes;
+	}
+
+	/**
+	 * Active package photos for the CS gallery (soft-deleted excluded).
+	 *
+	 * @return list<PackagePhotoEvidence>
+	 */
+	public function photos(): array {
+		return $this->photos;
+	}
+
+	/**
+	 * Photos grouped by package id, preserving sequence order within each group.
+	 *
+	 * @return array<int, list<PackagePhotoEvidence>>
+	 */
+	public function photos_by_package(): array {
+		$groups = array();
+
+		foreach ( $this->photos as $photo ) {
+			$pid = $photo->package_id();
+
+			if ( ! isset( $groups[ $pid ] ) ) {
+				$groups[ $pid ] = array();
+			}
+
+			$groups[ $pid ][] = $photo;
+		}
+
+		return $groups;
 	}
 }

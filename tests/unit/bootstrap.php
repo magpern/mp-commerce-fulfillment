@@ -28,6 +28,9 @@ require_once __DIR__ . '/Application/Doubles/InMemoryShipmentRepository.php';
 require_once __DIR__ . '/Application/Doubles/InMemoryPackageRepository.php';
 require_once __DIR__ . '/Application/Doubles/InMemoryPackageItemRepository.php';
 require_once __DIR__ . '/Application/Doubles/InMemoryDocumentRepository.php';
+require_once __DIR__ . '/Application/Doubles/InMemoryMediaRepository.php';
+require_once __DIR__ . '/Support/FakeImageProcessor.php';
+require_once __DIR__ . '/Support/FakePhotoStorage.php';
 require_once __DIR__ . '/Application/Notifications/RecordingEmailChannel.php';
 require_once __DIR__ . '/Application/Notifications/StubCustomerEmailLookup.php';
 

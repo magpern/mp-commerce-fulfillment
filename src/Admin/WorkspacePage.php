@@ -19,6 +19,7 @@ use MPCF\Application\WorkflowService;
 use MPCF\Capabilities;
 use MPCF\Documents\DocumentEventLabels;
 use MPCF\Admin\NotificationEventLabels;
+use MPCF\Admin\PhotoEventLabels;
 use MPCF\Documents\DocumentPrintContext;
 use MPCF\Domain\CarrierRegistry;
 use MPCF\Domain\Event\Actor;
@@ -30,6 +31,7 @@ use MPCF\Domain\Shipping\Package;
 use MPCF\Domain\Shipping\Shipment;
 use MPCF\Domain\Workflow\State;
 use MPCF\Domain\Workflow\WorkflowDefinition;
+use MPCF\Settings;
 use MPCF\Vendor\Mpds\ComponentRenderer;
 use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
 use MPCF\Vendor\Mpds\PageShell\Page;
@@ -152,6 +154,13 @@ final class WorkspacePage implements Page {
 	private DocumentRepository $documents;
 
 	/**
+	 * Plugin settings (photo requirement / limits for M6-C markup).
+	 *
+	 * @var Settings
+	 */
+	private Settings $settings;
+
+	/**
 	 * Builds the page.
 	 *
 	 * @param AdminPageShell           $shell       Page-shell chrome renderer.
@@ -166,6 +175,7 @@ final class WorkspacePage implements Page {
 	 * @param WorkflowDefinition       $definition  The governing workflow.
 	 * @param StoreUnits               $units       The store's configured weight/dimension display units.
 	 * @param DocumentRepository       $documents   Document generation records.
+	 * @param Settings                 $settings    Plugin settings.
 	 */
 	public function __construct(
 		AdminPageShell $shell,
@@ -179,7 +189,8 @@ final class WorkspacePage implements Page {
 		OrderSource $orders,
 		WorkflowDefinition $definition,
 		StoreUnits $units,
-		DocumentRepository $documents
+		DocumentRepository $documents,
+		Settings $settings
 	) {
 		$this->shell       = $shell;
 		$this->renderer    = $renderer;
@@ -193,6 +204,7 @@ final class WorkspacePage implements Page {
 		$this->definition  = $definition;
 		$this->units       = $units;
 		$this->documents   = $documents;
+		$this->settings    = $settings;
 	}
 
 	/**
@@ -750,6 +762,13 @@ final class WorkspacePage implements Page {
 	 * @param FulfillmentDetailView $view        Assembled detail view.
 	 */
 	private function render_outcome_region( Fulfillment $fulfillment, FulfillmentDetailView $view ): void {
+		if ( $this->settings->photos_required() && ( current_user_can( Capabilities::CAPTURE_PHOTOS ) || current_user_can( Capabilities::VIEW_QUEUE ) ) ) {
+			printf(
+				'<p class="mpcf-workspace__photo-requirement-banner" data-mpcf-photo-requirement-banner aria-live="polite">%s</p>',
+				esc_html__( 'A sealed-package photo is required before this fulfillment can be marked packed.', 'mp-commerce-fulfillment' )
+			);
+		}
+
 		if ( current_user_can( Capabilities::MANAGE_SHIPMENTS ) ) {
 			$this->render_shipment_panel( $fulfillment );
 		}
@@ -774,6 +793,9 @@ final class WorkspacePage implements Page {
 			$actor = '' !== (string) $event['actor_label_snapshot'] ? (string) $event['actor_label_snapshot'] : __( 'System', 'mp-commerce-fulfillment' );
 			$when  = human_time_diff( strtotime( (string) $event['created_at'] ) ) . ' ' . __( 'ago', 'mp-commerce-fulfillment' );
 			$label = DocumentEventLabels::describe( (string) $event['event_type'], (array) ( $event['payload'] ?? array() ) );
+			if ( null === $label ) {
+				$label = PhotoEventLabels::describe( (string) $event['event_type'], (array) ( $event['payload'] ?? array() ) );
+			}
 			if ( null === $label ) {
 				$label = NotificationEventLabels::describe( (string) $event['event_type'], (array) ( $event['payload'] ?? array() ) );
 			}
@@ -917,7 +939,7 @@ final class WorkspacePage implements Page {
 			$this->render_new_shipment_card();
 		} else {
 			foreach ( $rows as $row ) {
-				$this->render_shipment_card( $row['shipment'], $row['packages'] );
+				$this->render_shipment_card( $row['shipment'], $row['packages'], $fulfillment );
 			}
 		}
 
@@ -976,10 +998,11 @@ final class WorkspacePage implements Page {
 	 * route's own arg defaults), so `shipment.js` must resend the current
 	 * value on every edit or silently blank it.
 	 *
-	 * @param Shipment            $shipment Shipment to render.
-	 * @param array<int, Package> $packages Its packages.
+	 * @param Shipment            $shipment    Shipment to render.
+	 * @param array<int, Package> $packages    Its packages.
+	 * @param Fulfillment         $fulfillment Owning fulfillment (photo section).
 	 */
-	private function render_shipment_card( Shipment $shipment, array $packages ): void {
+	private function render_shipment_card( Shipment $shipment, array $packages, Fulfillment $fulfillment ): void {
 		printf(
 			'<div class="mpcf-workspace__shipment" data-mpcf-shipment-id="%d" data-mpcf-shipment-service="%s" data-mpcf-shipment-status="%s">',
 			(int) $shipment->id(),
@@ -1030,7 +1053,7 @@ final class WorkspacePage implements Page {
 		echo $this->renderer->repeater_open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		foreach ( $packages as $package ) {
-			$this->render_package_item( $package );
+			$this->render_package_item( $package, $fulfillment );
 		}
 
 		echo $this->renderer->repeater_add_button( __( 'Add package', 'mp-commerce-fulfillment' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -1048,9 +1071,10 @@ final class WorkspacePage implements Page {
 	 * before sending `PATCH /packages/{id}`, using the repeater wrapper's
 	 * `data-mpcf-grams-per-unit`/`data-mpcf-mm-per-unit` factors.
 	 *
-	 * @param Package $package Package to render.
+	 * @param Package     $package     Package to render.
+	 * @param Fulfillment $fulfillment Owning fulfillment (photo section).
 	 */
-	private function render_package_item( Package $package ): void {
+	private function render_package_item( Package $package, Fulfillment $fulfillment ): void {
 		$spec = $package->spec();
 		$id   = (int) $package->id();
 
@@ -1083,7 +1107,50 @@ final class WorkspacePage implements Page {
 				esc_attr__( 'Colli tracking number', 'mp-commerce-fulfillment' )
 			);
 
+		if ( current_user_can( Capabilities::CAPTURE_PHOTOS ) || current_user_can( Capabilities::VIEW_QUEUE ) ) {
+			$body .= $this->render_package_photos( $package, $fulfillment );
+		}
+
 		echo $this->renderer->repeater_item( $body, array( 'data-mpcf-package-id' => (string) $id ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	/**
+	 * Renders the per-package photo gallery / capture section (M6-C).
+	 * Gallery markup is filled by `assets/admin/js/photos.js`.
+	 *
+	 * @param Package     $package     Package to attach photos to.
+	 * @param Fulfillment $fulfillment Owning fulfillment.
+	 */
+	private function render_package_photos( Package $package, Fulfillment $fulfillment ): string {
+		unset( $fulfillment );
+
+		$can_capture = current_user_can( Capabilities::CAPTURE_PHOTOS );
+		$can_delete  = current_user_can( Capabilities::DELETE_PHOTOS );
+		$required    = $this->settings->photos_required();
+		$max         = $this->settings->photos_max_per_fulfillment();
+
+		$capture = '';
+		if ( $can_capture ) {
+			$capture = sprintf(
+				'<div data-mpcf-photo-capture><label>%1$s <select data-mpcf-photo-kind><option value="contents">%2$s</option><option value="package" selected>%3$s</option></select></label><label class="mpcf-workspace__photo-dropzone" data-mpcf-photo-dropzone tabindex="0"><span>%4$s</span><input type="file" accept="image/*" capture="environment" multiple data-mpcf-photo-input></label><div data-mpcf-photo-upload-status aria-live="polite"></div></div>',
+				esc_html__( 'Kind', 'mp-commerce-fulfillment' ),
+				esc_html__( 'Contents', 'mp-commerce-fulfillment' ),
+				esc_html__( 'Sealed package', 'mp-commerce-fulfillment' ),
+				esc_html__( 'Drop images here or choose files', 'mp-commerce-fulfillment' )
+			);
+		}
+
+		return sprintf(
+			'<section class="mpcf-workspace__photos" data-mpcf-photos data-mpcf-package-id="%1$d" data-mpcf-can-capture="%2$s" data-mpcf-can-delete="%3$s" data-mpcf-photos-required="%4$s" data-mpcf-photos-max="%5$d"><h4>%6$s</h4><p class="description">%7$s</p><p data-mpcf-photo-requirement-status aria-live="polite"></p><p data-mpcf-photo-count></p><ul data-mpcf-photo-gallery class="mpcf-workspace__photo-gallery"></ul>%8$s</section>',
+			(int) $package->id(),
+			$can_capture ? '1' : '0',
+			$can_delete ? '1' : '0',
+			$required ? '1' : '0',
+			$max,
+			esc_html__( 'Package photos', 'mp-commerce-fulfillment' ),
+			esc_html__( 'Contents photos are optional evidence. A Sealed package photo is required when the photo requirement setting is enabled.', 'mp-commerce-fulfillment' ),
+			$capture
+		);
 	}
 
 	/**

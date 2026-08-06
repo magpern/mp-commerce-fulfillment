@@ -32,14 +32,14 @@ final class ActivationTest extends WP_UnitTestCase {
 
 		Plugin::activate();
 
-		self::assertSame( 5, (int) get_option( Migrator::OPTION ), 'mpcf_db_version must reach target 5.' );
+		self::assertSame( 6, (int) get_option( Migrator::OPTION ), 'mpcf_db_version must reach target 6.' );
 
 		foreach ( Schema::all_tables() as $table ) {
 			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
 			self::assertNotNull( $exists, "{$table} must exist after activation." );
 		}
 
-		self::assertCount( 8, Schema::all_tables() );
+		self::assertCount( 9, Schema::all_tables() );
 	}
 
 	public function test_activation_grants_roles_and_capabilities(): void {
@@ -56,6 +56,8 @@ final class ActivationTest extends WP_UnitTestCase {
 		}
 
 		self::assertFalse( $operator->has_cap( Capabilities::MANAGE_SETTINGS ) );
+		self::assertFalse( $operator->has_cap( Capabilities::DELETE_PHOTOS ) );
+		self::assertTrue( $operator->has_cap( Capabilities::CAPTURE_PHOTOS ) );
 
 		$administrator = get_role( 'administrator' );
 		foreach ( Capabilities::all() as $capability ) {
@@ -67,7 +69,7 @@ final class ActivationTest extends WP_UnitTestCase {
 		Plugin::activate();
 		Plugin::activate();
 
-		self::assertSame( 5, (int) get_option( Migrator::OPTION ) );
+		self::assertSame( 6, (int) get_option( Migrator::OPTION ) );
 		self::assertNotNull( get_role( Capabilities::ROLE_OPERATOR ) );
 	}
 }

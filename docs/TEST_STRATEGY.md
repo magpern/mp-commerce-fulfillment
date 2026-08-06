@@ -122,10 +122,15 @@ committed but never shipped — enforced by three independent defenses
 (`bin/build-zip.sh`'s post-copy assertion, `bin/release-audit.sh`'s zip
 denylist, `ReleaseArtifactGuardTest`), per ADR-0006's own requirement that
 a single missed exclusion must not be enough to reintroduce a Node
-runtime dependency. This first pass covers the keyboard-only
+runtime dependency. this first pass covers the keyboard-only
 queued-to-shipped path (acceptance criterion 1), a 30-keystroke focus-retention
 session testing M2-R9, and an `@axe-core/playwright` accessibility scan of
-the workspace at 1440/1024/800px breakpoints (criterion 8); the two-browser-context
+the workspace at 1440/1024/800px breakpoints (criterion 8); M6-C adds
+`tests/browser/photos.spec.js` for file-input upload, requirement status,
+preview, and lead soft-delete. M6-D adds integration coverage for the
+Fulfillment Detail CS gallery (active / soft-deleted hidden / purged
+metadata) and unit coverage for retention eligibility and purge batches.
+The two-browser-context
 409 conflict, offline/retry interception, and queue-cursor navigation are
 deliberately not yet covered — a scope decision recorded here rather than
 silently left uncovered, and available to a follow-up commit without any
