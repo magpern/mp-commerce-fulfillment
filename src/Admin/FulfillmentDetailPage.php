@@ -506,6 +506,12 @@ final class FulfillmentDetailPage implements Page {
 			return $photo_label;
 		}
 
+		$scan_label = ScanEventLabels::describe( $event_type, $payload );
+
+		if ( null !== $scan_label ) {
+			return $scan_label;
+		}
+
 		if ( 'fulfillment.created' === $event_type ) {
 			return __( 'Fulfillment created from order.', 'mp-commerce-fulfillment' );
 		}

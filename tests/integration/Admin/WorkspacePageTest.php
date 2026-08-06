@@ -168,6 +168,8 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 		self::assertStringContainsString( 'mpcf-ui-action-bar', $html );
 		self::assertStringContainsString( 'Test Widget', $html );
 		self::assertStringContainsString( 'data-mpcf-scan-sink', $html );
+		self::assertStringContainsString( 'data-mpcf-scan-mode', $html );
+		self::assertStringContainsString( 'data-mpcf-scan-mode-enter="picking"', $html );
 		self::assertStringContainsString( 'data-mpcf-primary-action', $html );
 	}
 

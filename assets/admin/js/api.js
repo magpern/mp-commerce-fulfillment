@@ -216,6 +216,10 @@ export var api = {
 		return request( 'DELETE', 'photos/' + photoId, { version: version } );
 	},
 
+	scan: function ( fulfillmentId, body ) {
+		return request( 'POST', 'fulfillments/' + fulfillmentId + '/scan', body || {} );
+	},
+
 	photoThumbUrl: function ( photoId ) {
 		return ( config().restUrl || '' ) + 'photos/' + photoId + '/thumb';
 	},
