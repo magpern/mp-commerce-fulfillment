@@ -80,12 +80,14 @@ final class PhotoRetentionService {
 	private $retention_months;
 
 	/**
-	 * @param MediaRepository  $media             Photo persistence.
-	 * @param PhotoStorage     $storage           Protected photo filesystem.
-	 * @param EventRepository  $events            Audit log.
-	 * @param EventDispatcher  $dispatcher        In-process dispatch.
-	 * @param Clock            $clock             Source of now.
-	 * @param callable(): int  $retention_months  Returns configured months.
+	 * Builds the retention purge service.
+	 *
+	 * @param MediaRepository $media            Photo persistence.
+	 * @param PhotoStorage    $storage          Protected photo filesystem.
+	 * @param EventRepository $events           Audit log.
+	 * @param EventDispatcher $dispatcher       In-process dispatch.
+	 * @param Clock           $clock            Source of now.
+	 * @param callable(): int $retention_months Returns configured months.
 	 */
 	public function __construct(
 		MediaRepository $media,
@@ -109,7 +111,7 @@ final class PhotoRetentionService {
 	 * @param int $limit Max candidates this run (bounded).
 	 */
 	public function purge_batch( int $limit = self::DEFAULT_BATCH_SIZE ): PhotoRetentionResult {
-		$limit = max( 1, min( 500, $limit ) );
+		$limit  = max( 1, min( 500, $limit ) );
 		$months = (int) ( $this->retention_months )();
 		$now    = $this->clock->now();
 		$cutoff = PhotoRetentionEligibility::cutoff( $months, $now );
@@ -156,9 +158,9 @@ final class PhotoRetentionService {
 	/**
 	 * Purges one photo. Returns purged|skipped|failed.
 	 *
-	 * @param PhotoRecord       $photo  Candidate.
+	 * @param PhotoRecord        $photo  Candidate.
 	 * @param \DateTimeImmutable $now   Purge timestamp.
-	 * @param int               $months Policy months for audit context.
+	 * @param int                $months Policy months for audit context.
 	 */
 	private function purge_one( PhotoRecord $photo, $now, int $months ): string {
 		$fresh = $this->media->get( (int) $photo->id() );
@@ -241,18 +243,18 @@ final class PhotoRetentionService {
 		bool $thumb_removed
 	): void {
 		$payload = array(
-			'photo_id'            => (int) $photo->id(),
-			'package_id'          => $photo->package_id(),
-			'kind'                => $photo->kind(),
-			'sha256'              => $photo->sha256(),
-			'processing_version'  => $photo->processing_version(),
-			'bytes'               => $photo->bytes(),
-			'retention_months'    => $months,
-			'policy'              => 'age',
-			'canonical_present'   => $canonical_present,
-			'thumbnail_present'   => $thumb_present,
-			'canonical_removed'   => $canonical_removed,
-			'thumbnail_removed'   => $thumb_removed,
+			'photo_id'           => (int) $photo->id(),
+			'package_id'         => $photo->package_id(),
+			'kind'               => $photo->kind(),
+			'sha256'             => $photo->sha256(),
+			'processing_version' => $photo->processing_version(),
+			'bytes'              => $photo->bytes(),
+			'retention_months'   => $months,
+			'policy'             => 'age',
+			'canonical_present'  => $canonical_present,
+			'thumbnail_present'  => $thumb_present,
+			'canonical_removed'  => $canonical_removed,
+			'thumbnail_removed'  => $thumb_removed,
 		);
 
 		$event     = DomainEvent::for_fulfillment(
