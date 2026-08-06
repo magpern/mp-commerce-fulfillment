@@ -24,16 +24,22 @@ final class DocumentsPage implements Page {
 	public const SLUG = 'mpcf-documents';
 
 	/**
+	 * Admin page shell.
+	 *
 	 * @var AdminPageShell
 	 */
 	private AdminPageShell $shell;
 
 	/**
+	 * Document history service.
+	 *
 	 * @var DocumentHistoryService
 	 */
 	private DocumentHistoryService $history;
 
 	/**
+	 * Builds the page.
+	 *
 	 * @param AdminPageShell         $shell   Shell.
 	 * @param DocumentHistoryService $history History service.
 	 */
@@ -42,18 +48,30 @@ final class DocumentsPage implements Page {
 		$this->history = $history;
 	}
 
+	/**
+	 * Menu slug.
+	 */
 	public function slug(): string {
 		return self::SLUG;
 	}
 
+	/**
+	 * Screen title.
+	 */
 	public function title(): string {
 		return __( 'Documents', 'mp-commerce-fulfillment' );
 	}
 
+	/**
+	 * Menu title.
+	 */
 	public function menu_title(): string {
 		return __( 'Documents', 'mp-commerce-fulfillment' );
 	}
 
+	/**
+	 * Required capability.
+	 */
 	public function capability(): string {
 		return Capabilities::RENDER_DOCUMENTS;
 	}
@@ -144,7 +162,7 @@ final class DocumentsPage implements Page {
 				if ( ! empty( $row['stored'] ) ) {
 					printf(
 						'<button type="button" class="button button-small" data-mpcf-reprint-document="%d" data-mpcf-rest-base="%s">%s</button>',
-						$id,
+						(int) $id,
 						esc_attr( $rest ),
 						esc_html__( 'Reprint', 'mp-commerce-fulfillment' )
 					);

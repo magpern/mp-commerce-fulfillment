@@ -32,42 +32,56 @@ final class DocumentHistoryService {
 	public const BULK_PICKING_CAP = 25;
 
 	/**
+	 * Document repository.
+	 *
 	 * @var DocumentRepository
 	 */
 	private DocumentRepository $documents;
 
 	/**
+	 * Protected HTML file store.
+	 *
 	 * @var ProtectedDocumentStore
 	 */
 	private ProtectedDocumentStore $store;
 
 	/**
+	 * Event repository.
+	 *
 	 * @var EventRepository
 	 */
 	private EventRepository $events;
 
 	/**
+	 * In-process event dispatcher.
+	 *
 	 * @var EventDispatcher
 	 */
 	private EventDispatcher $dispatcher;
 
 	/**
+	 * Clock.
+	 *
 	 * @var Clock
 	 */
 	private Clock $clock;
 
 	/**
+	 * Fresh document renderer (bulk print).
+	 *
 	 * @var DocumentService
 	 */
 	private DocumentService $renderer;
 
 	/**
-	 * @param DocumentRepository     $documents Document records.
-	 * @param ProtectedDocumentStore $store     Protected HTML store.
-	 * @param EventRepository        $events    Audit log.
+	 * Builds the history service.
+	 *
+	 * @param DocumentRepository     $documents  Document records.
+	 * @param ProtectedDocumentStore $store      Protected HTML store.
+	 * @param EventRepository        $events     Audit log.
 	 * @param EventDispatcher        $dispatcher In-process dispatch.
-	 * @param Clock                  $clock     Source of now.
-	 * @param DocumentService        $renderer  Fresh render for bulk print.
+	 * @param Clock                  $clock      Source of now.
+	 * @param DocumentService        $renderer   Fresh render for bulk print.
 	 */
 	public function __construct(
 		DocumentRepository $documents,
@@ -176,7 +190,11 @@ final class DocumentHistoryService {
 			return $result;
 		}
 
-		/** @var DocumentRecord $record */
+		/**
+		 * Document record for the reprint.
+		 *
+		 * @var DocumentRecord $record
+		 */
 		$record = $result['record'];
 		$now    = $this->clock->now();
 
@@ -199,9 +217,9 @@ final class DocumentHistoryService {
 	/**
 	 * Capped bulk fresh picking-list renders for Queue rows.
 	 *
-	 * @param list<int>                 $fulfillment_ids Selected ids.
-	 * @param Actor                     $actor           Operator.
-	 * @param callable(string):bool     $can             Capability check.
+	 * @param int[]                 $fulfillment_ids Selected ids.
+	 * @param Actor                 $actor           Operator.
+	 * @param callable(string):bool $can             Capability check.
 	 * @return array{
 	 *   succeeded: list<array{fulfillment_id: int, document_id: int, html: string}>,
 	 *   failed: array<int, string>,
@@ -242,13 +260,13 @@ final class DocumentHistoryService {
 				continue;
 			}
 
-			$html = (string) $outcome->html();
+			$html        = (string) $outcome->html();
 			$succeeded[] = array(
 				'fulfillment_id' => $id,
 				'document_id'    => (int) $outcome->document_id(),
 				'html'           => $html,
 			);
-			$parts[] = '<div class="mpcf-bulk-doc" style="page-break-after: always;">' . $html . '</div>';
+			$parts[]     = '<div class="mpcf-bulk-doc" style="page-break-after: always;">' . $html . '</div>';
 		}
 
 		$combined = '';
@@ -259,14 +277,16 @@ final class DocumentHistoryService {
 		}
 
 		return array(
-			'succeeded'      => $succeeded,
-			'failed'         => $failed,
-			'skipped_cap'    => $overflow,
-			'combined_html'  => $combined,
+			'succeeded'     => $succeeded,
+			'failed'        => $failed,
+			'skipped_cap'   => $overflow,
+			'combined_html' => $combined,
 		);
 	}
 
 	/**
+	 * Appends a document audit event and dispatches it.
+	 *
 	 * @param int                  $fulfillment_id Fulfillment id.
 	 * @param string               $event_type     Event type.
 	 * @param Actor                $actor          Actor.

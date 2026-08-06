@@ -88,7 +88,7 @@ final class QueuePageTest extends WP_UnitTestCase {
 			new TransitionContextFactory( $items, $shipments, $packages, $settings )
 		);
 
-		$shipping = new ShippingService(
+		$shipping  = new ShippingService(
 			$this->fulfillments,
 			$items,
 			$shipments,
@@ -115,7 +115,7 @@ final class QueuePageTest extends WP_UnitTestCase {
 			$settings,
 			$doc_store
 		);
-		$history = new DocumentHistoryService( $doc_repo, $doc_store, $events, $dispatcher, $clock, $doc_svc );
+		$history   = new DocumentHistoryService( $doc_repo, $doc_store, $events, $dispatcher, $clock, $doc_svc );
 
 		$this->page = new QueuePage(
 			new \MPCF\Vendor\Mpds\PageShell\AdminPageShell( new \MPCF\Vendor\Mpds\PageShell\SectionNavigation() ),

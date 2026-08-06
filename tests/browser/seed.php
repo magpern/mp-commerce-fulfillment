@@ -6,12 +6,10 @@
  * direct table insert. Run via `wp eval-file tests/browser/seed.php`
  * against a site with WooCommerce and this plugin already active.
  *
- * More than one order exists specifically so concurrent Playwright
- * workers/projects (chromium and firefox run as separate projects, by
- * default in parallel) each mutate their own fulfillment rather than
- * racing each other's transitions on a single shared one — every spec
- * that needs "a queued fulfillment" selects one by the Queue row's
- * index matching its own `testInfo.parallelIndex`, never a hardcoded id.
+ * Specs claim ids atomically from the JSON list written below (see
+ * `tests/browser/claim-seed.js`) so concurrent chromium/firefox workers
+ * never mutate the same fulfillment, and queue-row index shifts after
+ * ship/complete cannot steal another test's fixture.
  *
  * @package MPCommerceFulfillment
  */
@@ -21,7 +19,9 @@ if ( ! function_exists( 'wc_create_order' ) ) {
 	exit( 1 );
 }
 
-const MPCF_SEED_ORDER_COUNT = 10;
+// Enough for packing + keyboard + accessibility across both browser
+// projects, plus a cushion for CI retries.
+const MPCF_SEED_ORDER_COUNT = 40;
 
 $product = new WC_Product_Simple();
 $product->set_name( 'Browser Test Widget' );
@@ -30,7 +30,11 @@ $product->set_sku( 'BROWSER-TEST-WIDGET' );
 $product->set_manage_stock( false );
 $product->save();
 
-$order_ids = array();
+$order_ids       = array();
+$fulfillment_ids = array();
+
+global $wpdb;
+$table = $wpdb->prefix . 'mpcf_fulfillments';
 
 for ( $i = 0; $i < MPCF_SEED_ORDER_COUNT; $i++ ) {
 	$order = wc_create_order();
@@ -53,7 +57,38 @@ for ( $i = 0; $i < MPCF_SEED_ORDER_COUNT; $i++ ) {
 	// order-paid → fulfillment-created flow a live store relies on.
 	$order->update_status( 'processing' );
 
-	$order_ids[] = $order->get_id();
+	$order_id    = (int) $order->get_id();
+	$order_ids[] = $order_id;
+
+	$fulfillment_id = (int) $wpdb->get_var(
+		$wpdb->prepare(
+			"SELECT id FROM {$table} WHERE order_id = %d ORDER BY id DESC LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name from $wpdb->prefix.
+			$order_id
+		)
+	);
+
+	if ( $fulfillment_id <= 0 ) {
+		fwrite( STDERR, "Seed failed: no fulfillment for order {$order_id}\n" );
+		exit( 1 );
+	}
+
+	$fulfillment_ids[] = $fulfillment_id;
 }
+
+$auth_dir = __DIR__ . '/.auth';
+if ( ! is_dir( $auth_dir ) && ! mkdir( $auth_dir, 0755, true ) && ! is_dir( $auth_dir ) ) {
+	fwrite( STDERR, "Seed failed: could not create {$auth_dir}\n" );
+	exit( 1 );
+}
+
+$ids_file    = $auth_dir . '/seed-fulfillments.json';
+$cursor_file = $auth_dir . '/seed-claim.cursor';
+
+if ( false === file_put_contents( $ids_file, wp_json_encode( array_values( $fulfillment_ids ) ) ) ) {
+	fwrite( STDERR, "Seed failed: could not write {$ids_file}\n" );
+	exit( 1 );
+}
+
+file_put_contents( $cursor_file, '0' );
 
 echo implode( ',', $order_ids );

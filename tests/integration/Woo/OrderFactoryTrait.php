@@ -89,20 +89,35 @@ trait OrderFactoryTrait {
 	 * Use this when tests need to exercise cross-order or customer-related
 	 * logic that requires a nonzero customer_id.
 	 *
-	 * @param int $quantity Line item quantity.
+	 * Pass `$customer_id` to attach a second (or later) order to an existing
+	 * customer — required for repeat-customer flag coverage.
+	 *
+	 * @param int      $quantity    Line item quantity.
+	 * @param int|null $customer_id Existing WP user id, or null to create one.
 	 * @return WC_Order
 	 */
-	private function create_paid_order_for_customer( int $quantity = 1 ): WC_Order {
-		$user_id = wp_create_user( 'testcustomer' . uniqid(), 'password', array( 'user_email' => 'test' . uniqid() . '@example.com' ) );
+	private function create_paid_order_for_customer( int $quantity = 1, ?int $customer_id = null ): WC_Order {
+		if ( null !== $customer_id && $customer_id > 0 ) {
+			$user = get_userdata( $customer_id );
+			self::assertNotFalse( $user, 'Reuse customer_id must refer to an existing user' );
+			$user_id = (int) $user->ID;
+			$email   = (string) $user->user_email;
+		} else {
+			$email    = 'test' . uniqid( '', true ) . '@example.com';
+			$username = 'testcustomer' . uniqid( '', true );
+			$user_id  = wp_create_user( $username, 'password', $email );
 
-		if ( is_wp_error( $user_id ) ) {
-			// User already exists, find it.
-			$user = get_user_by( 'login', 'testcustomer' );
-			if ( ! $user ) {
-				$user_id = wp_create_user( 'testcustomer' . uniqid(), 'password', array( 'user_email' => 'test' . uniqid() . '@example.com' ) );
-			} else {
-				$user_id = $user->ID;
+			if ( is_wp_error( $user_id ) ) {
+				// Collision is unexpected with uniqid; fall back to a second attempt.
+				$email    = 'test' . uniqid( '', true ) . '@example.com';
+				$username = 'testcustomer' . uniqid( '', true );
+				$user_id  = wp_create_user( $username, 'password', $email );
+				if ( is_wp_error( $user_id ) ) {
+					self::fail( 'Could not create customer user: ' . $user_id->get_error_message() );
+				}
 			}
+
+			$user_id = (int) $user_id;
 		}
 
 		$product = $this->create_product();
@@ -112,6 +127,7 @@ trait OrderFactoryTrait {
 		$order->add_product( $product, $quantity );
 		$order->set_billing_first_name( 'Jane' );
 		$order->set_billing_last_name( 'Doe' );
+		$order->set_billing_email( $email );
 		$order->set_status( 'pending' );
 		$order->calculate_totals();
 		$order->save();

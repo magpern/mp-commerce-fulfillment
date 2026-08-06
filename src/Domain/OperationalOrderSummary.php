@@ -41,7 +41,7 @@ final class OperationalOrderSummary {
 	private string $customer_name;
 
 	/**
-	 * order status key without the `wc-` prefix.
+	 * Order status key without the `wc-` prefix.
 	 *
 	 * @var string
 	 */
@@ -106,7 +106,7 @@ final class OperationalOrderSummary {
 	}
 
 	/**
-	 * order status key without the `wc-` prefix.
+	 * Order status key without the `wc-` prefix.
 	 */
 	public function status(): string {
 		return $this->status;

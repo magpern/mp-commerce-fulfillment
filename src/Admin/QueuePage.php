@@ -134,14 +134,14 @@ final class QueuePage implements Page {
 		WorkflowDefinition $definition,
 		DocumentHistoryService $document_history
 	) {
-		$this->shell             = $shell;
-		$this->renderer          = $renderer;
-		$this->queue             = $queue;
-		$this->detail            = $detail;
-		$this->assignments       = $assignments;
-		$this->workflow          = $workflow;
-		$this->definition        = $definition;
-		$this->document_history  = $document_history;
+		$this->shell            = $shell;
+		$this->renderer         = $renderer;
+		$this->queue            = $queue;
+		$this->detail           = $detail;
+		$this->assignments      = $assignments;
+		$this->workflow         = $workflow;
+		$this->definition       = $definition;
+		$this->document_history = $document_history;
 	}
 
 	/**

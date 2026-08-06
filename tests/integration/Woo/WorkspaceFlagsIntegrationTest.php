@@ -114,6 +114,8 @@ final class WorkspaceFlagsIntegrationTest extends WP_UnitTestCase {
 
 		$notes_repository = new WpdbNoteRepository();
 
+		( new WorkspaceFlags( $this->fulfillments, $definition ) )->register();
+
 		$this->page = new WorkspacePage(
 			new AdminPageShell( new SectionNavigation() ),
 			new ComponentRenderer(),
@@ -174,7 +176,7 @@ final class WorkspaceFlagsIntegrationTest extends WP_UnitTestCase {
 		$order1       = $this->create_paid_order_for_customer( 1 );
 		$fulfillment1 = $this->fulfillments->find_by_order_id( $order1->get_id() );
 
-		$order2       = $this->create_paid_order_for_customer( 1 );
+		$order2       = $this->create_paid_order_for_customer( 1, $order1->get_customer_id() );
 		$fulfillment2 = $this->fulfillments->find_by_order_id( $order2->get_id() );
 
 		self::assertNotNull( $fulfillment1 );
@@ -208,7 +210,7 @@ final class WorkspaceFlagsIntegrationTest extends WP_UnitTestCase {
 		$order1       = $this->create_paid_order_for_customer( 1 );
 		$fulfillment1 = $this->fulfillments->find_by_order_id( $order1->get_id() );
 
-		$order2       = $this->create_paid_order_for_customer( 1 );
+		$order2       = $this->create_paid_order_for_customer( 1, $order1->get_customer_id() );
 		$fulfillment2 = $this->fulfillments->find_by_order_id( $order2->get_id() );
 
 		self::assertNotNull( $fulfillment1 );

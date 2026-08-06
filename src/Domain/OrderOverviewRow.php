@@ -45,7 +45,7 @@ final class OrderOverviewRow {
 	private DateTimeImmutable $order_date;
 
 	/**
-	 * order status key without `wc-`.
+	 * Order status key without `wc-`.
 	 *
 	 * @var string
 	 */
@@ -163,7 +163,7 @@ final class OrderOverviewRow {
 	}
 
 	/**
-	 * order status key without `wc-`.
+	 * Order status key without `wc-`.
 	 */
 	public function woo_status(): string {
 		return $this->woo_status;

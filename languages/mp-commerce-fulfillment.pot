@@ -110,116 +110,116 @@ msgstr ""
 msgid "Shipped today"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:50
-#: src/Admin/DocumentsPage.php:54
+#: src/Admin/DocumentsPage.php:62
+#: src/Admin/DocumentsPage.php:69
 #: src/Admin/ShellNavigation.php:52
 #: src/Admin/WorkspacePage.php:807
 msgid "Documents"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:80
+#: src/Admin/DocumentsPage.php:98
 msgid "Document history"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:80
+#: src/Admin/DocumentsPage.php:98
 msgid "Immutable outbound documents. Reprint streams the original stored artifact."
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:86
-#: src/Admin/DocumentsPage.php:117
+#: src/Admin/DocumentsPage.php:104
+#: src/Admin/DocumentsPage.php:135
 msgid "Type"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:88
+#: src/Admin/DocumentsPage.php:106
 #: src/Admin/OrdersPage.php:149
 #: src/Admin/QueuePage.php:476
 msgid "All"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:89
+#: src/Admin/DocumentsPage.php:107
 #: src/Documents/DocumentEventLabels.php:56
 #: templates/documents/picking-list.php:30
 #: templates/documents/picking-list.php:51
 msgid "Picking list"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:90
+#: src/Admin/DocumentsPage.php:108
 #: src/Documents/DocumentEventLabels.php:54
 #: templates/documents/packing-slip.php:32
 #: templates/documents/packing-slip.php:53
 msgid "Packing slip"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:95
+#: src/Admin/DocumentsPage.php:113
 msgid "Order / fulfillment"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:100
+#: src/Admin/DocumentsPage.php:118
 msgid "From"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:105
+#: src/Admin/DocumentsPage.php:123
 msgid "To"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:108
+#: src/Admin/DocumentsPage.php:126
 #: src/Admin/OrdersPage.php:136
 #: src/Admin/QueuePage.php:462
 msgid "Filter"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:112
+#: src/Admin/DocumentsPage.php:130
 msgid "No documents match these filters."
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:115
+#: src/Admin/DocumentsPage.php:133
 msgid "ID"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:116
+#: src/Admin/DocumentsPage.php:134
 #: src/Admin/OrdersPage.php:181
 #: src/Admin/QueuePage.php:553
 msgid "Order"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:118
+#: src/Admin/DocumentsPage.php:136
 msgid "Rendered"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:119
+#: src/Admin/DocumentsPage.php:137
 msgid "By"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:120
+#: src/Admin/DocumentsPage.php:138
 msgid "Template"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:121
+#: src/Admin/DocumentsPage.php:139
 msgid "Stored"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:122
+#: src/Admin/DocumentsPage.php:140
 msgid "Actions"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:137
+#: src/Admin/DocumentsPage.php:155
 msgid "Yes"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:137
+#: src/Admin/DocumentsPage.php:155
 msgid "No"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:142
+#: src/Admin/DocumentsPage.php:160
 msgid "Workspace"
 msgstr ""
 
-#: src/Admin/DocumentsPage.php:149
+#: src/Admin/DocumentsPage.php:167
 msgid "Reprint"
 msgstr ""
 
 #. translators: %d: total matching documents
-#: src/Admin/DocumentsPage.php:161
+#: src/Admin/DocumentsPage.php:179
 #, php-format
 msgid "%d document(s) matched."
 msgstr ""
