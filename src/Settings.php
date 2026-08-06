@@ -248,17 +248,17 @@ final class Settings {
 	}
 
 	/**
-	 * Coerces an integer into an inclusive range, falling back to `$default`
+	 * Coerces an integer into an inclusive range, falling back to `$fallback`
 	 * when the raw value is not numeric.
 	 *
-	 * @param mixed $raw     Raw value.
-	 * @param int   $default Fallback when not numeric.
-	 * @param int   $min     Inclusive minimum.
-	 * @param int   $max     Inclusive maximum.
+	 * @param mixed $raw      Raw value.
+	 * @param int   $fallback Fallback when not numeric.
+	 * @param int   $min      Inclusive minimum.
+	 * @param int   $max      Inclusive maximum.
 	 */
-	private static function sanitize_int_range( mixed $raw, int $default, int $min, int $max ): int {
+	private static function sanitize_int_range( mixed $raw, int $fallback, int $min, int $max ): int {
 		if ( ! is_numeric( $raw ) ) {
-			return $default;
+			return $fallback;
 		}
 
 		$value = (int) $raw;

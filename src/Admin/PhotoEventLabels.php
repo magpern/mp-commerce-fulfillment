@@ -74,6 +74,6 @@ final class PhotoEventLabels {
 			return __( 'Sealed package', 'mp-commerce-fulfillment' );
 		}
 
-		return $kind !== '' ? $kind : __( 'Unknown', 'mp-commerce-fulfillment' );
+		return '' !== $kind ? $kind : __( 'Unknown', 'mp-commerce-fulfillment' );
 	}
 }

@@ -1,7 +1,7 @@
 /**
  * Package photography gallery + capture for the Packing Workspace (M6-C).
  *
- * Vanilla ES module, no getUserMedia / video / editing (ADR-0003/ADR-0006).
+ * Vanilla ES module, no live camera widget / video / editing (ADR-0003/ADR-0006).
  * Uses M6-B REST routes only.
  */
 

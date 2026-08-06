@@ -48,7 +48,7 @@ test.describe( 'Packing Workspace — package photography', () => {
 		if ( ! ( await required.isChecked() ) ) {
 			await required.check();
 		}
-		await page.locator( '[data-mpcf-sticky-save]' ).click();
+		await page.locator( '[data-mpcf-sticky-save] button[type="submit"]' ).click();
 		await expect( page.locator( '.notice-success' ) ).toContainText( 'Settings saved' );
 
 		await advanceToPackingWithPackage( page );

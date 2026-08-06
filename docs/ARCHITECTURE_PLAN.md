@@ -2416,3 +2416,19 @@ unprocessed originals; inbound domain work.
 | Tests | Unit (resource/factory/settings/service/guards) + integration REST/concurrency/guard matrix |
 
 **Explicitly not shipped (M6-C+):** Workspace capture/gallery UI, settings UI, CS Detail gallery, retention purge job, browser tests, version bump, release.
+
+## VIII.12 M6-C delivery record
+
+**Status:** Workspace capture/gallery + settings UI complete on `feature/m6-package-photography` (not merged; no `v0.6.0`).
+
+**Shipped in M6-C:**
+
+| Area | Outcome |
+|---|---|
+| Settings | `SCHEMA_VERSION` **8**; `photos_max_per_fulfillment` / `photos_max_upload_bytes` / `photos_max_edge_px` / `photos_retention_months` (+ existing `photos_required`); Settings UI card; accessors; `PhotoConfig::from_settings()` wired in `Plugin` with `GdImageProcessor(max_edge)` |
+| Workspace | Per-package photo section (`data-mpcf-photos`), requirement banner, gallery + file/dropzone upload (no getUserMedia), lightbox preview, soft-delete for Lead+, `PhotoEventLabels` timeline copy, `photo_required` guard messaging |
+| Assets | `mpcf-photos` script module; `window.mpcfWorkspace.photos` config; `api.js` list/upload/delete/stream helpers |
+| Retention | Months setting stored only — **no purge execution** |
+| Tests | Settings/PhotoConfig/PhotoEventLabels unit; Settings/Workspace/Assets integration; `tests/browser/photos.spec.js` |
+
+**Explicitly not shipped (M6-D):** Retention purge job, CS Fulfillment Detail gallery, docs reconcile for release, version bump, `v0.6.0` RC.
