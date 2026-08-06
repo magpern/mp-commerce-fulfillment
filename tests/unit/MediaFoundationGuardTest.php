@@ -141,9 +141,11 @@ final class MediaFoundationGuardTest extends TestCase {
 			dirname( __DIR__, 2 ) . '/src/Infrastructure/Media',
 			dirname( __DIR__, 2 ) . '/src/Infrastructure/Files/ProtectedPhotoStore.php',
 			dirname( __DIR__, 2 ) . '/src/Infrastructure/Database/WpdbMediaRepository.php',
+			dirname( __DIR__, 2 ) . '/assets/admin/js/photos.js',
+			dirname( __DIR__, 2 ) . '/src/Admin/SettingsPage.php',
 		);
 
-		$forbidden = '/\b(Inventory|Receiving|PurchaseOrder|Supplier|OCR|OpenAI|Vision|Tesseract|ffmpeg|Video)\b/';
+		$forbidden = '/\b(Inventory|Receiving|PurchaseOrder|Supplier|OCR|OpenAI|Vision|Tesseract|ffmpeg|Video|getUserMedia)\b/';
 
 		foreach ( $roots as $root ) {
 			if ( is_file( $root ) ) {

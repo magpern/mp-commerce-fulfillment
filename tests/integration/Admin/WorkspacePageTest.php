@@ -250,6 +250,57 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 		self::assertStringContainsString( 'data-mpcf-mm-per-unit="10"', $html );
 		self::assertStringContainsString( 'data-mpcf-weight-unit-label="kg"', $html );
 		self::assertStringContainsString( 'data-mpcf-dimension-unit-label="cm"', $html );
+		self::assertStringContainsString( 'data-mpcf-photos', $html );
+		self::assertStringContainsString( 'data-mpcf-can-delete="1"', $html );
+		self::assertStringContainsString( 'data-mpcf-can-capture="1"', $html );
+	}
+
+	public function test_operator_photo_section_omits_delete_capability(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_OPERATOR ) ) );
+
+		$id      = $this->seed();
+		$outcome = ( new ShippingService( $this->fulfillments, $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository(), new WpdbPackageItemRepository(), $this->events, new EventDispatcher(), new SystemClock() ) )
+			->create_shipment( $id, \MPCF\Domain\Event\Actor::system() );
+
+		self::assertTrue( $outcome->is_success() );
+
+		$html = $this->render_for( $id );
+
+		self::assertStringContainsString( 'data-mpcf-photos', $html );
+		self::assertStringContainsString( 'data-mpcf-can-capture="1"', $html );
+		self::assertStringContainsString( 'data-mpcf-can-delete="0"', $html );
+	}
+
+	public function test_photos_required_banner_renders_when_setting_enabled(): void {
+		$this->page = new WorkspacePage(
+			new AdminPageShell( new SectionNavigation() ),
+			new ComponentRenderer(),
+			new FulfillmentDetailService( $this->fulfillments, $this->items, $this->events, new WpdbNoteRepository() ),
+			new WorkflowService(
+				$this->fulfillments,
+				$this->events,
+				new WorkflowEngine( GuardRegistry::standard() ),
+				new EventDispatcher(),
+				new SystemClock(),
+				array( StandardWorkflow::NAME => StandardWorkflow::definition() ),
+				new TransitionContextFactory( $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository(), new Settings( array( 'photos_required' => true ) ) )
+			),
+			new ShippingService( $this->fulfillments, $this->items, new WpdbShipmentRepository(), new WpdbPackageRepository(), new WpdbPackageItemRepository(), $this->events, new EventDispatcher(), new SystemClock() ),
+			new NoteService( new WpdbNoteRepository(), new SystemClock() ),
+			new BundledCarrierRegistry(),
+			new AssignmentService( $this->fulfillments, $this->events, new EventDispatcher(), new SystemClock() ),
+			new WooOrderSource(),
+			StandardWorkflow::definition(),
+			new StoreUnits(),
+			new \MPCF\Infrastructure\Database\WpdbDocumentRepository(),
+			new Settings( array( 'photos_required' => true ) )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Capabilities::ROLE_LEAD ) ) );
+
+		$html = $this->render_for( $this->seed() );
+
+		self::assertStringContainsString( 'data-mpcf-photo-requirement-banner', $html );
 	}
 
 	public function test_render_shows_the_empty_state_without_a_fulfillment_id(): void {
