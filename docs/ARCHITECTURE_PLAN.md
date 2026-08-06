@@ -32,6 +32,7 @@ This document is the **authoritative architectural specification** for Commerce 
 | Partial fulfillment future capability | 2026-08-03 | §24.1 appended: partial fulfillment & split shipments documented as a future capability (operator dogfooding, M2). No architectural decision altered — a documentation-only pass. |
 | M3 Ops UX / Part V | 2026-08-04 | Roadmap sequencing amendment: M3 becomes Ops UX (Workspace next-action + Orders + dogfood stabilization) for `v0.3.0`; Documents I moves to M4; later milestones +1. Mission Control A/B/C deferred. Part V appended (execution summary). No invariant, D-decision, layer rule, data-model semantic, engine contract, or public-surface rule altered. |
 | ADR-0007 inbound/outbound ownership | 2026-08-04 | ADR-0007 Accepted: inbound inventory domain assigned to `wc-inventory-overview`; MPCF outbound-only reaffirmed; D13 amended (location hierarchy removed from MPCF); §2.6 ownership registry added; M12 rewritten; §6.6 store-order bridge naming clarified. Documentation-only — no invariant, engine contract, schema, or public-surface change. |
+| M8 Wave & Batch Picking plan (Part X) | 2026-08-06 | Part X appended: definitive M8 execution plan (Wave aggregate, combined walk document, Wave Scan Mode extending M7, Workspace, concurrency/security/performance). Operation Context deferred (documented only). IX.21 updated to M7 closed/`v0.7.0`. Documentation-only — no runtime change; implementation requires PO approval of Part X. |
 
 ## Governance
 
@@ -756,7 +757,7 @@ Each milestone is a usable release, tagged, installable. Detailed execution plan
 | **M5** | 0.5.0 | Tracking & notifications | Carrier registry (EU-skewed bundled set); tracking validation hints; multi-package UX polish; notification subsystem (policy/dispatcher/EmailChannel, §16.1) with shipped email per shipment + WC-email tracking block; bridge mapping settings UI | — |
 | **M6** | 0.6.0 | Package photography | Capture slots, protected store + streamer, SHA-256 audit fingerprints, photo-required workflow guard, retention purge job | media |
 | **M7** | 0.7.0 | Barcode & scan mode | Scan sink → pick/pack by SKU/EAN scan; scannable queue (slip barcode opens workspace); mismatch handling; kbd/scan-first workspace mode | — |
-| **M8** | 0.8.0 | Batch picking | BatchBuilder engine; batch creation from queue; batch picking list document; batch → per-order packing handoff | batches, batch_items |
+| **M8** | 0.8.0 | Wave & batch picking | Wave aggregate (`mpcf_waves` / `mpcf_wave_members`); combined walk document; Wave Scan Mode (extends M7); wave → per-order packing handoff at `picked` | waves, wave_members |
 | **M9** | 0.9.0 | Analytics I | Daily rollups (Action Scheduler + backfill CLI); Analytics screen (throughput, durations p50/p90, carrier mix, exception rates); dashboard trends; operator stats behind D17 | stats_daily |
 | **M10** | 0.9.x → RC | Hardening & operational maturity | i18n complete, Site Health tests, `wp mpcf doctor`/`audit verify`, privacy exporter/eraser, performance baselines at 50k fulfillments, security review doc, `ARCHITECTURE_FREEZE.md`, compatibility matrix | — |
 | **1.0** | 1.0.0 | Commercial release | Freeze public surface (hooks, REST v1, schema semantics, template contract) | — |
@@ -2735,16 +2736,386 @@ fixes.
 Part IV prose historically labeled barcode semantics as “M6”. Authoritative
 sequence is ROADMAP + §20 + Parts VIII/IX: photography = M6, barcode = M7.
 
-## IX.21 M7 delivery record (feature branch RC)
+## IX.21 M7 delivery record
 
-**Status:** M7-A–D complete on `feature/m7-barcode-scan` as release candidate
-`v0.7.0` (draft PR; **not merged/tagged/published** pending PO approval).
+**Status:** M7 **closed** — merged to `main`, tagged and published as `v0.7.0`
+(evidence: `docs/M7_RELEASE_REPORT.md`). Schema unchanged (settings **8**,
+migrator target **6**). No inventory/receiving coupling.
 
 | Package | Outcome |
 |---|---|
 | M7-A | Part IX; `BarcodePayload` / `ScanResolver`; Code 128 SVG; documents encode `MPCF:F:{id}` (+ item `MPCF:I:{id}` on picking list) |
 | M7-B | `ScanService` + transient undo store; `POST …/scan`; audits `scan.item_picked` / `scan.item_packed` / `scan.corrected` |
 | M7-C | Workspace Scan Mode panel + `scan.js` keyboard-wedge; shortcut suppression; browser `scan-mode.spec.js` |
-| M7-D | Docs reconcile; version triad `0.7.0`; ZIP + release audit; dogfood evidence in `docs/M7_RELEASE_REPORT.md` |
+| M7-D | Docs reconcile; version triad `0.7.0`; ZIP + release audit; published release |
 
-**Schema:** unchanged (settings **8**, migrator target **6**). **No** inventory/receiving coupling.
+---
+
+# Part X — M8 Wave & Batch Picking (definitive execution plan)
+
+**Milestone purpose:** Maximize warehouse walking throughput by letting one
+operator pick **many fulfillments in a single warehouse walk** (a **Wave**),
+then hand each fulfillment to the existing per-order packing workflow.
+Batch picking **ends at `picked`**. Packing, photography, shipping, and
+notifications remain per-fulfillment as shipped through M7.
+
+**Baseline:** green `main` @ `v0.7.0` (settings schema **8**, migrator target
+**6**). Target release: `v0.8.0`. Expected schema: migrator target **7**
+(`mpcf_waves`, `mpcf_wave_members`); settings may rise to **9** for wave
+caps only.
+
+**ADR-0007 remains authoritative.** Waves use immutable `location_snapshot`
+hints only. No inventory, receiving, stock, location-master, or
+`wc-inventory-overview` coupling.
+
+**Numbering:** §20 row “M8 — Batch picking” is this milestone. Historical
+prose that called batch picking “M7” (pre–barcode renumber) is obsolete —
+Part IX.20 + ROADMAP + this Part are authoritative. Domain language is
+**Wave**; “batch” remains a synonym in older §20 wording and is not a
+second aggregate.
+
+**Product Owner decisions (binding for M8 — proposed; require PO approval
+before implementation):**
+
+| # | Decision | Choice |
+|---|---|---|
+| 1 | Aggregate name | **Wave** (tables `mpcf_waves` / `mpcf_wave_members`) |
+| 2 | Wave ends at | **`picked`** per member fulfillment; packing never runs inside a wave |
+| 3 | Scan surface | **Extend M7 Scan Mode** — Wave Picking Scan Mode; no separate scanner app |
+| 4 | Cross-order same SKU | **Deterministic FIFO** by fulfillment `created_at ASC`, then item id — **no operator chooser** for multi-order matches |
+| 5 | Same-fulfillment ambiguity | Keep M7 rules (`ambiguous_sku`, `variation_required`) |
+| 6 | Location sort | Sort walk by `location_snapshot` (NULLS LAST), then SKU — **hint only**, not inventory authority |
+| 7 | Mutation entry | `WaveScanService` (or `ScanService` wave overload) → existing `PackingService` absolute +1 pick |
+| 8 | Ownership | Exclusive **owner user** on active/paused wave; resume by owner (lead override later) |
+| 9 | Capabilities | Reuse `mpcf_process_fulfillments` for M8; no new caps unless dogfood proves lead-only create is required |
+| 10 | Operation Context | **Document now; do not introduce a full Operation Context framework in M8** (see X.8) |
+| 11 | Documents | New doc type `wave_picking_list` (combined walk); per-order picking list remains |
+| 12 | Auto-group | Queue filters + warehouse_id + optional SKU-overlap heuristic; manual add/remove always available |
+
+## X.1 Goals and non-goals
+
+### Goals
+
+1. One warehouse walk → many orders picked.
+2. Combined picking list grouped for walking, not per-order paper stacks.
+3. Keyboard-wedge Batch/Wave Scan Mode reusing M7 sink + feedback patterns.
+4. Clean handoff: each member reaches `picked`, then individual packing Workspace.
+5. Survive disconnect: pause/resume without losing progress.
+6. Stay outbound-only (ADR-0007).
+
+### Explicit non-goals (M8)
+
+Inventory ownership; receiving; cycle counting; warehouse master data /
+bins as authority; route-optimization AI; RF terminals; mobile/PWA app;
+mandatory camera scanning; carrier batching; packing batching; Mission
+Control redesign; live per-package allocation redesign; EAN master table;
+stock mutation; reading `wc-inventory-overview` tables.
+
+## X.2 Wave lifecycle (M8-A)
+
+### States
+
+| State | Meaning |
+|---|---|
+| `draft` | Being composed; not yet walked |
+| `active` | Operator is walking / scanning |
+| `paused` | Owned, interrupted; progress retained |
+| `completed` | All members `picked` (or force-completed with recorded exceptions) |
+| `abandoned` | Cancelled; members released back to queue/picking without inventing stock moves |
+
+Transitions: `draft → active | abandoned`; `active → paused | completed | abandoned`;
+`paused → active | abandoned`. No revive from `completed`/`abandoned`.
+
+### Aggregate
+
+**Wave** (root):
+
+- `id`, `warehouse_id`, `owner_user_id`, `state`, `version` (optimistic concurrency)
+- `title` / optional label
+- `created_at`, `activated_at`, `completed_at`, `abandoned_at`
+- `settings_snapshot` JSON (max members, grouping criteria used) — auditability
+
+**WaveMember**:
+
+- `wave_id`, `fulfillment_id` (unique membership: a fulfillment is in at most
+  **one** non-terminal wave)
+- `position` (stable walk / display order)
+- `joined_at`, `picked_at` (when that fulfillment reached `picked` under the wave)
+
+**Why persist (not transient-only):** resume after browser crash, multi-hour
+walks, printed wave list + later scan, audit of who walked which set, and
+conflict detection across operators. Transients remain acceptable for
+**undo-last-scan** (M7 pattern), not for wave membership.
+
+### Operations
+
+| Op | Behavior |
+|---|---|
+| Create | `draft` wave for current `warehouse_id` + owner |
+| Add fulfillments | Only `queued` or `picking`; same `warehouse_id`; not in another open wave; optional auto `queued→picking` + assign owner on activate |
+| Remove | Only while `draft` or `paused` (not mid-active scan burst without pause); member not yet `picked` |
+| Auto-group | From Queue selection or filter (state=`queued`/`picking`, warehouse, age, optional shared-SKU affinity). Cap `wave_max_members` (settings, default e.g. 25, hard ceiling e.g. 100) |
+| Manual group | Explicit add/remove IDs |
+| Activate | `draft→active`; claim ownership; ensure members are `picking` + assignee = owner |
+| Pause / Resume | `active↔paused`; scan rejected while paused |
+| Complete | All members `picked` → `completed`; or lead force-complete with exception notes on unfinished members |
+| Abandon | Release membership lock; leave fulfillments in their current workflow state (no silent cancel) |
+
+### Data ownership
+
+Waves are **MPCF outbound execution** structure. They do not store stock,
+bins, or supplier data. Member progress is derived from existing
+`qty_picked` / fulfillment `state` — wave tables do not duplicate quantities.
+
+## X.3 Combined picking list / warehouse walk (M8-B)
+
+### Walk model (document + Workspace progress)
+
+Build a pure **WaveWalkModel** from member items:
+
+```
+location_snapshot (NULL → "∅")
+  → product key (variation_id > 0 ? V:{id} : PR:{id} / sku_snapshot)
+    → required_qty (sum outstanding: qty_ordered − qty_picked across members)
+    → allocations[] { fulfillment_id, item_id, outstanding }
+    → done_qty / complete flag
+```
+
+**Sort:** `location_snapshot` ascending (empty last), then `sku_snapshot`,
+then `product_id`/`variation_id`. This is a **warehouse walk hint**, not a
+path optimizer and not inventory topology.
+
+**Duplicate SKUs across orders:** one walk row with aggregated `required_qty`
+and per-fulfillment allocation list (FIFO order).
+
+**Variations:** never collapse variation lines into parent SKU rows.
+
+**Document:** `wave_picking_list` assembler + template; barcode for wave
+identity optional (`MPCF:W:{wave_id}` — new payload type **W**, additive to
+Part IX parser); human wave id + member order numbers visible. Per-line
+still may show compact member ticks, not full separate lists.
+
+**M4 picking list** stays fulfillment-scoped and unordered by location
+(existing Assembler comment). Wave list is the first document allowed to
+sort by `location_snapshot` because the sort key is already an MPCF
+immutable snapshot — still not inventory ownership.
+
+## X.4 Batch / Wave Scan Mode (M8-C)
+
+### Mode
+
+Extend `ScanMode` with `WAVE_PICKING` (or nest under picking with
+`wave_id` context). Eligible only when wave `state=active` and owner matches.
+
+**Do not** build a separate scanner. Reuse MPDS scan-sink, `scan.js`
+feedback (status/result/recent/sound), shortcut suppression, undo transient
+scoped to `(user, wave_id)`.
+
+### Resolve algorithm (deterministic)
+
+Against **union of outstanding items** in the wave (items with
+`qty_picked < qty_ordered` on members still in `picking`):
+
+1. Apply M7 parse order (`MPCF:I` / `V` / `PR` / SKU / `F` / `P` / new `W`).
+2. If `MPCF:I` → must belong to a wave member; else reject.
+3. If SKU / PR / V matches multiple **fulfillments**: choose outstanding
+   allocation with earliest fulfillment `created_at`, then lowest `item_id`.
+4. If multiple lines **on the same fulfillment** match → M7 `ambiguous_sku`
+   / `variation_required` (operator must scan `MPCF:I` or variation code).
+5. If no outstanding match → `unknown_barcode` or `over_scan` (wave-level).
+6. `MPCF:F` / `MPCF:W` → identity/progress feedback only (no qty).
+7. Packing scans **rejected** in wave mode (`wrong_mode`).
+
+**Operator never manually chooses among multi-order SKU matches** in M8.
+If product reality needs chooser UX, that is a post-M8 ADR.
+
+### Mutation
+
+`+1` via existing absolute quantity update on the chosen item; bump that
+fulfillment’s version; when that fulfillment’s lines all complete →
+workflow transition to `picked` (same guards as today); mark member
+`picked_at`; refresh wave progress. Undo last wave scan restores prior qty
+via M7-style correction store keyed by wave.
+
+### Feedback
+
+Show: SKU, fulfillment/order identity, new qty, remaining for that SKU on
+wave, members complete / remaining. Errors stay operator-readable codes.
+
+## X.5 Workspace (M8-D)
+
+Keep M7 Workspace architecture. Add **Wave Workspace** (or Wave panel in
+Mission Control deferred area — prefer a dedicated Wave screen + deep link
+from Queue “Create wave from selection”):
+
+- Wave dashboard: state, owner, progress bars (lines / fulfillments)
+- Resume / Pause
+- Remaining walk rows / remaining fulfillments / completed fulfillments
+- Missing / exception list (members stuck, ambiguous, problem-state)
+- Completion summary
+- Enter Wave Scan Mode (extends M7 panel patterns)
+- Print `wave_picking_list`
+- “Open fulfillment” for exception handling (exits or pauses wave)
+
+Single-fulfillment Packing Scan Mode unchanged. Switching into a wave
+pauses single-fulfillment scan mode and vice versa.
+
+## X.6 REST surface (smallest coherent)
+
+| Method | Route | Purpose |
+|---|---|---|
+| POST | `/mpcf/v1/waves` | Create draft |
+| GET | `/mpcf/v1/waves/{id}` | Wave + progress |
+| GET | `/mpcf/v1/waves` | List mine / open (paginated) |
+| POST | `/mpcf/v1/waves/{id}/members` | Add fulfillments |
+| DELETE | `/mpcf/v1/waves/{id}/members/{fulfillment_id}` | Remove |
+| POST | `/mpcf/v1/waves/{id}/activate` | draft→active |
+| POST | `/mpcf/v1/waves/{id}/pause` | active→paused |
+| POST | `/mpcf/v1/waves/{id}/resume` | paused→active |
+| POST | `/mpcf/v1/waves/{id}/complete` | complete |
+| POST | `/mpcf/v1/waves/{id}/abandon` | abandon |
+| GET | `/mpcf/v1/waves/{id}/walk` | Combined walk model |
+| POST | `/mpcf/v1/waves/{id}/scan` | Wave pick scan (+ undo action) |
+| POST | `/mpcf/v1/waves/{id}/documents` | Render wave picking list |
+
+All routes: `mpcf_process_fulfillments`; owner checks on mutating routes;
+wave `version` on mutations; per-fulfillment `version` still enforced inside
+scan.
+
+Optional: `MPCF:W:{id}` on documents — parser additive.
+
+## X.7 Audit events
+
+Append-only, hash-chained as today:
+
+- `wave.created` / `wave.activated` / `wave.paused` / `wave.resumed` /
+  `wave.completed` / `wave.abandoned`
+- `wave.member_added` / `wave.member_removed` / `wave.member_picked`
+- Reuse `scan.item_picked` / `scan.corrected` with payload fields
+  `wave_id`, `allocation_fulfillment_id`
+
+No silent stock or inventory events.
+
+## X.8 Operation Context (decision)
+
+**Choice B — document now; do not implement a general Operation Context
+framework in M8.**
+
+Justification:
+
+- M8 needs only one new ambient context: `wave_id` (+ owner + mode).
+- Single-fulfillment Workspace already threads `fulfillment_id` via
+  `data-mpcf-*` and the store module; inventing a generic Operation Context
+  now risks speculative abstraction ahead of Mission Control / mobile.
+- M8 introduces `WaveContext` (Application DTO / request attribute) passed
+  into wave services — a **local** pattern, not a platform kernel.
+- Revisit a shared Operation Context when a third concurrent ambient
+  context appears (e.g. station + wave + fulfillment) or at M15 mobile.
+
+Documented future shape (non-binding until ADR):
+
+```
+OperationContext { type: fulfillment|wave|…, id, mode?, version? }
+```
+
+## X.9 Performance expectations
+
+| Scale | Expectation |
+|---|---|
+| 20 orders / ≤200 lines | Instant walk build; scan feels <300 ms (M7 dogfood class) |
+| 50 orders / ≤500 lines | Walk build <500 ms server-side on VPS-class hardware; paginate walk UI if >100 rows |
+| 100 orders | Allowed only if under `wave_max_members` ceiling; warn in UI; prefer multiple waves |
+| 500 lines | Walk model built in one query set (members → items); no N+1; indexes on `(wave_id)`, `(fulfillment_id)` unique open-wave |
+
+Loading: hydrate wave + members + items in bounded queries. Grouping: pure
+PHP on arrays (unit-tested). Scan throughput: one item mutation path
+(existing PackingService). Memory: cap members. Resume: reload wave by id.
+Locking: wave `version` + owner; fulfillment `version` on qty writes.
+
+## X.10 Concurrency
+
+- One **owner** per active/paused wave; other operators get `wave_owned`.
+- Fulfillment may belong to at most one non-terminal wave (DB unique /
+  application guard).
+- Stale wave version → 409, no mutation.
+- Stale fulfillment version inside scan → 409, no replay (M7).
+- Disconnect → wave stays `active` until pause timeout policy (optional
+  M8-E: auto-pause after N minutes idle) or manual pause.
+- Two scanners on one wave: rejected (single owner); no multi-picker wave
+  in M8.
+
+## X.11 Security
+
+- Capability: `mpcf_process_fulfillments` (M8 default).
+- REST: nonce / Application Passwords as today; no cookie CSRF holes.
+- Ownership enforced server-side.
+- Payload length/format limits from M7.
+- No inventory table reads/writes; structural guard extension:
+  forbid `wc-inventory-overview` and stock APIs in new Wave code paths.
+- Documents: same protected storage + capability as M4.
+
+## X.12 Schema (planned)
+
+Migrator step → target **7**:
+
+- `mpcf_waves` — columns per X.2; indexes `(state, warehouse_id, owner_user_id)`, `(updated_at)`
+- `mpcf_wave_members` — `(wave_id, fulfillment_id)` PK/unique; index `(fulfillment_id)`; partial uniqueness for open waves enforced in Application if MySQL partial indexes unavailable
+
+Settings schema **9** (if needed): `wave_max_members`, `wave_idle_pause_minutes` (0=off).
+
+`PersistedKeys` + uninstall policy updated. No `mpcf_locations`.
+
+## X.13 Milestone packages
+
+| Package | Delivers | Does not |
+|---|---|---|
+| **M8-A** | Part X approved; Wave domain + repos + migrator 7; REST create/members/lifecycle; unit/integration | Scan mode, documents, rich UI |
+| **M8-B** | WaveWalkModel; `wave_picking_list` document; `MPCF:W` parser additive; print from wave | Scan mutations |
+| **M8-C** | Wave Scan Mode + `/waves/{id}/scan`; FIFO allocation; undo; browser tests | Mission Control redesign |
+| **M8-D** | Wave Workspace UI (progress, pause/resume, exceptions, enter scan); Queue “add to wave” | Analytics |
+| **M8-E** | Dogfood; hardening (idle pause optional); docs (`API`/`HOOKS`/`PERSISTED_DATA`); `0.8.0` RC ZIP/audit; PR | Production deploy without PO; M9 |
+
+## X.14 Acceptance criteria (falsifiable)
+
+1. Operator creates a wave of ≥5 queued fulfillments, activates, completes a
+   walk using Wave Scan Mode only, and every member ends in `picked`.
+2. Combined picking list groups duplicate SKUs and sorts by `location_snapshot`
+   without reading inventory plugins.
+3. Scanning a shared SKU allocates FIFO across members; never prompts a chooser.
+4. Over-scan / unknown / wrong-stage / non-owner / stale version reject without
+   mutation.
+5. Pause → browser refresh → resume continues with same progress.
+6. Abandon releases membership; fulfillments remain valid workflow citizens.
+7. Packing a wave member uses existing single-fulfillment Workspace (no wave
+   packing).
+8. PHPCS, unit, integration, browser, POT, release-audit green; ADR-0007
+   guards pass; version triad `0.8.0`.
+
+## X.15 Validation & testing
+
+- Unit: walk grouping/sort/FIFO allocator; wave state machine; parser `W`.
+- Integration: REST lifecycle; scan across members; concurrency 409;
+  membership exclusivity; document render.
+- Browser: create/activate/scan/pause/resume happy path (Playwright).
+- Structural: no inventory coupling in `Application/Wave`, `Domain/Wave`,
+  wave REST controllers.
+- Dogfood: 20-order wave on `dev.biopentra.eu`; measure scan latency.
+
+## X.16 Release strategy
+
+Branch `feature/m8-wave-batch-picking` from `v0.7.0` / main. One PR. Version
+`0.8.0`. Tag `v0.8.0` only after PO GO. No production deploy in-milestone
+unless separately ordered. M9 (Analytics I) must not start until M8 closes.
+
+## X.17 Stop conditions (runtime)
+
+Stop and report if: inventory/receiving data required; stock mutation
+needed; operator chooser required for normal multi-order SKUs; packing
+batching required; Mission Control redesign required; mobile/RF required;
+another agent dirties the tree; schema needs location master tables.
+
+## X.18 Prepare for M9
+
+Waves emit structured audit events and completion timestamps suitable for
+later throughput analytics (orders picked per wave, walk duration). M8 does
+**not** build Analytics UI or `mpcf_stats_daily` (M9).

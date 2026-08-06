@@ -59,21 +59,22 @@ actual state before work starts.
    picking list; branding; protected HTML storage; Workspace document
    actions; Documents history + exact reprint; capped Queue bulk
    picking-list print. Evidence: `docs/M4_RELEASE_REPORT.md`.
-5. **M5 — Tracking & notifications** — **release candidate `v0.5.0`** on
-   `feature/m5-tracking-notifications` (not tagged/published pending PO
-   approval). Carrier registry (M5-A), notification configuration (M5-B),
-   notification pipeline + EmailChannel (M5-C), completed-order tracking
-   extension + Workspace/REST notify (M5-D), dogfood + RC prep (M5-E).
-   Evidence: `docs/M5_RELEASE_REPORT.md`.
-6. **M6 — Package photography** — **release candidate `v0.6.0`** on
-   `feature/m6-package-photography` (not tagged/published pending PO
-   approval). M6-A–D: foundation, REST/guard, Workspace/settings, retention
-   purge + CS Detail gallery. Evidence: `docs/M6_RELEASE_REPORT.md`,
-   `docs/ARCHITECTURE_PLAN.md` Part VIII.10–VIII.13.
-7. **M7 — Barcode & scan mode** — **release candidate `v0.7.0`** on
-   `feature/m7-barcode-scan` (not tagged/published pending PO approval).
+5. **M5 — Tracking & notifications** — **released as `v0.5.0`**.
+   Carrier registry, notification configuration/pipeline, completed-order
+   tracking extension, Workspace/REST notify. Evidence:
+   `docs/M5_RELEASE_REPORT.md`.
+6. **M6 — Package photography** — **released as `v0.6.0`**. Foundation,
+   REST/guard, Workspace/settings, retention purge + CS Detail gallery.
+   Evidence: `docs/M6_RELEASE_REPORT.md`, `docs/ARCHITECTURE_PLAN.md` Part VIII.
+7. **M7 — Barcode & scan mode** — **released as `v0.7.0`**. ScanService,
+   Workspace Scan Mode, Code 128 document barcodes, MPCF payloads.
    Evidence: `docs/M7_RELEASE_REPORT.md`, `docs/ARCHITECTURE_PLAN.md` Part IX.
-8. **M8 — Batch picking** — not started.
+8. **M8 — Wave & batch picking** — **planning complete** (Architecture Plan
+   Part X + `docs/plans/M8_WAVE_BATCH_PICKING_IMPLEMENTATION.md`). **Not
+   started** (no implementation branch). Awaits PO approval of Part X.
+   Target `v0.8.0`: Wave aggregate, combined walk document, Wave Scan Mode
+   (extends M7), Wave Workspace; ends at `picked`; packing remains
+   per-fulfillment. ADR-0007 unchanged.
 9. **M9 — Analytics I** — not started.
 10. **M10 — Hardening & operational maturity** — not started.
 11. **1.0 — Commercial release** — not started.
