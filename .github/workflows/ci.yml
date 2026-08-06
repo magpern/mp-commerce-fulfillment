@@ -66,6 +66,7 @@ jobs:
         id: setup-php
         with:
           php-version: ${{ matrix.php }}
+          extensions: gd
           coverage: none
       - uses: actions/cache@v6
         with:
@@ -135,7 +136,7 @@ jobs:
         id: setup-php
         with:
           php-version: ${{ matrix.php }}
-          extensions: mysqli
+          extensions: mysqli, gd
           coverage: none
       - uses: actions/cache@v6
         with:

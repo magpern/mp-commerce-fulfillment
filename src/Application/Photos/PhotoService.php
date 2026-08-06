@@ -235,18 +235,16 @@ final class PhotoService {
 			$actor,
 			$now,
 			array(
-				'photo_id'            => $photo_id,
-				'package_id'          => $package_id,
-				'kind'                => $kind,
-				'file_path'           => $stored->relative_path(),
-				'thumb_path'          => $stored->thumb_relative_path(),
-				'mime'                => $processed->mime(),
-				'bytes'               => $processed->bytes(),
-				'sha256'              => $processed->sha256(),
-				'processing_version'  => $processed->processing_version(),
-				'width'               => $processed->width(),
-				'height'              => $processed->height(),
-				'seq'                 => $seq,
+				'photo_id'           => $photo_id,
+				'fulfillment_id'     => $fulfillment_id,
+				'package_id'         => $package_id,
+				'kind'               => $kind,
+				'sha256'             => $processed->sha256(),
+				'processing_version' => $processed->processing_version(),
+				'bytes'              => $processed->bytes(),
+				'mime'               => $processed->mime(),
+				'width'              => $processed->width(),
+				'height'             => $processed->height(),
 			)
 		);
 
@@ -317,10 +315,10 @@ final class PhotoService {
 			$actor,
 			$now,
 			array(
-				'photo_id'   => $photo_id,
-				'package_id' => $photo->package_id(),
-				'kind'       => $photo->kind(),
-				'sha256'     => $photo->sha256(),
+				'photo_id'           => $photo_id,
+				'package_id'         => $photo->package_id(),
+				'sha256'             => $photo->sha256(),
+				'processing_version' => $photo->processing_version(),
 			)
 		);
 
