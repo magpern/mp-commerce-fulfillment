@@ -33,6 +33,7 @@ final class CapabilitiesTest extends TestCase {
 		self::assertTrue( $operator->has_cap( Capabilities::VIEW_QUEUE ) );
 		self::assertTrue( $operator->has_cap( Capabilities::PROCESS_FULFILLMENTS ) );
 		self::assertFalse( $operator->has_cap( Capabilities::CANCEL_FULFILLMENT ), 'Operators must not be able to cancel a fulfillment.' );
+		self::assertFalse( $operator->has_cap( Capabilities::DELETE_PHOTOS ), 'Operators must not soft-delete photos (Lead+ only).' );
 		self::assertFalse( $operator->has_cap( Capabilities::MANAGE_SETTINGS ), 'Operators must not manage settings.' );
 
 		foreach ( Capabilities::all() as $capability ) {

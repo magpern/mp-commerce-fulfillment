@@ -16,7 +16,7 @@ generation record, §10).
 | Option | Owner | Notes |
 |---|---|---|
 | `mpcf_settings` | `MPCF\Settings` | Versioned settings array. M0's only key was `remove_data_on_uninstall` (default `false`). M1 raised the shape version to 3: v2 added `outbound_bridge_enabled` (default `true`) and `inbound_cancel_behavior`/`inbound_refund_behavior` (`cancel`\|`flag`, defaulting to `cancel` and `flag` respectively) for the **store-order bridge** (`Woo\StatusBridge`/`Woo\RefundObserver` — not supplier receiving; ADR-0007); v3 added `operator_mode_enabled` (default `false`) for `Admin\OperatorMode`. M2 raises the shape version to 4 (F21): `auto_advance_after_ship` (default `false`) and `default_carrier_id` (default `''`, no whitelist — any string is a valid carrier id) for the Packing Workspace, and `require_tracking_before_ship` (default `false`) for `Engine\Guard\HasTrackingGuard` via `Application\TransitionContextFactory`. M4-B raises to 5: documents branding keys. **M5-B raises to 6:** `notification_strategy` (`COMPLETED_EMAIL`\|`MPCF_SHIPPED`\|`BOTH`\|`DISABLED`, default `COMPLETED_EMAIL`), `notification_sender_name`, `notification_reply_to`, `notification_tracking_footer`, `notification_email_subject` (default `Your order has shipped`), `notification_email_introduction`, `notification_email_signature`. Effective default carrier (registry fallback to `other`) is resolved by `Application\Notifications\NotificationConfigurationService`, not by Settings sanitize. |
-| `mpcf_db_version` | `MPCF\Infrastructure\Database\Migrator` | Applied schema version. M1 raised `TARGET` to `3`: step 1 creates the first four tables below, step 2 adds the `order_unique` index on `mpcf_fulfillments (order_id, order_source)` that makes intake idempotency a database-enforced guarantee, step 3 adds `customer_name_snapshot` (on `mpcf_fulfillments`) and `sku_snapshot` (on `mpcf_fulfillment_items`) indexes that `SearchQuery` v1 (D15) needs to keep its Queue-search lookups indexed. M2 raises `TARGET` to `5`: step 4 creates the three shipping tables, step 5 creates `mpcf_documents`. |
+| `mpcf_db_version` | `MPCF\Infrastructure\Database\Migrator` | Applied schema version. M1 raised `TARGET` to `3`: step 1 creates the first four tables below, step 2 adds the `order_unique` index on `mpcf_fulfillments (order_id, order_source)` that makes intake idempotency a database-enforced guarantee, step 3 adds `customer_name_snapshot` (on `mpcf_fulfillments`) and `sku_snapshot` (on `mpcf_fulfillment_items`) indexes that `SearchQuery` v1 (D15) needs to keep its Queue-search lookups indexed. M2 raises `TARGET` to `5`: step 4 creates the three shipping tables, step 5 creates `mpcf_documents`. **M6 raises `TARGET` to `6`:** step 6 creates `mpcf_media` (Part VIII package photography). |
 
 ## Tables
 
@@ -33,6 +33,7 @@ DDL in `MPCF\Infrastructure\Database\Schema` (see `docs/ARCHITECTURE_PLAN.md`
 | `mpcf_packages` | 4 | Physical boxes within a shipment (ADR-0005/D19) — weight, dimensions, colli tracking, a reserved `label_path` (NULL until M12). |
 | `mpcf_package_items` | 4 | Per-package line-quantity allocations. Milestone 2 always allocates every packed line to package 1 (PO decision, §IV.0.2); the shape already supports M4's line-allocation split. |
 | `mpcf_documents` | 5 | Document generation record (§10) — one row per **fresh** render. M4 stores relative `file_path` under the protected upload root for packing_slip and picking_list; integrity (`mime`, `bytes`, `sha256`) lives in the `document.rendered` event payload. Historical reprint does **not** insert a new row; lineage uses `document.reprinted` payload `source_document_id` (no schema column). No delete API. Indexes: `fulfillment_id`, `doc_type`. Composite `(fulfillment_id, doc_type, created_at)` deferred (acceptable at current volume). |
+| `mpcf_media` | 6 | Package photography evidence (Part VIII) — one row per capture. `package_id` NOT NULL; relative `file_path` / `thumb_path` under `uploads/mpcf/photos/…`; integrity columns `mime`, `bytes`, `sha256`, `processing_version`, dimensions; soft-delete via `deleted_at` (bytes preserved until M6-D retention purge / `purged_at`). Indexes: `fulfillment_id`, `package_id`, `(fulfillment_id, deleted_at)`, `(package_id, deleted_at)`, `(fulfillment_id, seq)`. |
 
 ## Capabilities and roles
 
@@ -49,6 +50,7 @@ options and tables below.
 | `mpcf_manage_shipments` | Create/edit shipments and tracking. |
 | `mpcf_add_notes` | Add internal fulfillment notes. |
 | `mpcf_capture_photos` | Upload package photos. |
+| `mpcf_delete_photos` | Soft-delete package photos (Lead+ only — not granted to Warehouse Operator). |
 | `mpcf_render_documents` | Render packing slips and other documents. |
 | `mpcf_cancel_fulfillment` | Cancel a fulfillment. |
 | `mpcf_view_audit` | View the fulfillment audit trail. |
@@ -88,7 +90,9 @@ Protected upload root under `wp-content/uploads/mpcf/` (ADR-0004). M4
 stores canonical document HTML under `mpcf/documents/{yyyy}/{mm}/{fulfillment_id}/`
 with deny-all `.htaccess` and random filenames. Content is served only
 through capability-checked REST (`GET /documents/{id}/content` /
-`POST .../reprint`), never via public direct URL.
+`POST .../reprint`), never via public direct URL. M6 stores package
+photos under `mpcf/photos/{yyyy}/{mm}/{fulfillment_id}/` the same way
+(ADR-0004 / Part VIII).
 Inventoried as `PersistedKeys::upload_directories()` → `mpcf`. Removed on
 uninstall when `remove_data_on_uninstall` is enabled.
 
