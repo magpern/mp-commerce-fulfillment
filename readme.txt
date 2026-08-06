@@ -4,7 +4,7 @@ Tags: woocommerce, fulfillment, warehouse, shipping, picking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.5.0
+Stable tag: 0.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,13 @@ Performance Order Storage (HPOS).
 3. WooCommerce 8.2+ must be installed and active.
 
 == Changelog ==
+
+= 0.6.0 =
+* Feat: Package photography foundation — protected store, SHA-256, soft-delete (M6-A).
+* Feat: Photo REST upload/list/stream/delete with packing photo_required guard (M6-B).
+* Feat: Workspace capture/gallery/preview/delete and photography settings (M6-C).
+* Feat: Retention purge (Action Scheduler) and CS Fulfillment Detail gallery (M6-D).
+* Docs: Part VIII outcomes and M6 release-candidate report.
 
 = 0.5.0 =
 * Feat: Carrier registry foundation with tracking URL templates (M5-A).
