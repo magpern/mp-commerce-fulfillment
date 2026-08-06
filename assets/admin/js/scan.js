@@ -326,6 +326,27 @@ function canEnter( target ) {
 	return stage() === target;
 }
 
+/**
+ * Keep enter-button `disabled` in sync with `data-mpcf-stage` after AJAX
+ * transitions. PHP renders the initial disabled flags for the first paint
+ * only; without this, Picking/Packing Scan Mode stays unclickable after
+ * Ctrl+Enter advances the stage without a full reload.
+ */
+function syncEnterButtons() {
+	var current = stage();
+	var buttons = document.querySelectorAll( '[data-mpcf-scan-mode-enter]' );
+	var i;
+
+	for ( i = 0; i < buttons.length; i++ ) {
+		buttons[ i ].disabled =
+			buttons[ i ].getAttribute( 'data-mpcf-scan-mode-enter' ) !== current;
+	}
+
+	if ( mode && mode !== current ) {
+		setMode( null );
+	}
+}
+
 function bindUi() {
 	var el = panel();
 
@@ -397,6 +418,8 @@ function initScanMode() {
 	window.MpcfWorkspace.exitScanMode = function () {
 		setMode( null );
 	};
+	window.MpcfWorkspace.syncScanModeButtons = syncEnterButtons;
+	syncEnterButtons();
 }
 
 if ( 'loading' === document.readyState ) {

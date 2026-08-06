@@ -93,14 +93,25 @@
 		field.addEventListener( 'keydown', function ( event ) {
 			if ( 'Enter' === event.key || 'Tab' === event.key ) {
 				event.preventDefault();
-				buffer = field.value;
+				// Append any characters not yet taken by `input` (e.g. IME),
+				// then flush immediately — do not replace the buffer, or a
+				// prior keystroke burst is discarded when the field is empty.
+				if ( field.value ) {
+					buffer += field.value;
+				}
 				field.value = '';
+				if ( null !== flushTimer ) {
+					window.clearTimeout( flushTimer );
+					flushTimer = null;
+				}
 				flush();
 			}
 		} );
 
 		field.addEventListener( 'input', function () {
-			buffer = field.value;
+			// Field is cleared after each input so `field.value` is only the
+			// newest character(s); append into the quiet-period buffer.
+			buffer += field.value;
 			field.value = '';
 			scheduleFlush();
 		} );
