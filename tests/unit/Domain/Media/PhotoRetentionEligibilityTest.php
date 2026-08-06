@@ -47,10 +47,10 @@ final class PhotoRetentionEligibilityTest extends TestCase {
 	}
 
 	public function test_already_purged_and_null_cutoff_are_ineligible(): void {
-		$cutoff = new DateTimeImmutable( '2025-08-06 12:00:00', new DateTimeZone( 'UTC' ) );
-		$base   = $this->photo( '2024-01-01 00:00:00' )->to_array();
+		$cutoff            = new DateTimeImmutable( '2025-08-06 12:00:00', new DateTimeZone( 'UTC' ) );
+		$base              = $this->photo( '2024-01-01 00:00:00' )->to_array();
 		$base['purged_at'] = new DateTimeImmutable( '2026-01-01 00:00:00', new DateTimeZone( 'UTC' ) );
-		$purged = PhotoRecord::from_array( $base );
+		$purged            = PhotoRecord::from_array( $base );
 
 		self::assertFalse( PhotoRetentionEligibility::is_eligible( $purged, $cutoff ) );
 		self::assertFalse( PhotoRetentionEligibility::is_eligible( $this->photo( '2024-01-01 00:00:00' ), null ) );
