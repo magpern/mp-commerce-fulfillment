@@ -130,6 +130,10 @@ the workspace at 1440/1024/800px breakpoints (criterion 8); M6-C adds
 preview, and lead soft-delete. M6-D adds integration coverage for the
 Fulfillment Detail CS gallery (active / soft-deleted hidden / purged
 metadata) and unit coverage for retention eligibility and purge batches.
+M7 adds unit coverage for barcode payload parsing, scan resolution,
+Code 128 rendering, and `ScanService` pick/pack/undo; Workspace Scan Mode
+browser coverage lives in `tests/browser/scan-mode.spec.js` (keyboard-wedge
+SKU scan → `POST …/scan`).
 The two-browser-context
 409 conflict, offline/retry interception, and queue-cursor navigation are
 deliberately not yet covered — a scope decision recorded here rather than

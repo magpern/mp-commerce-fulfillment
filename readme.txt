@@ -4,7 +4,7 @@ Tags: woocommerce, fulfillment, warehouse, shipping, picking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.6.0
+Stable tag: 0.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,14 @@ Performance Order Storage (HPOS).
 3. WooCommerce 8.2+ must be installed and active.
 
 == Changelog ==
+
+= 0.7.0 =
+* Feat: Barcode payload format (MPCF:F/I/P/PR/V) and deterministic scan resolver (M7-A).
+* Feat: Code 128 SVG barcodes on picking list and packing slip (M7-A).
+* Feat: ScanService pick/pack/undo with optimistic concurrency (M7-B).
+* Feat: REST POST /fulfillments/{id}/scan (M7-B).
+* Feat: Workspace Scan Mode (keyboard-wedge) with feedback and undo (M7-C).
+* Docs: Part IX outcomes and M7 release-candidate report.
 
 = 0.6.0 =
 * Feat: Package photography foundation — protected store, SHA-256, soft-delete (M6-A).

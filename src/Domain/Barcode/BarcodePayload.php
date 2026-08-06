@@ -95,7 +95,7 @@ final class BarcodePayload {
 	/**
 	 * Builds a product-id payload.
 	 *
-	 * @param int $product_id WooCommerce product id.
+	 * @param int $product_id Product id.
 	 */
 	public static function product( int $product_id ): self {
 		return self::of( self::TYPE_PRODUCT, $product_id );
@@ -104,7 +104,7 @@ final class BarcodePayload {
 	/**
 	 * Builds a variation-id payload.
 	 *
-	 * @param int $variation_id WooCommerce variation id.
+	 * @param int $variation_id Variation id.
 	 */
 	public static function variation( int $variation_id ): self {
 		return self::of( self::TYPE_VARIATION, $variation_id );

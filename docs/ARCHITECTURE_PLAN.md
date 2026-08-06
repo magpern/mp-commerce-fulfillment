@@ -2734,3 +2734,17 @@ fixes.
 
 Part IV prose historically labeled barcode semantics as “M6”. Authoritative
 sequence is ROADMAP + §20 + Parts VIII/IX: photography = M6, barcode = M7.
+
+## IX.21 M7 delivery record (feature branch RC)
+
+**Status:** M7-A–D complete on `feature/m7-barcode-scan` as release candidate
+`v0.7.0` (draft PR; **not merged/tagged/published** pending PO approval).
+
+| Package | Outcome |
+|---|---|
+| M7-A | Part IX; `BarcodePayload` / `ScanResolver`; Code 128 SVG; documents encode `MPCF:F:{id}` (+ item `MPCF:I:{id}` on picking list) |
+| M7-B | `ScanService` + transient undo store; `POST …/scan`; audits `scan.item_picked` / `scan.item_packed` / `scan.corrected` |
+| M7-C | Workspace Scan Mode panel + `scan.js` keyboard-wedge; shortcut suppression; browser `scan-mode.spec.js` |
+| M7-D | Docs reconcile; version triad `0.7.0`; ZIP + release audit; dogfood evidence in `docs/M7_RELEASE_REPORT.md` |
+
+**Schema:** unchanged (settings **8**, migrator target **6**). **No** inventory/receiving coupling.

@@ -16,7 +16,7 @@ Milestone 2).
 | `admin_init` | action | `MPCF\Plugin::init()` | default | Runs `Migrator::maybe_migrate()` — the drift check for bind-mount deployments that never fire the activation hook (§7). |
 | `admin_menu` | action | `MPCF\Plugin::wire_admin()` | priority `20` | Registers `Fulfillment Detail` as a real submenu page (so its capability/URL resolve), then immediately calls `remove_submenu_page()` — reachable only from Queue/Dashboard, never a standalone nav item. |
 | `admin_menu` | action | `Vendor\Mpds\PageShell\Menu::register()` | default | Registers the top-level "Fulfillment" menu (Dashboard + Queue), invoked via `Plugin::wire_admin()`. |
-| `admin_enqueue_scripts` | action | `Admin\Assets::maybe_enqueue()` | default | Enqueues MPDS + plugin admin CSS/JS, gated to this plugin's own screens (`mpcf-dashboard`, `mpcf-queue`, `mpcf-orders`, `mpcf-settings`, `mpcf-fulfillment-detail`, `mpcf-workspace`). Script Modules API (`wp_enqueue_script_module`, WP 6.5+) enqueues five workspace ES modules from `assets/admin/js/`. |
+| `admin_enqueue_scripts` | action | `Admin\Assets::maybe_enqueue()` | default | Enqueues MPDS + plugin admin CSS/JS, gated to this plugin's own screens (`mpcf-dashboard`, `mpcf-queue`, `mpcf-orders`, `mpcf-settings`, `mpcf-fulfillment-detail`, `mpcf-workspace`). Script Modules API (`wp_enqueue_script_module`, WP 6.5+) enqueues workspace ES modules from `assets/admin/js/` including `mpcf-scan` (M7). |
 | `admin_body_class` | filter | `Admin\Assets::maybe_add_body_class()` | default | Appends `mpcf-ui-scope mpcf-admin` on this plugin's own screens. |
 | `admin_body_class` | filter | `Admin\OperatorMode::maybe_add_body_class()` | default | Appends `mpcf-operator-mode` for operator-tier users when the `operator_mode_enabled` setting is on and the user is not an admin/lead — CSS then hides the rest of wp-admin's nav. |
 | `woocommerce_payment_complete` | action | `Woo\IntakeHooks::handle_order_paid()` | default | Synchronous order-to-fulfillment intake on payment completion (classic and Blocks checkout). |
@@ -43,6 +43,7 @@ Uninstall runs via the standard `uninstall.php` file convention, not
 | `/mpcf/v1/fulfillments/{id}/transitions` | GET | `mpcf_view_queue` | Available transitions, returned in every mutation response. |
 | `/mpcf/v1/fulfillments/{id}/transitions` | POST | per-edge, from workflow definition | Apply a transition. |
 | `/mpcf/v1/fulfillments/{id}/items` | PUT | `mpcf_process_fulfillments` | Batch absolute quantities (picked/packed). |
+| `/mpcf/v1/fulfillments/{id}/scan` | POST | `mpcf_process_fulfillments` | M7 Scan Mode — resolve/pick/pack/undo (Part IX). |
 | `/mpcf/v1/fulfillments/{id}/notes` | GET/POST | `mpcf_view_queue` / `mpcf_add_notes` | Fetch/add notes. |
 | `/mpcf/v1/fulfillments/{id}/assignment` | PUT/DELETE | `mpcf_process_fulfillments` | Assign/unassign. |
 | `/mpcf/v1/fulfillments/{id}/shipments` | GET/POST | `mpcf_view_queue` / `mpcf_manage_shipments` | Fetch/create shipments. |
@@ -122,6 +123,21 @@ Payloads are PayloadGuard-safe (no recipient email). WooCommerce
 completed-order emails are extended via
 `Woo\TrackingEmailExtension` on `woocommerce_email_after_order_table`
 when strategy includes `COMPLETED_EMAIL` / `BOTH` — not a public MPCF hook.
+
+## M7 Scan Mode
+
+M7 adds no public WordPress filters. Scan mutations use
+`POST /mpcf/v1/fulfillments/{id}/scan`. Internal audit events:
+
+| Event type | When |
+|---|---|
+| `scan.item_picked` | Successful picking scan (+1) |
+| `scan.item_packed` | Successful packing scan (+1) |
+| `scan.corrected` | Successful undo of last scan |
+
+Quantity writes still also emit `items.picked` / `items.packed` via
+`PackingService`. Undo memory uses a per-operator transient
+(`mpcf_scan_undo_{user}_{fulfillment}`, TTL 30 minutes) — not a table.
 
 All other v1.0 extension surfaces (`mpcf_workflows`, `mpcf_event` +
 per-type actions, `mpcf_intake_should_create`) remain documented in
