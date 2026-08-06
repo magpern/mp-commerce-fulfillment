@@ -43,6 +43,7 @@ use MPCF\Application\IntakeService;
 use MPCF\Application\NoteService;
 use MPCF\Application\OrderOverviewService;
 use MPCF\Application\PackingService;
+use MPCF\Application\Photos\PhotoConfig;
 use MPCF\Application\Photos\PhotoService;
 use MPCF\Application\QueueService;
 use MPCF\Application\ShipmentAutoShipSubscriber;
@@ -180,17 +181,19 @@ final class Plugin {
 		$clock        = new SystemClock();
 		$settings     = new Settings();
 		$definition   = StandardWorkflow::definition();
+		$photo_config = PhotoConfig::from_settings( $settings );
 
 		$photo_service = new PhotoService(
 			new WpdbMediaRepository(),
 			new ProtectedPhotoStore(),
-			new GdImageProcessor(),
+			new GdImageProcessor( $photo_config->max_edge_px() ),
 			$fulfillments,
 			$packages,
 			$shipments,
 			$events,
 			$dispatcher,
-			$clock
+			$clock,
+			$photo_config
 		);
 
 		$workflow_service = new WorkflowService(

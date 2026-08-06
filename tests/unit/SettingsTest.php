@@ -121,7 +121,11 @@ final class SettingsTest extends TestCase {
 		self::assertSame( '', $defaults['default_carrier_id'] );
 		self::assertFalse( $defaults['require_tracking_before_ship'] );
 		self::assertFalse( $defaults['photos_required'] );
-		self::assertSame( 7, Settings::SCHEMA_VERSION );
+		self::assertSame( 10, $defaults['photos_max_per_fulfillment'] );
+		self::assertSame( 12582912, $defaults['photos_max_upload_bytes'] );
+		self::assertSame( 2000, $defaults['photos_max_edge_px'] );
+		self::assertSame( 12, $defaults['photos_retention_months'] );
+		self::assertSame( 8, Settings::SCHEMA_VERSION );
 	}
 
 	public function test_sanitize_coerces_auto_advance_after_ship_truthy_and_falsy_values(): void {
@@ -143,6 +147,68 @@ final class SettingsTest extends TestCase {
 		self::assertTrue( Settings::sanitize( array( 'photos_required' => true ) )['photos_required'] );
 		self::assertFalse( Settings::sanitize( array( 'photos_required' => 0 ) )['photos_required'] );
 		self::assertFalse( Settings::sanitize( array() )['photos_required'] );
+	}
+
+	public function test_sanitize_clamps_photo_limit_settings(): void {
+		$sanitized = Settings::sanitize(
+			array(
+				'photos_max_per_fulfillment' => 0,
+				'photos_max_upload_bytes'    => 100,
+				'photos_max_edge_px'         => 50,
+				'photos_retention_months'    => 0,
+			)
+		);
+
+		self::assertSame( 1, $sanitized['photos_max_per_fulfillment'] );
+		self::assertSame( 1048576, $sanitized['photos_max_upload_bytes'] );
+		self::assertSame( 500, $sanitized['photos_max_edge_px'] );
+		self::assertSame( 1, $sanitized['photos_retention_months'] );
+
+		$high = Settings::sanitize(
+			array(
+				'photos_max_per_fulfillment' => 999,
+				'photos_max_upload_bytes'    => 999999999,
+				'photos_max_edge_px'         => 99999,
+				'photos_retention_months'    => 999,
+			)
+		);
+
+		self::assertSame( 100, $high['photos_max_per_fulfillment'] );
+		self::assertSame( 52428800, $high['photos_max_upload_bytes'] );
+		self::assertSame( 8000, $high['photos_max_edge_px'] );
+		self::assertSame( 120, $high['photos_retention_months'] );
+	}
+
+	public function test_photo_limit_accessors_read_sanitized_values(): void {
+		$settings = new Settings(
+			array(
+				'photos_max_per_fulfillment' => 5,
+				'photos_max_upload_bytes'    => 2097152,
+				'photos_max_edge_px'         => 1500,
+				'photos_retention_months'    => 24,
+			)
+		);
+
+		self::assertSame( 5, $settings->photos_max_per_fulfillment() );
+		self::assertSame( 2097152, $settings->photos_max_upload_bytes() );
+		self::assertSame( 1500, $settings->photos_max_edge_px() );
+		self::assertSame( 24, $settings->photos_retention_months() );
+	}
+
+	public function test_sanitize_upgrades_pre_m6c_settings_while_preserving_photos_required(): void {
+		$legacy = array(
+			'schema_version'  => 7,
+			'photos_required' => true,
+		);
+
+		$sanitized = Settings::sanitize( $legacy );
+
+		self::assertSame( Settings::SCHEMA_VERSION, $sanitized['schema_version'] );
+		self::assertTrue( $sanitized['photos_required'] );
+		self::assertSame( 10, $sanitized['photos_max_per_fulfillment'] );
+		self::assertSame( 12582912, $sanitized['photos_max_upload_bytes'] );
+		self::assertSame( 2000, $sanitized['photos_max_edge_px'] );
+		self::assertSame( 12, $sanitized['photos_retention_months'] );
 	}
 
 	public function test_sanitize_coerces_default_carrier_id_to_a_string_with_no_whitelist(): void {

@@ -19,8 +19,9 @@ use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
 use MPCF\Vendor\Mpds\PageShell\Page;
 
 /**
- * Settings surface: document branding (M4-B) and notifications (M5-B).
- * Uses MPDS settings cards and the existing `mpcf_settings` option.
+ * Settings surface: document branding (M4-B), package photography (M6-C),
+ * and notifications (M5-B). Uses MPDS settings cards and the existing
+ * `mpcf_settings` option.
  */
 final class SettingsPage implements Page {
 
@@ -155,6 +156,7 @@ final class SettingsPage implements Page {
 		wp_nonce_field( 'mpcf_save_settings', 'mpcf_settings_nonce' );
 
 		$this->render_documents_card( $data );
+		$this->render_photography_card( $data );
 		$this->render_notifications_card( $data, $config->default_carrier_id() );
 
 		echo $this->renderer->sticky_save_bar( self::STICKY_SCOPE ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- MPDS sticky_save_bar escapes.
@@ -211,6 +213,87 @@ final class SettingsPage implements Page {
 			)
 		);
 		echo $logo_row; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- MPDS number_row escapes.
+
+		echo $this->renderer->settings_card_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- MPDS helper returns static markup.
+	}
+
+	/**
+	 * Package photography settings card (M6-C). Retention months are
+	 * stored for M6-D; this card does not offer a purge-now action.
+	 *
+	 * @param array<string, mixed> $data Current settings.
+	 */
+	private function render_photography_card( array $data ): void {
+		$card_open = $this->renderer->settings_card_open(
+			__( 'Package photography', 'mp-commerce-fulfillment' ),
+			__( 'Evidence photos captured in the packing workspace. Retention is configured here; automatic purge arrives in a later release.', 'mp-commerce-fulfillment' )
+		);
+		echo $card_open; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- MPDS settings_card_open escapes.
+
+		$required = $this->renderer->toggle_row(
+			'photos_required',
+			! empty( $data['photos_required'] ),
+			__( 'Require sealed-package photo', 'mp-commerce-fulfillment' ),
+			__( 'When enabled, a sealed-package photo is required before packing can be marked packed. Contents photos remain optional evidence.', 'mp-commerce-fulfillment' )
+		);
+		echo $required; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- MPDS toggle_row escapes.
+
+		$max_photos = $this->renderer->number_row(
+			'photos_max_per_fulfillment',
+			__( 'Maximum photos per fulfillment', 'mp-commerce-fulfillment' ),
+			(string) (int) $data['photos_max_per_fulfillment'],
+			__( 'Active photos across all packages for one fulfillment (1–100).', 'mp-commerce-fulfillment' ),
+			array(
+				'min'  => '1',
+				'max'  => '100',
+				'step' => '1',
+			)
+		);
+		echo $max_photos; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- MPDS number_row escapes.
+
+		$max_mb = (int) round( (int) $data['photos_max_upload_bytes'] / ( 1024 * 1024 ) );
+		if ( $max_mb < 1 ) {
+			$max_mb = 1;
+		}
+
+		$max_upload = $this->renderer->number_row(
+			'photos_max_upload_mb',
+			__( 'Maximum upload size (MB)', 'mp-commerce-fulfillment' ),
+			(string) $max_mb,
+			__( 'Raw upload size before processing (1–50 MiB). Stored as bytes.', 'mp-commerce-fulfillment' ),
+			array(
+				'min'  => '1',
+				'max'  => '50',
+				'step' => '1',
+			)
+		);
+		echo $max_upload; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- MPDS number_row escapes.
+
+		$max_edge = $this->renderer->number_row(
+			'photos_max_edge_px',
+			__( 'Maximum image edge (px)', 'mp-commerce-fulfillment' ),
+			(string) (int) $data['photos_max_edge_px'],
+			__( 'Longest edge of the stored JPEG after resize (500–8000).', 'mp-commerce-fulfillment' ),
+			array(
+				'min'  => '500',
+				'max'  => '8000',
+				'step' => '1',
+			)
+		);
+		echo $max_edge; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- MPDS number_row escapes.
+
+		$retention = $this->renderer->number_row(
+			'photos_retention_months',
+			__( 'Retention (months)', 'mp-commerce-fulfillment' ),
+			(string) (int) $data['photos_retention_months'],
+			__( 'How long soft-deleted photos are kept before an automatic purge (1–120). Purge itself is not run from this screen.', 'mp-commerce-fulfillment' ),
+			array(
+				'min'  => '1',
+				'max'  => '120',
+				'step' => '1',
+			)
+		);
+		echo $retention; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- MPDS number_row escapes.
 
 		echo $this->renderer->settings_card_close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- MPDS helper returns static markup.
 	}
@@ -379,6 +462,17 @@ final class SettingsPage implements Page {
 		$current['notification_email_introduction'] = isset( $_POST['notification_email_introduction'] ) ? wp_unslash( (string) $_POST['notification_email_introduction'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by Settings::save().
 		$current['notification_tracking_footer']    = isset( $_POST['notification_tracking_footer'] ) ? wp_unslash( (string) $_POST['notification_tracking_footer'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by Settings::save().
 		$current['notification_email_signature']    = isset( $_POST['notification_email_signature'] ) ? wp_unslash( (string) $_POST['notification_email_signature'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by Settings::save().
+
+		$current['photos_required']            = ! empty( $_POST['photos_required'] );
+		$current['photos_max_per_fulfillment'] = isset( $_POST['photos_max_per_fulfillment'] ) ? wp_unslash( (string) $_POST['photos_max_per_fulfillment'] ) : '10'; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by Settings::save().
+		$current['photos_max_edge_px']         = isset( $_POST['photos_max_edge_px'] ) ? wp_unslash( (string) $_POST['photos_max_edge_px'] ) : '2000'; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by Settings::save().
+		$current['photos_retention_months']    = isset( $_POST['photos_retention_months'] ) ? wp_unslash( (string) $_POST['photos_retention_months'] ) : '12'; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by Settings::save().
+
+		$upload_mb = isset( $_POST['photos_max_upload_mb'] ) ? (int) wp_unslash( $_POST['photos_max_upload_mb'] ) : 12; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Coerced to int; sanitized via Settings::save() bytes clamp.
+		if ( $upload_mb < 1 ) {
+			$upload_mb = 1;
+		}
+		$current['photos_max_upload_bytes'] = $upload_mb * 1024 * 1024;
 
 		$this->settings->save( $current );
 		$this->saved = true;

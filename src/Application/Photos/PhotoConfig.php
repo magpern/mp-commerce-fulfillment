@@ -9,8 +9,11 @@ declare( strict_types=1 );
 
 namespace MPCF\Application\Photos;
 
+use MPCF\Settings;
+
 /**
- * Defaults for M6-A; settings UI arrives in M6-C.
+ * Capture limits for package photography. Built-in defaults match
+ * Settings schema v8; production uses {@see from_settings()}.
  */
 final class PhotoConfig {
 
@@ -88,6 +91,20 @@ final class PhotoConfig {
 			$max_edge_px,
 			$max_photos_per_fulfillment,
 			$processing_version
+		);
+	}
+
+	/**
+	 * Reads capture limits from plugin settings (processing_version stays 1).
+	 *
+	 * @param Settings $settings Plugin settings.
+	 */
+	public static function from_settings( Settings $settings ): self {
+		return new self(
+			$settings->photos_max_upload_bytes(),
+			$settings->photos_max_edge_px(),
+			$settings->photos_max_per_fulfillment(),
+			1
 		);
 	}
 

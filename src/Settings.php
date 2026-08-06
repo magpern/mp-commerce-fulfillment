@@ -43,12 +43,15 @@ final class Settings {
 	 * is applied by NotificationConfigurationService, not here (purity).
 	 * 7: `photos_required` (M6-B / Part VIII) — when true, packing→packed
 	 * requires ≥1 active kind=package photo via PhotoRequiredGuard.
+	 * 8: Package photography limits (M6-C): `photos_max_per_fulfillment`,
+	 * `photos_max_upload_bytes`, `photos_max_edge_px`,
+	 * `photos_retention_months` (stored for M6-D; no purge execution here).
 	 * Each bump is purely informational (`sanitize()` always rebuilds the
 	 * canonical shape from `defaults()`, so there is no destructive
 	 * migration step to write for a purely additive change like any of
 	 * these).
 	 */
-	public const SCHEMA_VERSION = 7;
+	public const SCHEMA_VERSION = 8;
 
 	/**
 	 * Inbound cancel/refund behavior: move the fulfillment straight to
@@ -186,6 +189,16 @@ final class Settings {
 			 * photo (Part VIII / PhotoRequiredGuard). Default off.
 			 */
 			'photos_required'                 => false,
+
+			/*
+			 * Package photography limits (M6-C). Defaults match
+			 * PhotoConfig::defaults(). Retention months are stored for
+			 * M6-D; this milestone does not run a purge job.
+			 */
+			'photos_max_per_fulfillment'      => 10,
+			'photos_max_upload_bytes'         => 12582912,
+			'photos_max_edge_px'              => 2000,
+			'photos_retention_months'         => 12,
 		);
 	}
 
@@ -226,8 +239,39 @@ final class Settings {
 		$out['notification_email_introduction'] = self::sanitize_multiline_text( $raw['notification_email_introduction'] ?? '', 2000 );
 		$out['notification_email_signature']    = self::sanitize_multiline_text( $raw['notification_email_signature'] ?? '', 2000 );
 		$out['photos_required']                 = ! empty( $raw['photos_required'] );
+		$out['photos_max_per_fulfillment']      = self::sanitize_int_range( $raw['photos_max_per_fulfillment'] ?? null, 10, 1, 100 );
+		$out['photos_max_upload_bytes']         = self::sanitize_int_range( $raw['photos_max_upload_bytes'] ?? null, 12582912, 1048576, 52428800 );
+		$out['photos_max_edge_px']              = self::sanitize_int_range( $raw['photos_max_edge_px'] ?? null, 2000, 500, 8000 );
+		$out['photos_retention_months']         = self::sanitize_int_range( $raw['photos_retention_months'] ?? null, 12, 1, 120 );
 
 		return $out;
+	}
+
+	/**
+	 * Coerces an integer into an inclusive range, falling back to `$default`
+	 * when the raw value is not numeric.
+	 *
+	 * @param mixed $raw     Raw value.
+	 * @param int   $default Fallback when not numeric.
+	 * @param int   $min     Inclusive minimum.
+	 * @param int   $max     Inclusive maximum.
+	 */
+	private static function sanitize_int_range( mixed $raw, int $default, int $min, int $max ): int {
+		if ( ! is_numeric( $raw ) ) {
+			return $default;
+		}
+
+		$value = (int) $raw;
+
+		if ( $value < $min ) {
+			return $min;
+		}
+
+		if ( $value > $max ) {
+			return $max;
+		}
+
+		return $value;
 	}
 
 	/**
@@ -487,6 +531,34 @@ final class Settings {
 	 */
 	public function photos_required(): bool {
 		return (bool) $this->get()['photos_required'];
+	}
+
+	/**
+	 * Maximum active photos allowed per fulfillment.
+	 */
+	public function photos_max_per_fulfillment(): int {
+		return (int) $this->get()['photos_max_per_fulfillment'];
+	}
+
+	/**
+	 * Maximum raw photo upload size in bytes.
+	 */
+	public function photos_max_upload_bytes(): int {
+		return (int) $this->get()['photos_max_upload_bytes'];
+	}
+
+	/**
+	 * Maximum longest edge (pixels) for the canonical processed image.
+	 */
+	public function photos_max_edge_px(): int {
+		return (int) $this->get()['photos_max_edge_px'];
+	}
+
+	/**
+	 * Soft-delete retention horizon in months (consumed by M6-D purge).
+	 */
+	public function photos_retention_months(): int {
+		return (int) $this->get()['photos_retention_months'];
 	}
 
 	/**
