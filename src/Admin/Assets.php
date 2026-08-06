@@ -77,6 +77,10 @@ final class Assets {
 			$this->enqueue_workspace_assets();
 		}
 
+		if ( self::is_detail_screen() ) {
+			$this->enqueue_detail_photo_assets();
+		}
+
 		if ( self::is_settings_screen() ) {
 			wp_enqueue_script( 'mpcf-mpds-sticky-save', MPCF_PLUGIN_URL . 'assets/mpds/js/sticky-save.js', array(), MPCF_VERSION, true );
 		}
@@ -146,12 +150,44 @@ final class Assets {
 	}
 
 	/**
+	 * Enqueues CS Detail gallery preview helpers (protected REST thumbs).
+	 */
+	private function enqueue_detail_photo_assets(): void {
+		wp_enqueue_script( 'wp-api-request' );
+		wp_add_inline_script(
+			'wp-api-request',
+			sprintf(
+				'window.mpcfWorkspace = window.mpcfWorkspace || { restUrl: %s, nonce: %s };',
+				wp_json_encode( rest_url( 'mpcf/v1/' ) ),
+				wp_json_encode( wp_create_nonce( 'wp_rest' ) )
+			),
+			'before'
+		);
+		wp_enqueue_script(
+			'mpcf-detail-photos',
+			MPCF_PLUGIN_URL . 'assets/admin/js/detail-photos.js',
+			array(),
+			MPCF_VERSION,
+			true
+		);
+	}
+
+	/**
 	 * Whether the current admin request is the Settings screen.
 	 */
 	private static function is_settings_screen(): bool {
 		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen detection, no state change.
 
 		return 'mpcf-settings' === $page;
+	}
+
+	/**
+	 * Whether the current admin request is Fulfillment Detail.
+	 */
+	private static function is_detail_screen(): bool {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen detection, no state change.
+
+		return 'mpcf-fulfillment-detail' === $page;
 	}
 
 	/**

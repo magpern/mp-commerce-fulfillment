@@ -196,6 +196,7 @@ final class FulfillmentDetailPage implements Page {
 
 		$this->render_summary( $view );
 		$this->render_transitions( $view->fulfillment() );
+		$this->render_photos( $view );
 		$this->render_timeline( $view, $timeline_page );
 		$this->render_notes( $view );
 
@@ -322,6 +323,99 @@ final class FulfillmentDetailPage implements Page {
 	}
 
 	/**
+	 * Read-only package photography gallery for customer service.
+	 *
+	 * Soft-deleted photos are omitted by the detail service. Purged rows
+	 * show metadata-only evidence without broken thumbnails. No upload or
+	 * delete controls on this surface.
+	 *
+	 * @param FulfillmentDetailView $view Assembled detail view.
+	 */
+	private function render_photos( FulfillmentDetailView $view ): void {
+		$groups = $view->photos_by_package();
+
+		$this->shell->open_section_card( __( 'Package photos', 'mp-commerce-fulfillment' ) );
+
+		if ( array() === $groups ) {
+			printf( '<p>%s</p>', esc_html__( 'No package photos for this fulfillment.', 'mp-commerce-fulfillment' ) );
+			$this->shell->close_section_card();
+
+			return;
+		}
+
+		echo '<div class="mpcf-detail-photos" data-mpcf-detail-photos>';
+
+		foreach ( $groups as $package_id => $photos ) {
+			$seq = $photos[0]->package_seq();
+			printf(
+				'<section class="mpcf-detail-photos__package" data-mpcf-package-id="%d"><h3>%s</h3><ul class="mpcf-detail-photos__gallery">',
+				(int) $package_id,
+				esc_html(
+					sprintf(
+						/* translators: 1: package sequence, 2: package id */
+						__( 'Package %1$d (id %2$d)', 'mp-commerce-fulfillment' ),
+						$seq > 0 ? $seq : 1,
+						(int) $package_id
+					)
+				)
+			);
+
+			foreach ( $photos as $photo ) {
+				$kind = 'package' === $photo->kind()
+					? __( 'Sealed package', 'mp-commerce-fulfillment' )
+					: __( 'Contents', 'mp-commerce-fulfillment' );
+				$when = $photo->created_at()->setTimezone( wp_timezone() )->format( 'Y-m-d H:i' );
+				$by   = $photo->captured_by();
+
+				echo '<li class="mpcf-detail-photos__card" data-mpcf-photo-id="' . esc_attr( (string) $photo->id() ) . '">';
+
+				if ( $photo->has_bytes() && ! $photo->is_purged() ) {
+					printf(
+						'<button type="button" class="mpcf-detail-photos__thumb button-link" data-mpcf-detail-photo-preview="%1$d" aria-label="%2$s"><span class="mpcf-detail-photos__thumb-placeholder" data-mpcf-detail-photo-thumb="%1$d">%3$s</span></button>',
+						(int) $photo->id(),
+						esc_attr(
+							sprintf(
+								/* translators: %s: photo kind */
+								__( 'Preview %s photo', 'mp-commerce-fulfillment' ),
+								$kind
+							)
+						),
+						esc_html__( 'Loading…', 'mp-commerce-fulfillment' )
+					);
+				} else {
+					printf(
+						'<p class="mpcf-detail-photos__purged">%s</p>',
+						esc_html__( 'Photo retained as audit metadata; image removed by retention policy.', 'mp-commerce-fulfillment' )
+					);
+				}
+
+				printf( '<p><strong>%s</strong></p>', esc_html( $kind ) );
+				printf( '<p>%s</p>', esc_html( $when ) );
+
+				if ( null !== $by ) {
+					/* translators: %d: WordPress user id */
+					$captured_by = sprintf( __( 'Captured by user #%d', 'mp-commerce-fulfillment' ), $by );
+					printf( '<p>%s</p>', esc_html( $captured_by ) );
+				}
+
+				if ( $photo->is_purged() ) {
+					printf(
+						'<p><em>%s</em></p>',
+						esc_html__( 'Integrity: bytes purged; SHA-256 retained in audit metadata.', 'mp-commerce-fulfillment' )
+					);
+				}
+
+				echo '</li>';
+			}
+
+			echo '</ul></section>';
+		}
+
+		echo '</div>';
+		$this->shell->close_section_card();
+	}
+
+	/**
 	 * Renders one page of the audit timeline (Architecture Plan §IV.10,
 	 * risk M2-R11: the full chain, unbounded, is what this replaced).
 	 *
@@ -404,6 +498,12 @@ final class FulfillmentDetailPage implements Page {
 
 		if ( null !== $document_label ) {
 			return $document_label;
+		}
+
+		$photo_label = PhotoEventLabels::describe( $event_type, $payload );
+
+		if ( null !== $photo_label ) {
+			return $photo_label;
 		}
 
 		if ( 'fulfillment.created' === $event_type ) {

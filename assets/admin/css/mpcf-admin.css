@@ -342,3 +342,33 @@ body.mpcf-operator-mode #wpfooter {
 .mpcf-workspace[data-mpcf-stage="completed"] .mpcf-ui-workspace-layout {
 	opacity: 0.72;
 }
+
+/* Fulfillment Detail CS package photo gallery (M6-D). */
+.mpcf-detail-photos__gallery {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.mpcf-detail-photos__card {
+	min-width: 140px;
+	max-width: 200px;
+}
+
+.mpcf-detail-photos__thumb img {
+	display: block;
+	width: 120px;
+	height: 120px;
+	object-fit: cover;
+}
+
+.mpcf-detail-photos__purged {
+	margin: 0 0 0.5rem;
+	padding: 0.75rem;
+	border: 1px dashed #c3c4c7;
+	background: #f6f7f7;
+	font-size: 0.9rem;
+}
