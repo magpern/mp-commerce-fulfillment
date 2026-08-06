@@ -68,8 +68,3 @@ measured **~26 ms** wall time inside `wp eval` on the WordPress container
 column; live per-package packed qty; wedge timing tuning across scanner
 models; Mission Control scannable queue deep-link UX polish beyond document
 payload.
-
-- `v0.7.0` not merged/tagged/published
-- Production not deployed
-- M8 not started
-- No inventory/receiving coupling
