@@ -1,8 +1,24 @@
-# M6 Release Candidate Report — Package Photography (`v0.6.0`)
+# M6 Release Report — Package Photography (`v0.6.0`)
 
-**Status:** Release candidate prepared on `feature/m6-package-photography`.  
-**Not tagged / not published / not deployed** pending Product Owner approval.  
-**Do not begin M7.**
+**Status:** **M6 closed.** Tagged and published as GitHub Release `v0.6.0`.  
+**Production was not deployed.**  
+**M7 has not started.**
+
+## Publication record
+
+| Field | Value |
+|---|---|
+| Feature RC HEAD | `d84b374` |
+| Merged PR | [#4](https://github.com/magpern/mp-commerce-fulfillment/pull/4) |
+| Merge commit (main) | `994182c08b6e02074204629e96a038a23f851852` |
+| Annotated tag | `v0.6.0` → `994182c` |
+| GitHub Release | https://github.com/magpern/mp-commerce-fulfillment/releases/tag/v0.6.0 |
+| Published asset | `mp-commerce-fulfillment-0.6.0.zip` |
+| Release workflow | [31116462017](https://github.com/magpern/mp-commerce-fulfillment/actions/runs/31116462017) — **success** |
+| Local ZIP SHA-256 (pre-tag rebuild at `d84b374`) | `39814391322124db4ebe2edf8454ba79b076ccf354942377de47a5a5c3960810` |
+| Published ZIP SHA-256 | `0be4e8e1a49210e505d395c28d5de51a6888b40c3174325540ebda0a970c1c3c` |
+
+Local vs published: same member set (272 entries); SHA differs only by expected archive/Composer packaging metadata from the Release workflow rebuild.
 
 ## Implementation summary
 
@@ -11,7 +27,7 @@
 | M6-A | `mpcf_media`, PhotoRecord/PhotoKind, ProtectedPhotoStore, GD pipeline, PhotoService, soft-delete, `photo.captured`/`photo.deleted`, requirement semantics |
 | M6-B | Photo REST (list/upload/meta/content/thumb/delete), optimistic concurrency, packing→packed `photo_required` guard |
 | M6-C | Workspace capture/gallery/preview/delete, merchant photo settings (`SCHEMA_VERSION` 8), browser coverage |
-| M6-D | Retention eligibility + `PhotoRetentionService`, daily Action Scheduler purge (`mpcf` group), `photo.purged`, CS Fulfillment Detail gallery, docs + `0.6.0` RC |
+| M6-D | Retention eligibility + `PhotoRetentionService`, daily Action Scheduler purge (`mpcf` group), `photo.purged`, CS Fulfillment Detail gallery, docs + `0.6.0` release |
 
 ## Retention policy
 
@@ -76,20 +92,18 @@ Invented numbers are forbidden. Measured in this RC:
 - Unit: eligibility, retention service, settings retention=0, labels, resource `purged`/`has_bytes`, foundation guards
 - Integration: CS Detail gallery active/deleted/purged rendering
 - Browser: existing M6-C `photos.spec.js` (packing capture/requirement/delete)
-- Full unit suite green locally (540 tests at RC prep)
+- Full configured CI green on PR #4 before merge
 
 ## Version / ZIP
 
 - Version triad: `0.6.0` (plugin header, `MPCF_VERSION`, `readme.txt` Stable tag)
-- Schema settings shape: still **8** (no new settings keys in M6-D)
-- Migrator target: still **6** (`mpcf_media`)
-- Build: `bash bin/build-zip.sh` → `dist/mp-commerce-fulfillment-0.6.0.zip`
-- SHA-256: `7a7eb2725366b800d88808259878418f55b609ed6cf330244f4dd48a561fea4d`
+- Schema settings shape: **8**
+- Migrator target: **6** (`mpcf_media`)
 - Install/upgrade/rollback: clean install of ZIP; upgrade from `0.5.0` keeps `mpcf_media` + files; rollback to `0.5.0` does not delete photo files/metadata (older code ignores retention schedule / CS gallery)
 
 ## Confirmation
 
-- `v0.6.0` **not** tagged or published
+- M6 **closed** (merged + tagged + GitHub Release published)
 - Production **not** deployed
-- No M7 work
+- M7 **not** started
 - No inventory/receiving/PO coupling
