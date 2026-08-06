@@ -40,7 +40,7 @@ final class DocumentTypeRegistry {
 	 */
 	public static function bundled_definitions(): array {
 		return array(
-			'packing_slip' => array(
+			'packing_slip'      => array(
 				'id'               => 'packing_slip',
 				'label'            => 'Packing slip',
 				'assembler'        => 'packing_slip',
@@ -52,7 +52,7 @@ final class DocumentTypeRegistry {
 				'storage_policy'   => DocumentType::STORAGE_STORE,
 				'template_version' => '2',
 			),
-			'picking_list' => array(
+			'picking_list'      => array(
 				'id'               => 'picking_list',
 				'label'            => 'Picking list',
 				'assembler'        => 'picking_list',
@@ -62,6 +62,18 @@ final class DocumentTypeRegistry {
 				'capability'       => Capabilities::RENDER_DOCUMENTS,
 				'allowed_states'   => self::PICKING_LIST_STATES,
 				'storage_policy'   => DocumentType::STORAGE_STORE,
+				'template_version' => '1',
+			),
+			'wave_picking_list' => array(
+				'id'               => 'wave_picking_list',
+				'label'            => 'Wave picking list',
+				'assembler'        => 'wave_picking_list',
+				'template_key'     => 'wave_picking_list',
+				'renderer'         => DocumentType::RENDERER_HTML,
+				'paper_size'       => 'A4',
+				'capability'       => Capabilities::RENDER_DOCUMENTS,
+				'allowed_states'   => array( 'draft', 'active', 'paused', 'completed' ),
+				'storage_policy'   => DocumentType::STORAGE_PRINT,
 				'template_version' => '1',
 			),
 		);

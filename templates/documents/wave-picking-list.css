@@ -1,0 +1,89 @@
+/**
+ * Wave picking list print styles.
+ *
+ * @package MPCommerceFulfillment
+ */
+
+@page {
+	size: A4;
+	margin: 12mm;
+}
+
+body {
+	font-family: Georgia, "Times New Roman", serif;
+	font-size: 12px;
+	color: #1a1a1a;
+	margin: 0;
+}
+
+.mpcf-wave-header {
+	display: flex;
+	justify-content: space-between;
+	gap: 1.5rem;
+	border-bottom: 2px solid #1a1a1a;
+	padding-bottom: 0.75rem;
+	margin-bottom: 1rem;
+}
+
+.mpcf-wave-store {
+	font-size: 1.25rem;
+	font-weight: 700;
+}
+
+.mpcf-wave-title {
+	font-size: 1.1rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.mpcf-wave-meta,
+.mpcf-wave-address {
+	color: #444;
+	margin-top: 0.25rem;
+}
+
+.mpcf-wave-members {
+	margin-bottom: 0.75rem;
+}
+
+.mpcf-wave-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.mpcf-wave-table th,
+.mpcf-wave-table td {
+	border-bottom: 1px solid #ccc;
+	padding: 0.4rem 0.35rem;
+	text-align: left;
+	vertical-align: top;
+}
+
+.mpcf-wave-table th {
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+}
+
+.mpcf-wave-table tr.is-complete td {
+	opacity: 0.45;
+	text-decoration: line-through;
+}
+
+.mpcf-wave-barcode {
+	text-align: right;
+}
+
+.mpcf-wave-barcode-text {
+	font-family: ui-monospace, monospace;
+	font-size: 0.7rem;
+	margin-top: 0.25rem;
+}
+
+.mpcf-wave-footer {
+	margin-top: 1.5rem;
+	border-top: 1px solid #ccc;
+	padding-top: 0.5rem;
+	color: #555;
+}

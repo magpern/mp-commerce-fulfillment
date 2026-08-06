@@ -29,6 +29,7 @@ use MPCF\Domain\Repository\FulfillmentItemRepository;
 use MPCF\Domain\Repository\FulfillmentRepository;
 use MPCF\Engine\DocumentAssembler\PackingSlipAssembler;
 use MPCF\Engine\DocumentAssembler\PickingListAssembler;
+use MPCF\Engine\DocumentAssembler\WavePickingListAssembler;
 use MPCF\Infrastructure\Files\ProtectedDocumentStore;
 use MPCF\Settings;
 use Throwable;
@@ -210,6 +211,67 @@ final class DocumentService {
 			'packing_slip',
 			array(
 				'actor' => $actor,
+			)
+		);
+	}
+
+	/**
+	 * Renders a combined wave picking list (Part X). Print-only — does not
+	 * insert a fulfillment-scoped document row (wave docs are not
+	 * fulfillment-anchored in M8).
+	 *
+	 * @param \MPCF\Domain\Wave\Wave $wave  Wave.
+	 * @param array<string, mixed>   $walk  Walk model.
+	 * @param Actor                  $actor Operator.
+	 */
+	public function render_wave_picking_list( \MPCF\Domain\Wave\Wave $wave, array $walk, Actor $actor ): DocumentOutcome {
+		$type = $this->types->get( WavePickingListAssembler::DOC_TYPE );
+
+		if ( null === $type ) {
+			return DocumentOutcome::failed( 'unknown_document_type', 'Wave picking list is not registered.' );
+		}
+
+		$branding = BrandingSnapshot::capture( $this->settings, $this->blog_name_fallback );
+		$store    = (string) ( $branding['store_name'] ?? $this->blog_name_fallback );
+		$model    = WavePickingListAssembler::assemble( $wave, $walk, $store, $branding, $type->template_version() );
+		$now      = $this->clock->now();
+		$model    = $model->with_render_meta(
+			$this->templates->template_version( $type->id(), $type->template_version() ),
+			$wave->state(),
+			$now,
+			(int) ( $actor->id() ?? 0 ),
+			$branding,
+			$this->renderer->format()
+		);
+
+		$html = $this->renderer->render( $model );
+
+		if ( null === $html || '' === $html ) {
+			return DocumentOutcome::failed( 'render_failed', 'Wave picking list render produced no HTML.' );
+		}
+
+		$event = DomainEvent::global_event(
+			'document.rendered',
+			$actor,
+			$now,
+			array(
+				'doc_type'         => WavePickingListAssembler::DOC_TYPE,
+				'wave_id'          => (int) $wave->id(),
+				'template_version' => $model->template_version(),
+				'stored'           => false,
+			)
+		);
+		$this->events->append( $event, null );
+		$this->dispatcher->dispatch( $event );
+
+		return DocumentOutcome::succeeded(
+			$html,
+			0,
+			array(
+				'document_type'    => WavePickingListAssembler::DOC_TYPE,
+				'template_version' => $model->template_version(),
+				'stored'           => false,
+				'wave_id'          => (int) $wave->id(),
 			)
 		);
 	}
