@@ -162,7 +162,7 @@ final class SettingsTest extends TestCase {
 		self::assertSame( 1, $sanitized['photos_max_per_fulfillment'] );
 		self::assertSame( 1048576, $sanitized['photos_max_upload_bytes'] );
 		self::assertSame( 500, $sanitized['photos_max_edge_px'] );
-		self::assertSame( 1, $sanitized['photos_retention_months'] );
+		self::assertSame( 0, $sanitized['photos_retention_months'] );
 
 		$high = Settings::sanitize(
 			array(

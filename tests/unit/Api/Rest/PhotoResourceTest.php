@@ -52,6 +52,8 @@ final class PhotoResourceTest extends TestCase {
 		self::assertSame( 2, $resource['sequence'] );
 		self::assertSame( '/mpcf/v1/photos/42/content', $resource['content'] );
 		self::assertSame( '/mpcf/v1/photos/42/thumb', $resource['thumbnail'] );
+		self::assertFalse( $resource['purged'] );
+		self::assertTrue( $resource['has_bytes'] );
 		self::assertArrayNotHasKey( 'file_path', $resource );
 		self::assertArrayNotHasKey( 'thumb_path', $resource );
 

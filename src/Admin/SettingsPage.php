@@ -218,15 +218,15 @@ final class SettingsPage implements Page {
 	}
 
 	/**
-	 * Package photography settings card (M6-C). Retention months are
-	 * stored for M6-D; this card does not offer a purge-now action.
+	 * Package photography settings card. Retention months drive the
+	 * scheduled purge (0 = retain indefinitely). No purge-now control.
 	 *
 	 * @param array<string, mixed> $data Current settings.
 	 */
 	private function render_photography_card( array $data ): void {
 		$card_open = $this->renderer->settings_card_open(
 			__( 'Package photography', 'mp-commerce-fulfillment' ),
-			__( 'Evidence photos captured in the packing workspace. Retention is configured here; automatic purge arrives in a later release.', 'mp-commerce-fulfillment' )
+			__( 'Evidence photos captured in the packing workspace. Image bytes older than the retention window are removed automatically; metadata and audit history are kept.', 'mp-commerce-fulfillment' )
 		);
 		echo $card_open; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- MPDS settings_card_open escapes.
 
@@ -286,9 +286,9 @@ final class SettingsPage implements Page {
 			'photos_retention_months',
 			__( 'Retention (months)', 'mp-commerce-fulfillment' ),
 			(string) (int) $data['photos_retention_months'],
-			__( 'How long soft-deleted photos are kept before an automatic purge (1–120). Purge itself is not run from this screen.', 'mp-commerce-fulfillment' ),
+			__( 'Age after which image bytes are purged (0 = keep forever; 1–120 months). Soft-deleted and active photos are both eligible. Metadata and audit events are always retained. There is no purge-now control.', 'mp-commerce-fulfillment' ),
 			array(
-				'min'  => '1',
+				'min'  => '0',
 				'max'  => '120',
 				'step' => '1',
 			)

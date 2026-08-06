@@ -14,8 +14,8 @@ use MPCF\Domain\Media\PhotoRecord;
 
 /**
  * Implemented in Infrastructure ({@see \MPCF\Infrastructure\Database\WpdbMediaRepository}).
- * Create / get / list / soft_delete / counts / next_sequence only — no hard
- * delete and no arbitrary update (Part VIII).
+ * Create / get / list / soft_delete / mark_purged / counts / next_sequence —
+ * no hard delete and no arbitrary update (Part VIII).
  */
 interface MediaRepository {
 
@@ -52,6 +52,18 @@ interface MediaRepository {
 	public function list_for_package( int $package_id, bool $include_deleted = false ): array;
 
 	/**
+	 * Lists photos eligible for retention purge by age cutoff.
+	 *
+	 * Rows with `purged_at IS NULL` and `created_at <= $cutoff`, oldest first.
+	 * Soft-deleted and active rows are both included.
+	 *
+	 * @param DateTimeImmutable $cutoff Inclusive age cutoff (UTC).
+	 * @param int               $limit  Max rows (bounded).
+	 * @return list<PhotoRecord>
+	 */
+	public function list_purge_candidates( DateTimeImmutable $cutoff, int $limit ): array;
+
+	/**
 	 * Count of active (non-deleted) photos for a fulfillment.
 	 *
 	 * @param int $fulfillment_id Fulfillment id.
@@ -81,4 +93,13 @@ interface MediaRepository {
 	 * @param DateTimeImmutable $now      Soft-delete timestamp.
 	 */
 	public function soft_delete( int $photo_id, DateTimeImmutable $now ): bool;
+
+	/**
+	 * Marks a photo purged: sets `purged_at` and clears relative paths.
+	 * Idempotent: returns true when newly purged or already purged; false when missing.
+	 *
+	 * @param int               $photo_id Photo id.
+	 * @param DateTimeImmutable $now      Purge timestamp.
+	 */
+	public function mark_purged( int $photo_id, DateTimeImmutable $now ): bool;
 }

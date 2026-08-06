@@ -156,4 +156,58 @@ final class InMemoryMediaRepository implements MediaRepository {
 
 		return true;
 	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public function list_purge_candidates( DateTimeImmutable $cutoff, int $limit ): array {
+		$limit = max( 1, min( 500, $limit ) );
+		$out   = array();
+
+		foreach ( $this->rows as $row ) {
+			if ( $row->is_purged() ) {
+				continue;
+			}
+
+			if ( $row->created_at() > $cutoff ) {
+				continue;
+			}
+
+			$out[] = PhotoRecord::from_array( $row->to_array() );
+		}
+
+		usort(
+			$out,
+			static function ( PhotoRecord $a, PhotoRecord $b ): int {
+				$cmp = $a->created_at() <=> $b->created_at();
+
+				return 0 !== $cmp ? $cmp : ( (int) $a->id() <=> (int) $b->id() );
+			}
+		);
+
+		return array_slice( $out, 0, $limit );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public function mark_purged( int $photo_id, DateTimeImmutable $now ): bool {
+		$existing = $this->get( $photo_id );
+
+		if ( null === $existing ) {
+			return false;
+		}
+
+		if ( $existing->is_purged() ) {
+			return true;
+		}
+
+		$data                    = $existing->to_array();
+		$data['purged_at']       = $now;
+		$data['file_path']       = '';
+		$data['thumb_path']      = '';
+		$this->rows[ $photo_id ] = PhotoRecord::from_array( $data );
+
+		return true;
+	}
 }

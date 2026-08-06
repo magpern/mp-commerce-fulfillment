@@ -198,6 +198,59 @@ final class WpdbMediaRepository implements MediaRepository {
 	}
 
 	/**
+	 * Lists photos eligible for retention purge by age cutoff.
+	 *
+	 * @param DateTimeImmutable $cutoff Inclusive age cutoff (UTC).
+	 * @param int               $limit  Max rows.
+	 * @return list<PhotoRecord>
+	 */
+	public function list_purge_candidates( DateTimeImmutable $cutoff, int $limit ): array {
+		global $wpdb;
+
+		$limit = max( 1, min( 500, $limit ) );
+		$table = Schema::table( Schema::MEDIA );
+		$utc   = $cutoff->setTimezone( new DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed schema literal.
+		$sql = $wpdb->prepare(
+			"SELECT * FROM {$table} WHERE purged_at IS NULL AND created_at <= %s ORDER BY created_at ASC, id ASC LIMIT %d",
+			$utc,
+			$limit
+		);
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql is the output of $wpdb->prepare() above.
+		$rows = $wpdb->get_results( $sql, ARRAY_A );
+
+		return $this->hydrate_list( is_array( $rows ) ? $rows : array() );
+	}
+
+	/**
+	 * Marks a photo purged and clears relative paths. Idempotent.
+	 *
+	 * @param int               $photo_id Photo id.
+	 * @param DateTimeImmutable $now      Purge timestamp.
+	 */
+	public function mark_purged( int $photo_id, DateTimeImmutable $now ): bool {
+		global $wpdb;
+
+		$existing = $this->get( $photo_id );
+
+		if ( null === $existing ) {
+			return false;
+		}
+
+		if ( $existing->is_purged() ) {
+			return true;
+		}
+
+		$table = Schema::table( Schema::MEDIA );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed schema literal.
+		$sql = "UPDATE {$table} SET purged_at = %s, file_path = '', thumb_path = '' WHERE id = %d AND purged_at IS NULL";
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql is a fixed literal with placeholders only.
+		$wpdb->query( $wpdb->prepare( $sql, $now->setTimezone( new DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' ), $photo_id ) );
+
+		return true;
+	}
+
+	/**
 	 * Hydrates a list of database rows.
 	 *
 	 * @param list<array<string, mixed>> $rows Database rows.

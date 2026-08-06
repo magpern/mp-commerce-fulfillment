@@ -45,6 +45,13 @@ interface PhotoStorage {
 	public function delete_relative( string $relative_path ): bool;
 
 	/**
+	 * Whether bytes currently exist for a relative path under the photo root.
+	 *
+	 * @param string $relative_path Relative path under uploads basedir.
+	 */
+	public function exists_relative( string $relative_path ): bool;
+
+	/**
 	 * Resolves a relative path to an absolute path under the photo root.
 	 *
 	 * @param string $relative_path Relative path under uploads basedir.

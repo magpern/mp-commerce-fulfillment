@@ -16,8 +16,9 @@ use RecursiveIteratorIterator;
 
 /**
  * Proves evidence integrity boundaries: no Media Library registration,
- * MediaRepository stays create/get/list/soft_delete only, PhotoService is
- * the sole mutator, and Domain/Media stays free of WooCommerce/wpdb.
+ * MediaRepository stays create/get/list/soft_delete/mark_purged only,
+ * PhotoService + PhotoRetentionService are the sole mutators, and
+ * Domain/Media stays free of WooCommerce/wpdb.
  */
 final class MediaFoundationGuardTest extends TestCase {
 
@@ -25,6 +26,7 @@ final class MediaFoundationGuardTest extends TestCase {
 		$files = array(
 			dirname( __DIR__, 2 ) . '/src/Infrastructure/Files/ProtectedPhotoStore.php',
 			dirname( __DIR__, 2 ) . '/src/Application/Photos/PhotoService.php',
+			dirname( __DIR__, 2 ) . '/src/Application/Photos/PhotoRetentionService.php',
 		);
 
 		foreach ( $files as $file ) {
@@ -39,11 +41,17 @@ final class MediaFoundationGuardTest extends TestCase {
 
 		self::assertStringNotContainsString( 'hard_delete', $source );
 		self::assertStringNotContainsString( 'function update', $source );
+		self::assertStringContainsString( 'function mark_purged', $source );
+		self::assertStringContainsString( 'function list_purge_candidates', $source );
 	}
 
-	public function test_only_photo_service_in_application_calls_media_repository_mutations(): void {
+	public function test_only_photo_services_in_application_call_media_repository_mutations(): void {
 		$app_root   = dirname( __DIR__, 2 ) . '/src/Application';
 		$violations = array();
+		$allowed    = array(
+			'Photos/PhotoService.php',
+			'Photos/PhotoRetentionService.php',
+		);
 
 		$iterator = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $app_root, FilesystemIterator::SKIP_DOTS ) );
 
@@ -54,28 +62,29 @@ final class MediaFoundationGuardTest extends TestCase {
 
 			$relative = ltrim( str_replace( $app_root, '', $file->getPathname() ), '/' );
 
-			if ( 'Photos/PhotoService.php' === $relative ) {
+			if ( in_array( $relative, $allowed, true ) ) {
 				continue;
 			}
 
 			$contents = (string) file_get_contents( $file->getPathname() );
 
-			if ( preg_match( '/\$\w+->(?:insert|soft_delete)\s*\(/', $contents )
+			if ( preg_match( '/\$\w+->(?:insert|soft_delete|mark_purged)\s*\(/', $contents )
 				&& str_contains( $contents, 'MediaRepository' ) ) {
 				$violations[] = $relative;
 			}
 		}
 
-		self::assertSame( array(), $violations, 'Only PhotoService may call MediaRepository insert/soft_delete.' );
+		self::assertSame( array(), $violations, 'Only PhotoService/PhotoRetentionService may call MediaRepository mutations.' );
 	}
 
-	public function test_photos_controller_exists_and_admin_has_no_photo_ui_yet(): void {
+	public function test_photos_controller_and_retention_service_exist_without_standalone_photos_admin_pages(): void {
 		$root = dirname( __DIR__, 2 ) . '/src';
 
 		self::assertFileExists( $root . '/Api/Rest/PhotosController.php' );
+		self::assertFileExists( $root . '/Application/Photos/PhotoRetentionService.php' );
+		self::assertFileExists( $root . '/Infrastructure/Scheduling/PhotoRetentionScheduler.php' );
 		self::assertFileDoesNotExist( $root . '/Admin/PhotosPage.php' );
 		self::assertFileDoesNotExist( $root . '/Admin/PhotoGalleryPage.php' );
-		self::assertFileDoesNotExist( $root . '/Application/Photos/RetentionPurgeService.php' );
 
 		$controller = (string) file_get_contents( $root . '/Api/Rest/PhotosController.php' );
 		self::assertStringContainsString( 'PhotoService', $controller );
@@ -99,6 +108,7 @@ final class MediaFoundationGuardTest extends TestCase {
 			$contents = (string) file_get_contents( $file->getPathname() );
 			self::assertStringNotContainsString( 'PhotoService', $contents, $file->getPathname() );
 			self::assertStringNotContainsString( 'mpcf_media', $contents, $file->getPathname() );
+			self::assertStringNotContainsString( 'PhotoRetentionService', $contents, $file->getPathname() );
 		}
 	}
 

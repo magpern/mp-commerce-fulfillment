@@ -128,6 +128,8 @@ final class CompositionRootTest extends TestCase {
 			'WpdbDocumentRepository',
 			'PhotosController',
 			'PhotoService',
+			'PhotoRetentionService',
+			'PhotoRetentionScheduler',
 			'WpdbMediaRepository',
 			'ProtectedPhotoStore',
 			'GdImageProcessor',

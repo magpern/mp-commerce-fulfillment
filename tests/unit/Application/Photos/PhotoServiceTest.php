@@ -188,6 +188,12 @@ final class PhotoServiceTest extends TestCase {
 			public function soft_delete( int $photo_id, DateTimeImmutable $now ): bool {
 				return false;
 			}
+			public function list_purge_candidates( DateTimeImmutable $cutoff, int $limit ): array {
+				return array();
+			}
+			public function mark_purged( int $photo_id, DateTimeImmutable $now ): bool {
+				return false;
+			}
 		};
 
 		$service = new PhotoService(

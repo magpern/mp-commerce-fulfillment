@@ -438,6 +438,8 @@ final class PhotosController extends AbstractRestController {
 			'sequence'           => $photo->seq(),
 			'captured_by'        => $photo->captured_by(),
 			'created_at'         => $photo->created_at()->format( DATE_ATOM ),
+			'purged'             => $photo->is_purged(),
+			'has_bytes'          => $photo->has_bytes(),
 			'content'            => '/mpcf/v1/photos/' . $id . '/content',
 			'thumbnail'          => '/mpcf/v1/photos/' . $id . '/thumb',
 		);

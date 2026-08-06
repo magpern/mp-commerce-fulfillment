@@ -38,6 +38,16 @@ final class PhotoEventLabelsTest extends TestCase {
 				)
 			)
 		);
+		self::assertSame(
+			'Package photo bytes purged by retention (Sealed package) for package 3.',
+			PhotoEventLabels::describe(
+				'photo.purged',
+				array(
+					'kind'       => 'package',
+					'package_id' => 3,
+				)
+			)
+		);
 		self::assertNull( PhotoEventLabels::describe( 'fulfillment.created', array() ) );
 	}
 }

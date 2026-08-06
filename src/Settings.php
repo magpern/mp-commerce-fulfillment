@@ -43,10 +43,11 @@ final class Settings {
 	 * is applied by NotificationConfigurationService, not here (purity).
 	 * 7: `photos_required` (M6-B / Part VIII) — when true, packing→packed
 	 * requires ≥1 active kind=package photo via PhotoRequiredGuard.
-	 * 8: Package photography limits (M6-C): `photos_max_per_fulfillment`,
-	 * `photos_max_upload_bytes`, `photos_max_edge_px`,
-	 * `photos_retention_months` (stored for M6-D; no purge execution here).
-	 * Each bump is purely informational (`sanitize()` always rebuilds the
+	 * 8: Package photography limits (M6-C/D): `photos_max_per_fulfillment`,
+	 * `photos_max_upload_bytes`, `photos_max_edge_px`, and
+	 * `photos_retention_months` where 0 retains forever and positive values
+	 * purge aged bytes while preserving metadata. Each bump is purely
+	 * informational (`sanitize()` always rebuilds the
 	 * canonical shape from `defaults()`, so there is no destructive
 	 * migration step to write for a purely additive change like any of
 	 * these).
@@ -242,7 +243,7 @@ final class Settings {
 		$out['photos_max_per_fulfillment']      = self::sanitize_int_range( $raw['photos_max_per_fulfillment'] ?? null, 10, 1, 100 );
 		$out['photos_max_upload_bytes']         = self::sanitize_int_range( $raw['photos_max_upload_bytes'] ?? null, 12582912, 1048576, 52428800 );
 		$out['photos_max_edge_px']              = self::sanitize_int_range( $raw['photos_max_edge_px'] ?? null, 2000, 500, 8000 );
-		$out['photos_retention_months']         = self::sanitize_int_range( $raw['photos_retention_months'] ?? null, 12, 1, 120 );
+		$out['photos_retention_months']         = self::sanitize_int_range( $raw['photos_retention_months'] ?? null, 12, 0, 120 );
 
 		return $out;
 	}

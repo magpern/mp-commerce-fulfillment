@@ -172,6 +172,17 @@ final class ProtectedPhotoStore implements PhotoStorage {
 	}
 
 	/**
+	 * Whether bytes currently exist for a relative path under the photo root.
+	 *
+	 * @param string $relative_path Relative path under uploads basedir.
+	 */
+	public function exists_relative( string $relative_path ): bool {
+		$absolute = $this->absolute_path( $relative_path );
+
+		return null !== $absolute && is_file( $absolute );
+	}
+
+	/**
 	 * Resolves a relative path to an absolute path under the photo root.
 	 *
 	 * @param string $relative_path Relative path under uploads basedir.

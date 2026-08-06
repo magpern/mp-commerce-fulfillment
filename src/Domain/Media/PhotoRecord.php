@@ -369,6 +369,20 @@ final class PhotoRecord {
 	}
 
 	/**
+	 * Whether retention purge has removed filesystem bytes.
+	 */
+	public function is_purged(): bool {
+		return null !== $this->purged_at;
+	}
+
+	/**
+	 * Whether canonical/thumbnail bytes are expected to still be on disk.
+	 */
+	public function has_bytes(): bool {
+		return null === $this->purged_at && '' !== $this->file_path;
+	}
+
+	/**
 	 * Own id, or null before insert.
 	 */
 	public function id(): ?int {
@@ -488,7 +502,10 @@ final class PhotoRecord {
 	}
 
 	/**
-	 * Asserts a relative storage path is non-empty and traversal-safe.
+	 * Asserts a relative storage path is traversal-safe.
+	 *
+	 * Empty paths are allowed only as the post-purge cleared state
+	 * (Part VIII.5); non-empty paths must be relative without traversal.
 	 *
 	 * @param string $path  Relative path.
 	 * @param string $field Field name for the exception message.
@@ -497,8 +514,12 @@ final class PhotoRecord {
 	private static function assert_relative_path( string $path, string $field ): void {
 		$path = str_replace( '\\', '/', $path );
 
-		if ( '' === $path || str_starts_with( $path, '/' ) || str_contains( $path, '..' ) || str_contains( $path, "\0" ) ) {
-			throw new InvalidArgumentException( sprintf( '%s must be a non-empty relative path without traversal.', $field ) );
+		if ( '' === $path ) {
+			return;
+		}
+
+		if ( str_starts_with( $path, '/' ) || str_contains( $path, '..' ) || str_contains( $path, "\0" ) ) {
+			throw new InvalidArgumentException( sprintf( '%s must be a relative path without traversal.', $field ) );
 		}
 	}
 }

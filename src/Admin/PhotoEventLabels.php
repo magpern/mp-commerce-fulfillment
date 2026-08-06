@@ -55,6 +55,21 @@ final class PhotoEventLabels {
 					__( 'Package photo deleted (%s).', 'mp-commerce-fulfillment' ),
 					$kind_label
 				);
+			case 'photo.purged':
+				if ( $package_id > 0 ) {
+					return sprintf(
+						/* translators: 1: photo kind label (Sealed package|Contents), 2: package id */
+						__( 'Package photo bytes purged by retention (%1$s) for package %2$d.', 'mp-commerce-fulfillment' ),
+						$kind_label,
+						$package_id
+					);
+				}
+
+				return sprintf(
+					/* translators: %s: photo kind label (Sealed package|Contents) */
+					__( 'Package photo bytes purged by retention (%s).', 'mp-commerce-fulfillment' ),
+					$kind_label
+				);
 			default:
 				return null;
 		}

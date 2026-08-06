@@ -34,10 +34,38 @@ final class FakePhotoStorage implements PhotoStorage {
 	private bool $fail_writes = false;
 
 	/**
+	 * When true, the next delete_relative returns false.
+	 *
+	 * @var bool
+	 */
+	private bool $fail_deletes = false;
+
+	/**
 	 * Forces the next write to fail.
 	 */
 	public function fail_next_write(): void {
 		$this->fail_writes = true;
+	}
+
+	/**
+	 * Forces the next delete_relative to fail containment/delete.
+	 */
+	public function fail_next_delete(): void {
+		$this->fail_deletes = true;
+	}
+
+	/**
+	 * Plants bytes at a relative path for tests (must be under photo root).
+	 *
+	 * @param string $relative Relative path.
+	 * @param string $bytes    Content.
+	 */
+	public function put( string $relative, string $bytes ): void {
+		if ( ! $this->belongs_to_photo_root( $relative ) ) {
+			throw new RuntimeException( 'Path outside photo root.' );
+		}
+
+		$this->files[ $relative ] = $bytes;
 	}
 
 	/**
@@ -99,6 +127,12 @@ final class FakePhotoStorage implements PhotoStorage {
 	 * {@inheritDoc}
 	 */
 	public function delete_relative( string $relative_path ): bool {
+		if ( $this->fail_deletes ) {
+			$this->fail_deletes = false;
+
+			return false;
+		}
+
 		if ( ! $this->belongs_to_photo_root( $relative_path ) ) {
 			return false;
 		}
@@ -106,6 +140,13 @@ final class FakePhotoStorage implements PhotoStorage {
 		unset( $this->files[ $relative_path ] );
 
 		return true;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public function exists_relative( string $relative_path ): bool {
+		return $this->belongs_to_photo_root( $relative_path ) && isset( $this->files[ $relative_path ] );
 	}
 
 	/**

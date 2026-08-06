@@ -516,6 +516,14 @@ final class PhotoService {
 			);
 		}
 
+		if ( $photo->is_purged() || ! $photo->has_bytes() ) {
+			return array(
+				'ok'      => false,
+				'code'    => 'photo_purged',
+				'message' => 'Photo bytes have been removed by retention policy.',
+			);
+		}
+
 		$relative = 'thumb' === $which ? $photo->thumb_path() : $photo->file_path();
 		$absolute = $this->storage->absolute_path( $relative );
 
