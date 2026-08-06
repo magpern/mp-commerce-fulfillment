@@ -9,6 +9,9 @@ declare( strict_types=1 );
 
 namespace MPCF\Admin;
 
+use MPCF\Capabilities;
+use MPCF\Settings;
+
 /**
  * Loads the vendored MPDS stylesheet/scripts (invariant: no runtime
  * dependency on the design system repo — these are this plugin's own
@@ -83,11 +86,11 @@ final class Assets {
 	 * Enqueues the Packing Workspace's own behavior modules — the vendored
 	 * MPDS IIFEs its markup depends on (toast, action-bar, scan-sink;
 	 * classic scripts, same as the trio in {@see maybe_enqueue()}) plus
-	 * this plugin's own bootstrap, checklist, shipment, documents and
+	 * this plugin's own bootstrap, checklist, shipment, documents, photos and
 	 * keyboard-shortcut modules, and localizes the small config object
 	 * `assets/admin/js/api.js` reads its REST base URL and nonce from.
 	 *
-	 * The plugin-owned five use real `import`/`export` (unlike every
+	 * The plugin-owned modules use real `import`/`export` (unlike every
 	 * vendored file here), so they are registered through WordPress's
 	 * dedicated Script Modules API (`wp_enqueue_script_module()`, since
 	 * WP 6.5) — never `wp_enqueue_script()` plus a `type` script-data key,
@@ -98,7 +101,7 @@ final class Assets {
 	 * plugin's own workspace JS runs — a defect the Playwright suite's
 	 * first real page load caught, F22, since no PHPUnit test ever
 	 * renders a real `<script>` tag to inspect). `packing.js`/`shipment.js`/
-	 * `documents.js`/`shortcuts.js` load after `workspace.js` since each
+	 * `documents.js`/`photos.js`/`shortcuts.js` load after `workspace.js` since each
 	 * reads `window.MpcfWorkspace`, which `workspace.js` sets on its own
 	 * `DOMContentLoaded` listener — script modules still execute in
 	 * registration order when (as here) none declares the others as a
@@ -113,6 +116,7 @@ final class Assets {
 		wp_enqueue_script_module( 'mpcf-packing', MPCF_PLUGIN_URL . 'assets/admin/js/packing.js', array(), MPCF_VERSION );
 		wp_enqueue_script_module( 'mpcf-shipment', MPCF_PLUGIN_URL . 'assets/admin/js/shipment.js', array(), MPCF_VERSION );
 		wp_enqueue_script_module( 'mpcf-documents', MPCF_PLUGIN_URL . 'assets/admin/js/documents.js', array(), MPCF_VERSION );
+		wp_enqueue_script_module( 'mpcf-photos', MPCF_PLUGIN_URL . 'assets/admin/js/photos.js', array(), MPCF_VERSION );
 		wp_enqueue_script_module( 'mpcf-shortcuts', MPCF_PLUGIN_URL . 'assets/admin/js/shortcuts.js', array(), MPCF_VERSION );
 
 		// Script modules have no `wp_add_inline_script()` counterpart —
@@ -124,12 +128,19 @@ final class Assets {
 		// a separate, unrelated script rather than truly "before" a
 		// specific module the way `wp_add_inline_script()`'s `before`
 		// position means for a classic script.
+		$settings = new Settings();
+
 		wp_add_inline_script(
 			'mpcf-mpds-scan-sink',
 			sprintf(
-				'window.mpcfWorkspace = { restUrl: %s, nonce: %s };',
+				'window.mpcfWorkspace = { restUrl: %s, nonce: %s, photos: { required: %s, maxPerFulfillment: %d, maxUploadBytes: %d, canCapture: %s, canDelete: %s } };',
 				wp_json_encode( rest_url( 'mpcf/v1/' ) ),
-				wp_json_encode( wp_create_nonce( 'wp_rest' ) )
+				wp_json_encode( wp_create_nonce( 'wp_rest' ) ),
+				$settings->photos_required() ? 'true' : 'false',
+				$settings->photos_max_per_fulfillment(),
+				$settings->photos_max_upload_bytes(),
+				current_user_can( Capabilities::CAPTURE_PHOTOS ) ? 'true' : 'false',
+				current_user_can( Capabilities::DELETE_PHOTOS ) ? 'true' : 'false'
 			)
 		);
 	}

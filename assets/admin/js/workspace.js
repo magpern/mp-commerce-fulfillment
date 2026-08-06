@@ -84,6 +84,7 @@ var GUARD_MESSAGES = {
 	all_items_picked: 'Pick all ordered items before marking this fulfillment as picked.',
 	all_items_packed: 'Pack all picked items before marking this fulfillment as packed.',
 	package_spec_present: 'Enter package weight and dimensions before marking this fulfillment as packed.',
+	photo_required: 'A sealed-package photo is required before this fulfillment can be marked packed.',
 	has_shipment: 'Add a shipment before shipping this fulfillment.',
 	has_tracking: 'Enter a tracking number before shipping.'
 };

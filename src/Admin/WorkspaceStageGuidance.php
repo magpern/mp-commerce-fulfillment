@@ -70,6 +70,7 @@ final class WorkspaceStageGuidance {
 			'all_items_picked'     => __( 'Pick all ordered items before marking this fulfillment as picked.', 'mp-commerce-fulfillment' ),
 			'all_items_packed'     => __( 'Pack all picked items before marking this fulfillment as packed.', 'mp-commerce-fulfillment' ),
 			'package_spec_present' => __( 'Enter package weight and dimensions before marking this fulfillment as packed.', 'mp-commerce-fulfillment' ),
+			'photo_required'       => __( 'A sealed-package photo is required before this fulfillment can be marked packed.', 'mp-commerce-fulfillment' ),
 			'has_shipment'         => __( 'Add a shipment before shipping this fulfillment.', 'mp-commerce-fulfillment' ),
 			'has_tracking'         => __( 'Enter a tracking number before shipping.', 'mp-commerce-fulfillment' ),
 		);

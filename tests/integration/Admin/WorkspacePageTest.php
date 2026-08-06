@@ -127,7 +127,8 @@ final class WorkspacePageTest extends WP_UnitTestCase {
 			new WooOrderSource(),
 			$definition,
 			new StoreUnits(),
-			new \MPCF\Infrastructure\Database\WpdbDocumentRepository()
+			new \MPCF\Infrastructure\Database\WpdbDocumentRepository(),
+			new Settings( array() )
 		);
 	}
 

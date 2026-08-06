@@ -476,7 +476,8 @@ final class Plugin {
 			new WooOrderSource(),
 			$definition,
 			new StoreUnits(),
-			$document_repo
+			$document_repo,
+			$settings
 		);
 
 		( new Menu(
