@@ -59,6 +59,7 @@ final class FakePhotoStorage implements PhotoStorage {
 	 *
 	 * @param string $relative Relative path.
 	 * @param string $bytes    Content.
+	 * @throws RuntimeException When the path is outside the photo root.
 	 */
 	public function put( string $relative, string $bytes ): void {
 		if ( ! $this->belongs_to_photo_root( $relative ) ) {

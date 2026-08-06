@@ -211,13 +211,9 @@ final class WpdbMediaRepository implements MediaRepository {
 		$table = Schema::table( Schema::MEDIA );
 		$utc   = $cutoff->setTimezone( new DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed schema literal.
-		$sql = $wpdb->prepare(
-			"SELECT * FROM {$table} WHERE purged_at IS NULL AND created_at <= %s ORDER BY created_at ASC, id ASC LIMIT %d",
-			$utc,
-			$limit
-		);
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql is the output of $wpdb->prepare() above.
-		$rows = $wpdb->get_results( $sql, ARRAY_A );
+		$sql = "SELECT * FROM {$table} WHERE purged_at IS NULL AND created_at <= %s ORDER BY created_at ASC, id ASC LIMIT %d";
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $sql placeholders prepared below; table name is a fixed schema literal.
+		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $utc, $limit ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared immediately; table name is Schema::table().
 
 		return $this->hydrate_list( is_array( $rows ) ? $rows : array() );
 	}

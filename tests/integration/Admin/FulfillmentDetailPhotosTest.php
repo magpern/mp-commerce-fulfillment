@@ -36,6 +36,7 @@ use MPCF\Infrastructure\Database\WpdbPackageRepository;
 use MPCF\Infrastructure\Database\WpdbShipmentRepository;
 use MPCF\Infrastructure\SystemClock;
 use MPCF\Settings;
+use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
 use MPCF\Vendor\Mpds\ComponentRenderer;
 use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
 use MPCF\Vendor\Mpds\PageShell\SectionNavigation;
@@ -45,6 +46,8 @@ use WP_UnitTestCase;
  * CS gallery: active photos grouped by package; soft-deleted hidden; purged metadata shown.
  */
 final class FulfillmentDetailPhotosTest extends WP_UnitTestCase {
+
+	use CleanFulfillmentTablesTrait;
 
 	/**
 	 * @var WpdbFulfillmentRepository
@@ -71,8 +74,11 @@ final class FulfillmentDetailPhotosTest extends WP_UnitTestCase {
 	 */
 	private WpdbPackageRepository $packages;
 
-	public function set_up(): void {
-		parent::set_up();
+	protected function setUp(): void {
+		parent::setUp();
+		$this->clean_fulfillment_tables();
+		\MPCF\Plugin::activate();
+
 		$this->fulfillments = new WpdbFulfillmentRepository();
 		$this->items        = new WpdbFulfillmentItemRepository();
 		$this->media        = new WpdbMediaRepository();

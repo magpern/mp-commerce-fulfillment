@@ -145,7 +145,7 @@ final class PhotoRetentionServiceTest extends TestCase {
 
 	/**
 	 * @param array{media:InMemoryMediaRepository,storage:FakePhotoStorage} $ctx Context.
-	 * @param int                                                             $seq Sequence / path token.
+	 * @param int                                                           $seq Sequence / path token.
 	 */
 	private function seed_old_photo( array $ctx, int $seq = 1 ): PhotoRecord {
 		$file  = "mpcf/photos/2024/01/1/a{$seq}.jpg";

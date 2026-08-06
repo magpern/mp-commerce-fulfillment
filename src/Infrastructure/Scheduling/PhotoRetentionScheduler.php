@@ -47,6 +47,8 @@ final class PhotoRetentionScheduler {
 	private PhotoRetentionService $retention;
 
 	/**
+	 * Builds the scheduler.
+	 *
 	 * @param PhotoRetentionService $retention Retention purge orchestrator.
 	 */
 	public function __construct( PhotoRetentionService $retention ) {

@@ -77,13 +77,13 @@ final class FulfillmentDetailService {
 	/**
 	 * Builds the service.
 	 *
-	 * @param FulfillmentRepository          $fulfillments Fulfillment lookup.
-	 * @param FulfillmentItemRepository      $items        Line items.
-	 * @param EventRepository                $events       Audit timeline.
-	 * @param NoteRepository                 $notes        Notes.
-	 * @param MediaRepository|null           $media        Package photos (M6-D).
-	 * @param ShipmentRepository|null        $shipments    Shipments (M6-D).
-	 * @param PackageRepository|null         $packages     Packages (M6-D).
+	 * @param FulfillmentRepository     $fulfillments Fulfillment lookup.
+	 * @param FulfillmentItemRepository $items        Line items.
+	 * @param EventRepository           $events       Audit timeline.
+	 * @param NoteRepository            $notes        Notes.
+	 * @param MediaRepository|null      $media        Package photos (M6-D).
+	 * @param ShipmentRepository|null   $shipments    Shipments (M6-D).
+	 * @param PackageRepository|null    $packages     Packages (M6-D).
 	 */
 	public function __construct(
 		FulfillmentRepository $fulfillments,
