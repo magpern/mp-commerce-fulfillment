@@ -2380,5 +2380,23 @@ unprocessed originals; inbound domain work.
 
 ## VIII.10 M6-A delivery record
 
-*(Filled when M6-A completes.)*
+**Status:** foundation complete on `feature/m6-package-photography` (not merged; no `v0.6.0`).
+
+**Shipped in M6-A:**
+
+| Area | Outcome |
+|---|---|
+| Schema | Migrator target **6**; `mpcf_media` with `package_id NOT NULL`, `sha256 CHAR(64)`, `processing_version`, soft-delete `deleted_at`, retention marker `purged_at`, indexes `fulfillment_deleted` / `package_deleted` / `fulfillment_seq` |
+| Domain | Immutable `PhotoRecord`, allow-listed `PhotoKind` (`contents` \| `package`), `ProcessedImage`, ports `MediaRepository` / `PhotoStorage` / `ImageProcessor` |
+| Storage | `ProtectedPhotoStore` under `uploads/mpcf/photos/{yyyy}/{mm}/{fid}/{token}.jpg` (+ `-thumb.jpg`); deny rules; atomic write; no Media Library; no public URL |
+| Processing | `GdImageProcessor` **processing_version = 1**: decode JPEG/PNG/WebP → EXIF orientation into pixels → longest-edge resize → re-encode JPEG (metadata stripped) → thumb → SHA-256 of canonical bytes |
+| Service | `PhotoService` sole mutator: `capture`, `get`, lists, `soft_delete` (idempotent; bytes retained), `requirement_satisfied` (≥1 active `kind=package`) |
+| Audit | `photo.captured` / `photo.deleted` on fulfillment chain; payloads per VIII.6 (no `photo.purged` yet) |
+| Caps | `mpcf_capture_photos` (operators+); `mpcf_delete_photos` (lead+ / full-access only) — controller enforcement deferred to M6-B |
+| Config | Internal `PhotoConfig` defaults only (no settings UI) |
+| Tests | Domain/unit/service/store/processor/guards + media schema integration; CI unit+integration install `gd` |
+
+**Explicitly not shipped (M6-B+):** REST/stream, Workspace/Detail UI, settings UI, `TransitionContextFactory` / packing guard wiring, retention purge job, browser tests, version bump, release.
+
+**Algorithm note (v1):** changing decode/resize/quality/thumb parameters without bumping `PROCESSING_VERSION` is forbidden; reprocess-in-place is forbidden (replace = new capture).
 
