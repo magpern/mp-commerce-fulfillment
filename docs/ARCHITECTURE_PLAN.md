@@ -2260,3 +2260,125 @@ labels, inventory/receiving, Mission Control, M6 photography.
 
 ---
 
+
+# Part VIII — M6 Package photography (operational evidence)
+
+**Milestone purpose:** Prove what left the warehouse. Package photography is
+**operational evidence**, not a DAM, media library, product photography
+system, or inbound/receiving feature (ADR-0007).
+
+**Baseline:** `v0.5.0` on green `main`. Target release: `v0.6.0`.
+
+**Product Owner decisions (binding):**
+
+| Decision | Choice |
+|---|---|
+| Owning entity | **Package** owns each photo; **Fulfillment** owns the audit stream |
+| `package_id` | **Required** (NOT NULL) on every M6 capture |
+| Storage | Protected `uploads/mpcf/photos/…` only (ADR-0004 / I9) — **never** WP Media Library |
+| Canonical bytes | Deterministic server-side processing; **no** raw unprocessed original kept |
+| Integrity | `sha256` covers canonical stored image bytes; `processing_version` identifies the pipeline that produced them |
+| Immutability | Capture creates an immutable record; replace = new capture |
+| Soft-delete | Sets `deleted_at`; **bytes remain** until retention purge |
+| Retention purge (M6-D) | Removes canonical + thumbnail **files only**; preserves metadata, audit events, fulfillment history |
+| Capture vs delete | Operators: `mpcf_capture_photos`. Soft-delete: **`mpcf_delete_photos` (Lead+ only)** |
+| `photo_required` | When enabled, ≥1 **active** photo with `kind = package` before `packing → packed`. **Contents photos do not satisfy** |
+| Guard edge | Wire on **`packing → packed`** (shipped workflow), not `packed → shipped` |
+| Streamer | REST content routes (M4 documents pattern); ADR-0004 behavior preserved |
+
+## VIII.1 Aggregate ownership
+
+```
+Fulfillment (audit root)
+  └── Shipment
+        └── Package  ← PhotoRecord (mpcf_media) attaches here
+```
+
+Capture requires an existing package that belongs to the fulfillment
+(via its shipment). No fulfillment-only orphan photos in M6.
+
+## VIII.2 Domain model
+
+- `Domain\Media\PhotoRecord` — immutable evidence row
+- `Domain\Media\PhotoKind` — allow-list: `contents` | `package`
+- Port `Domain\Repository\MediaRepository` — create / get / list / soft_delete / counts / next_sequence; **no** hard-delete or arbitrary update
+- Port `Domain\Media\PhotoStorage` + `Domain\Media\ImageProcessor`
+- Application `PhotoService` — sole mutation entry point
+
+## VIII.3 Storage (ADR-0004)
+
+```
+wp-content/uploads/mpcf/photos/{yyyy}/{mm}/{fulfillment_id}/{token}.{ext}
+wp-content/uploads/mpcf/photos/{yyyy}/{mm}/{fulfillment_id}/{token}-thumb.jpg
+```
+
+Deny rules + empty `index.html` under the protected root (same model as
+M4 documents). Relative paths only in DB. Random non-guessable filenames.
+Atomic writes. No public URLs. No Media Library registration.
+
+## VIII.4 Processing pipeline v1 (`processing_version = 1`)
+
+1. Accept JPEG / PNG / WebP source bytes only (validated MIME + decode).
+2. Decode; reject malformed / zero-dimension / decompression-bomb estimates.
+3. Normalize EXIF orientation into pixels.
+4. Resize so longest edge ≤ configured max edge px.
+5. Strip EXIF GPS and unnecessary metadata.
+6. Encode canonical JPEG (quality fixed for v1) as the evidence artifact.
+7. Generate one gallery JPEG thumbnail.
+8. SHA-256 the **final canonical stored bytes**.
+9. Persist `processing_version = 1` with dimensions, MIME, byte size.
+
+Future pipeline changes **must** increment `processing_version`. Historical
+hashes remain unambiguous because each row records which pipeline produced
+its bytes.
+
+## VIII.5 Soft-delete and retention semantics
+
+| Action | Row | Canonical + thumb bytes | Audit chain |
+|---|---|---|---|
+| Capture | Insert | Written | `photo.captured` |
+| Soft-delete | `deleted_at` set | **Preserved** | `photo.deleted` |
+| Retention purge (M6-D) | Metadata kept; paths cleared; `purged_at` | **Removed** | `photo.purged` |
+
+The audit chain is permanent. Purge records intentional file removal under
+retention policy — it does not erase history.
+
+## VIII.6 Photo requirement rule
+
+`requirement_satisfied(fulfillment_id)` ↔ at least one **non-deleted**
+photo with `kind = package` for that fulfillment.
+
+Contents-only evidence never satisfies the guard. M6-B wires
+`TransitionContextFactory`; M6-A only exposes the query.
+
+## VIII.7 Capability boundary
+
+| Cap | Roles | Purpose |
+|---|---|---|
+| `mpcf_capture_photos` | Operator + Lead + Admin | Capture / upload |
+| `mpcf_delete_photos` | **Lead + Admin only** | Soft-delete |
+
+No new workflow states. Authorization is capability-only. Controllers
+(M6-B) enforce delete cap; `PhotoService` remains Admin/REST-free.
+
+## VIII.8 Milestone packages
+
+| Package | Delivers | Does not |
+|---|---|---|
+| **M6-A** | Part VIII docs; `mpcf_media` migration; domain; store; processor; `PhotoService`; audit events; foundation tests | REST, Workspace UI, settings UI, purge job, browser, version bump |
+| **M6-B** | REST + stream; guard wiring; delete-cap on DELETE | Workspace gallery UI |
+| **M6-C** | Workspace capture/gallery; settings | Retention scheduler |
+| **M6-D** | Retention purge; Detail CS gallery; docs reconcile; `v0.6.0` RC | — |
+
+## VIII.9 Explicit non-goals (ADR-0007 and beyond)
+
+OCR; AI image analysis; barcode recognition; video; customer uploads;
+carrier labels; returns photography; inventory / supplier / PO / receiving
+photos (`wc-inventory-overview`); Mission Control; live `getUserMedia`
+widget; photo annotations; signed CDN URLs; Media Library; keeping raw
+unprocessed originals; inbound domain work.
+
+## VIII.10 M6-A delivery record
+
+*(Filled when M6-A completes.)*
+
