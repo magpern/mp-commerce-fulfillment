@@ -179,6 +179,86 @@ function buildPackageItem( card, pkg ) {
 	tracking.setAttribute( 'data-mpcf-package-field', 'tracking_number' );
 	item.appendChild( tracking );
 
+	var photosCfg = ( window.mpcfWorkspace && window.mpcfWorkspace.photos ) || {};
+	var photos = document.createElement( 'section' );
+	photos.className = 'mpcf-workspace__photos';
+	photos.setAttribute( 'data-mpcf-photos', '' );
+	photos.setAttribute( 'data-mpcf-package-id', String( pkg.id ) );
+	photos.setAttribute( 'data-mpcf-can-capture', photosCfg.canCapture ? '1' : '0' );
+	photos.setAttribute( 'data-mpcf-can-delete', photosCfg.canDelete ? '1' : '0' );
+	photos.setAttribute( 'data-mpcf-photos-required', photosCfg.required ? '1' : '0' );
+	photos.setAttribute( 'data-mpcf-photos-max', String( photosCfg.maxPerFulfillment || 10 ) );
+
+	var heading = document.createElement( 'h4' );
+	heading.textContent = 'Package photos';
+	photos.appendChild( heading );
+
+	var description = document.createElement( 'p' );
+	description.className = 'description';
+	description.textContent =
+		'Contents photos are optional evidence. A Sealed package photo is required when the photo requirement setting is enabled.';
+	photos.appendChild( description );
+
+	var requirement = document.createElement( 'p' );
+	requirement.setAttribute( 'data-mpcf-photo-requirement-status', '' );
+	requirement.setAttribute( 'aria-live', 'polite' );
+	photos.appendChild( requirement );
+
+	var count = document.createElement( 'p' );
+	count.setAttribute( 'data-mpcf-photo-count', '' );
+	photos.appendChild( count );
+
+	var gallery = document.createElement( 'ul' );
+	gallery.setAttribute( 'data-mpcf-photo-gallery', '' );
+	gallery.className = 'mpcf-workspace__photo-gallery';
+	photos.appendChild( gallery );
+
+	if ( photosCfg.canCapture ) {
+		var capture = document.createElement( 'div' );
+		capture.setAttribute( 'data-mpcf-photo-capture', '' );
+
+		var kindLabel = document.createElement( 'label' );
+		kindLabel.appendChild( document.createTextNode( 'Kind ' ) );
+		var kindSelect = document.createElement( 'select' );
+		kindSelect.setAttribute( 'data-mpcf-photo-kind', '' );
+		var contentsOpt = document.createElement( 'option' );
+		contentsOpt.value = 'contents';
+		contentsOpt.textContent = 'Contents';
+		var packageOpt = document.createElement( 'option' );
+		packageOpt.value = 'package';
+		packageOpt.selected = true;
+		packageOpt.textContent = 'Sealed package';
+		kindSelect.appendChild( contentsOpt );
+		kindSelect.appendChild( packageOpt );
+		kindLabel.appendChild( kindSelect );
+		capture.appendChild( kindLabel );
+
+		var dropzone = document.createElement( 'label' );
+		dropzone.className = 'mpcf-workspace__photo-dropzone';
+		dropzone.setAttribute( 'data-mpcf-photo-dropzone', '' );
+		dropzone.tabIndex = 0;
+		var dropText = document.createElement( 'span' );
+		dropText.textContent = 'Drop images here or choose files';
+		dropzone.appendChild( dropText );
+		var fileInput = document.createElement( 'input' );
+		fileInput.type = 'file';
+		fileInput.accept = 'image/*';
+		fileInput.multiple = true;
+		fileInput.setAttribute( 'capture', 'environment' );
+		fileInput.setAttribute( 'data-mpcf-photo-input', '' );
+		dropzone.appendChild( fileInput );
+		capture.appendChild( dropzone );
+
+		var uploadStatus = document.createElement( 'div' );
+		uploadStatus.setAttribute( 'data-mpcf-photo-upload-status', '' );
+		uploadStatus.setAttribute( 'aria-live', 'polite' );
+		capture.appendChild( uploadStatus );
+
+		photos.appendChild( capture );
+	}
+
+	item.appendChild( photos );
+
 	var remove = document.createElement( 'button' );
 	remove.type = 'button';
 	remove.className = 'mpcf-ui-repeater__remove';
@@ -212,6 +292,12 @@ function renderPackageItems( card, packages ) {
 			repeater.appendChild( item );
 		}
 	} );
+
+	if ( window.MpcfPhotos && typeof window.MpcfPhotos.refreshAll === 'function' ) {
+		window.MpcfPhotos.refreshAll();
+	} else {
+		document.dispatchEvent( new CustomEvent( 'mpcf-photos-refresh' ) );
+	}
 }
 
 /**

@@ -153,5 +153,105 @@ export var api = {
 		return request( 'POST', 'fulfillments/' + fulfillmentId + '/documents/render', {
 			doc_type: docType || 'packing_slip'
 		} );
+	},
+
+	listPhotos: function ( fulfillmentId, filters ) {
+		var query = [];
+		var options = filters || {};
+
+		if ( options.package_id ) {
+			query.push( 'package_id=' + encodeURIComponent( String( options.package_id ) ) );
+		}
+
+		if ( options.kind ) {
+			query.push( 'kind=' + encodeURIComponent( String( options.kind ) ) );
+		}
+
+		return request(
+			'GET',
+			'fulfillments/' + fulfillmentId + '/photos' + ( query.length ? '?' + query.join( '&' ) : '' )
+		);
+	},
+
+	uploadPhoto: function ( fulfillmentId, fields ) {
+		var settings = config();
+		var form = new window.FormData();
+		var options = fields || {};
+
+		form.append( 'file', options.file );
+		form.append( 'package_id', String( options.package_id ) );
+		form.append( 'kind', String( options.kind ) );
+		form.append( 'version', String( options.version ) );
+
+		var headers = {};
+
+		if ( settings.nonce ) {
+			headers[ 'X-WP-Nonce' ] = settings.nonce;
+		}
+
+		return window
+			.fetch( ( settings.restUrl || '' ) + 'fulfillments/' + fulfillmentId + '/photos', {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: headers,
+				body: form
+			} )
+			.then( function ( response ) {
+				return response.json().then(
+					function ( data ) {
+						if ( ! response.ok ) {
+							throw toApiError( response, data );
+						}
+
+						return data;
+					},
+					function () {
+						throw toApiError( response, {} );
+					}
+				);
+			} );
+	},
+
+	deletePhoto: function ( photoId, version ) {
+		return request( 'DELETE', 'photos/' + photoId, { version: version } );
+	},
+
+	photoThumbUrl: function ( photoId ) {
+		return ( config().restUrl || '' ) + 'photos/' + photoId + '/thumb';
+	},
+
+	photoContentUrl: function ( photoId ) {
+		return ( config().restUrl || '' ) + 'photos/' + photoId + '/content';
+	},
+
+	fetchPhotoBlob: function ( photoId, which ) {
+		var settings = config();
+		var path = which === 'content' ? this.photoContentUrl( photoId ) : this.photoThumbUrl( photoId );
+		var headers = {};
+
+		if ( settings.nonce ) {
+			headers[ 'X-WP-Nonce' ] = settings.nonce;
+		}
+
+		return window
+			.fetch( path, {
+				method: 'GET',
+				credentials: 'same-origin',
+				headers: headers
+			} )
+			.then( function ( response ) {
+				if ( ! response.ok ) {
+					return response.json().then(
+						function ( data ) {
+							throw toApiError( response, data );
+						},
+						function () {
+							throw toApiError( response, {} );
+						}
+					);
+				}
+
+				return response.blob();
+			} );
 	}
 };
