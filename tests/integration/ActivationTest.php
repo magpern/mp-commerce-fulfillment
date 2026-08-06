@@ -39,7 +39,7 @@ final class ActivationTest extends WP_UnitTestCase {
 			self::assertNotNull( $exists, "{$table} must exist after activation." );
 		}
 
-		self::assertCount( 8, Schema::all_tables() );
+		self::assertCount( 9, Schema::all_tables() );
 	}
 
 	public function test_activation_grants_roles_and_capabilities(): void {
@@ -56,6 +56,8 @@ final class ActivationTest extends WP_UnitTestCase {
 		}
 
 		self::assertFalse( $operator->has_cap( Capabilities::MANAGE_SETTINGS ) );
+		self::assertFalse( $operator->has_cap( Capabilities::DELETE_PHOTOS ) );
+		self::assertTrue( $operator->has_cap( Capabilities::CAPTURE_PHOTOS ) );
 
 		$administrator = get_role( 'administrator' );
 		foreach ( Capabilities::all() as $capability ) {

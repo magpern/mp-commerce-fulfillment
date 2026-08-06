@@ -1315,11 +1315,11 @@ msgstr ""
 msgid "Draft"
 msgstr ""
 
-#: src/Capabilities.php:103
+#: src/Capabilities.php:106
 msgid "Warehouse Operator"
 msgstr ""
 
-#: src/Capabilities.php:107
+#: src/Capabilities.php:110
 msgid "Warehouse Lead"
 msgstr ""
 
