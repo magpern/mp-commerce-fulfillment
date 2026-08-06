@@ -97,15 +97,18 @@ test.describe( 'Packing Workspace — package photography', () => {
 		await expect( primary ).toBeEnabled();
 		await expect( primary ).toHaveText( /^Packed$/ );
 
-		page.once( 'dialog', ( dialog ) => dialog.accept() );
-		await photos.locator( '[data-mpcf-photo-gallery] li' ).filter( { hasText: 'Sealed package' } ).locator( 'button', { hasText: 'Preview' } ).click();
+		const sealed = photos.locator( '[data-mpcf-photo-gallery] li[data-mpcf-photo-card-kind="package"]' );
+
+		await sealed.locator( 'button', { hasText: 'Preview' } ).click();
 		const lightbox = page.locator( '[data-mpcf-photo-lightbox]' );
 		await expect( lightbox ).toBeVisible();
 		await page.keyboard.press( 'Escape' );
 		await expect( lightbox ).toHaveCount( 0 );
 
+		// Register the confirm handler immediately before Delete only —
+		// a leftover handler from Preview would double-accept and fail.
 		page.once( 'dialog', ( dialog ) => dialog.accept() );
-		await photos.locator( '[data-mpcf-photo-gallery] li' ).filter( { hasText: 'Sealed package' } ).locator( 'button', { hasText: 'Delete' } ).click();
+		await sealed.locator( 'button', { hasText: 'Delete' } ).click();
 		await expect( photos.locator( '[data-mpcf-photo-gallery] li' ) ).toHaveCount( 1, { timeout: 15000 } );
 		await expect( page.locator( '[data-mpcf-photo-requirement-status]' ).first() ).toContainText(
 			/sealed-package photo still required/i

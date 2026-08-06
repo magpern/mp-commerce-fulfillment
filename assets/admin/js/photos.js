@@ -244,6 +244,7 @@ function renderGallery( section, photos ) {
 		var li = document.createElement( 'li' );
 		li.className = 'mpcf-workspace__photo-card';
 		li.setAttribute( 'data-mpcf-photo-id', String( photo.id ) );
+		li.setAttribute( 'data-mpcf-photo-card-kind', String( photo.kind || '' ) );
 
 		var thumb = document.createElement( 'img' );
 		thumb.alt = kindLabel( photo.kind );
