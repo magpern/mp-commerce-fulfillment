@@ -24,7 +24,7 @@ final class Assets {
 	/**
 	 * Every admin page slug this plugin owns.
 	 */
-	private const SCREEN_SLUGS = array( 'mpcf-dashboard', 'mpcf-queue', 'mpcf-orders', 'mpcf-documents', 'mpcf-settings', 'mpcf-fulfillment-detail', 'mpcf-workspace' );
+	private const SCREEN_SLUGS = array( 'mpcf-dashboard', 'mpcf-queue', 'mpcf-orders', 'mpcf-documents', 'mpcf-settings', 'mpcf-fulfillment-detail', 'mpcf-workspace', 'mpcf-wave' );
 
 	/**
 	 * Registers hooks.
@@ -75,6 +75,14 @@ final class Assets {
 
 		if ( self::is_workspace_screen() ) {
 			$this->enqueue_workspace_assets();
+		}
+
+		if ( self::is_wave_screen() ) {
+			$this->enqueue_wave_assets();
+		}
+
+		if ( self::is_queue_screen() ) {
+			$this->enqueue_queue_wave_assets();
 		}
 
 		if ( self::is_detail_screen() ) {
@@ -210,6 +218,62 @@ final class Assets {
 		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen detection, no state change.
 
 		return 'mpcf-workspace' === $page;
+	}
+
+	/**
+	 * Whether the current admin request is the Wave Workspace.
+	 */
+	private static function is_wave_screen(): bool {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen detection, no state change.
+
+		return 'mpcf-wave' === $page;
+	}
+
+	/**
+	 * Whether the current admin request is the Queue.
+	 */
+	private static function is_queue_screen(): bool {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen detection, no state change.
+
+		return 'mpcf-queue' === $page;
+	}
+
+	/**
+	 * Enqueues Wave Workspace modules + scan sink.
+	 */
+	private function enqueue_wave_assets(): void {
+		wp_enqueue_script( 'mpcf-mpds-toast', MPCF_PLUGIN_URL . 'assets/mpds/js/toast.js', array(), MPCF_VERSION, true );
+		wp_enqueue_script( 'mpcf-mpds-scan-sink', MPCF_PLUGIN_URL . 'assets/mpds/js/scan-sink.js', array(), MPCF_VERSION, true );
+		wp_enqueue_script_module( 'mpcf-wave', MPCF_PLUGIN_URL . 'assets/admin/js/wave.js', array(), MPCF_VERSION );
+
+		wp_register_script( 'mpcf-wave-config', false, array(), MPCF_VERSION, true );
+		wp_enqueue_script( 'mpcf-wave-config' );
+		wp_add_inline_script(
+			'mpcf-wave-config',
+			sprintf(
+				'window.mpcfWorkspace = window.mpcfWorkspace || { restUrl: %s, nonce: %s };',
+				wp_json_encode( rest_url( 'mpcf/v1/' ) ),
+				wp_json_encode( wp_create_nonce( 'wp_rest' ) )
+			)
+		);
+	}
+
+	/**
+	 * Enqueues Queue "create wave" helper.
+	 */
+	private function enqueue_queue_wave_assets(): void {
+		wp_enqueue_script_module( 'mpcf-queue-wave', MPCF_PLUGIN_URL . 'assets/admin/js/queue-wave.js', array(), MPCF_VERSION );
+		wp_register_script( 'mpcf-queue-wave-config', false, array(), MPCF_VERSION, true );
+		wp_enqueue_script( 'mpcf-queue-wave-config' );
+		wp_add_inline_script(
+			'mpcf-queue-wave-config',
+			sprintf(
+				'window.mpcfWorkspace = window.mpcfWorkspace || { restUrl: %s, nonce: %s }; window.mpcfWavePage = %s;',
+				wp_json_encode( rest_url( 'mpcf/v1/' ) ),
+				wp_json_encode( wp_create_nonce( 'wp_rest' ) ),
+				wp_json_encode( admin_url( 'admin.php?page=' . WavePage::SLUG ) )
+			)
+		);
 	}
 
 	/**

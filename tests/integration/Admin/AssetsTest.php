@@ -75,12 +75,36 @@ final class AssetsTest extends WP_UnitTestCase {
 	}
 
 	public function test_workspace_script_is_not_enqueued_on_another_plugin_screen(): void {
-		$_GET['page'] = 'mpcf-queue'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test harness simulating the admin screen query param.
+		$_GET['page'] = 'mpcf-settings'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test harness simulating the admin screen query param.
 
 		( new Assets() )->maybe_enqueue( '' );
 
 		self::assertSame( '', $this->render_enqueued_script_modules() );
 		self::assertFalse( wp_script_is( 'mpcf-mpds-toast', 'enqueued' ) );
+	}
+
+	public function test_queue_screen_enqueues_queue_wave_module_only(): void {
+		$_GET['page'] = 'mpcf-queue'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test harness simulating the admin screen query param.
+
+		( new Assets() )->maybe_enqueue( '' );
+
+		$html = $this->render_enqueued_script_modules();
+
+		self::assertStringContainsString( 'id="mpcf-queue-wave-js-module"', $html );
+		self::assertStringNotContainsString( 'id="mpcf-workspace-js-module"', $html );
+		self::assertFalse( wp_script_is( 'mpcf-mpds-toast', 'enqueued' ) );
+	}
+
+	public function test_wave_screen_enqueues_wave_module(): void {
+		$_GET['page'] = 'mpcf-wave'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test harness simulating the admin screen query param.
+
+		( new Assets() )->maybe_enqueue( '' );
+
+		$html = $this->render_enqueued_script_modules();
+
+		self::assertStringContainsString( 'id="mpcf-wave-js-module"', $html );
+		self::assertTrue( wp_script_is( 'mpcf-mpds-toast', 'enqueued' ) );
+		self::assertTrue( wp_script_is( 'mpcf-mpds-scan-sink', 'enqueued' ) );
 	}
 
 	public function test_workspace_scripts_are_registered_as_real_script_modules(): void {
