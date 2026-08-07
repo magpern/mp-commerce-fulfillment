@@ -61,8 +61,21 @@ use MPCF\Application\TransitionContextFactory;
 use MPCF\Application\Wave\WaveScanService;
 use MPCF\Application\Wave\WaveService;
 use MPCF\Application\WorkflowService;
+use MPCF\Application\Diagnostics\AuditChainVerifier;
+use MPCF\Infrastructure\Diagnostics\DefaultCheckerRegistryFactory;
+use MPCF\Application\Diagnostics\DoctorService;
+use MPCF\Application\Diagnostics\MaintenanceAuditor;
+use MPCF\Infrastructure\Diagnostics\Repair\CapabilitiesRepairService;
+use MPCF\Infrastructure\Diagnostics\Repair\ScheduleRepairService;
+use MPCF\Infrastructure\Diagnostics\Repair\SchemaRepairService;
+use MPCF\Infrastructure\Diagnostics\Repair\StorageDirsRepairService;
+use MPCF\Application\Diagnostics\ValidationService;
 use MPCF\Cli\AnalyticsCommand;
+use MPCF\Cli\AuditCommand;
 use MPCF\Cli\BackfillCommand;
+use MPCF\Cli\DoctorCommand;
+use MPCF\Cli\RepairCommand;
+use MPCF\Cli\ValidateCommand;
 use MPCF\Documents\HtmlRenderer;
 use MPCF\Documents\TemplateRegistry;
 use MPCF\Domain\Scan\ScanResolver;
@@ -91,15 +104,20 @@ use MPCF\Infrastructure\Files\ProtectedDocumentStore;
 use MPCF\Infrastructure\Files\ProtectedPhotoStore;
 use MPCF\Infrastructure\Media\GdImageProcessor;
 use MPCF\Infrastructure\Notifications\EmailChannel;
+use MPCF\Infrastructure\Privacy\PrivacyEraser;
+use MPCF\Infrastructure\Privacy\PrivacyExporter;
+use MPCF\Infrastructure\Privacy\PrivacyRegistrar;
 use MPCF\Infrastructure\Scheduling\AnalyticsRollupScheduler;
 use MPCF\Infrastructure\Scheduling\PhotoRetentionScheduler;
 use MPCF\Infrastructure\Scan\TransientScanCorrectionStore;
+use MPCF\Infrastructure\SiteHealth\SiteHealthRegistrar;
 use MPCF\Infrastructure\SystemClock;
 use MPCF\Vendor\Mpds\ComponentRenderer;
 use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
 use MPCF\Vendor\Mpds\PageShell\Menu;
 use MPCF\Vendor\Mpds\PageShell\SectionNavigation;
 use MPCF\Woo\IntakeHooks;
+use MPCF\Woo\PrivacyHooks;
 use MPCF\Woo\RefundObserver;
 use MPCF\Woo\StatusBridge;
 use MPCF\Woo\StoreUnits;
@@ -363,9 +381,29 @@ final class Plugin {
 
 		( new RefundObserver( $fulfillments, $items, $orders, $workflow_service, $settings ) )->register();
 
+		// M10: shared CheckerRegistry powers doctor + Site Health; repairs audit via MaintenanceAuditor.
+		$checker_registry = DefaultCheckerRegistryFactory::create();
+		$doctor_service   = new DoctorService( $checker_registry );
+		$validation       = new ValidationService( $checker_registry );
+		$maintenance      = new MaintenanceAuditor( $events, $dispatcher, $clock );
+		$audit_verifier   = new AuditChainVerifier( $events );
+		$privacy_eraser   = new PrivacyEraser();
+		( new SiteHealthRegistrar( $checker_registry ) )->register();
+		( new PrivacyRegistrar( new PrivacyExporter(), $privacy_eraser ) )->register();
+		( new PrivacyHooks( $privacy_eraser ) )->register();
+
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			( new BackfillCommand( $orders, $intake ) )->register();
 			( new AnalyticsCommand( $analytics_service ) )->register();
+			( new DoctorCommand( $doctor_service ) )->register();
+			( new ValidateCommand( $validation ) )->register();
+			( new RepairCommand(
+				new ScheduleRepairService( $maintenance ),
+				new StorageDirsRepairService( $maintenance ),
+				new SchemaRepairService( $maintenance ),
+				new CapabilitiesRepairService( $maintenance )
+			) )->register();
+			( new AuditCommand( $audit_verifier ) )->register();
 		}
 
 		// Architecture Plan §IV.9: mpcf/v1 is unconditional, not gated on

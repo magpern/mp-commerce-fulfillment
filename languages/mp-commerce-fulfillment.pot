@@ -2,7 +2,7 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Commerce Fulfillment 0.9.0\n"
+"Project-Id-Version: Commerce Fulfillment 0.10.0\n"
 "Report-Msgid-Bugs-To: https://github.com/magpern/mp-commerce-fulfillment/issues\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -270,6 +270,7 @@ msgstr ""
 #: src/Admin/QueuePage.php:556
 #: src/Admin/QueuePage.php:722
 #: src/Admin/WorkspacePage.php:388
+#: src/Infrastructure/Privacy/PrivacyExporter.php:66
 msgid "State"
 msgstr ""
 
@@ -719,7 +720,7 @@ msgid "Order status"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:185
-#: src/Plugin.php:590
+#: src/Plugin.php:628
 msgid "Fulfillment"
 msgstr ""
 
@@ -1809,6 +1810,95 @@ msgstr ""
 
 #: src/Documents/DocumentEventLabels.php:58
 msgid "Document"
+msgstr ""
+
+#: src/Infrastructure/Privacy/PrivacyEraser.php:62
+msgid "No MPCF personal data found for this email."
+msgstr ""
+
+#. translators: %d: fulfillment id
+#: src/Infrastructure/Privacy/PrivacyEraser.php:86
+#, php-format
+msgid "Fulfillment %d: snapshots anonymized; audit chain retained."
+msgstr ""
+
+#. translators: %d: rows updated
+#: src/Infrastructure/Privacy/PrivacyEraser.php:97
+#, php-format
+msgid "Cleared actor_id on %d audit events for this user (labels anonymized)."
+msgstr ""
+
+#: src/Infrastructure/Privacy/PrivacyEraser.php:103
+msgid "Retained: event payloads, hashes, prev_hash, order_id links, operational ids (required for audit integrity)."
+msgstr ""
+
+#: src/Infrastructure/Privacy/PrivacyExporter.php:53
+#: src/Infrastructure/Privacy/PrivacyRegistrar.php:45
+#: src/Infrastructure/Privacy/PrivacyRegistrar.php:61
+#: src/Infrastructure/SiteHealth/SiteHealthRegistrar.php:55
+msgid "MP Commerce Fulfillment"
+msgstr ""
+
+#: src/Infrastructure/Privacy/PrivacyExporter.php:54
+msgid "Warehouse fulfillment records linked to your orders."
+msgstr ""
+
+#: src/Infrastructure/Privacy/PrivacyExporter.php:58
+msgid "Fulfillment ID"
+msgstr ""
+
+#: src/Infrastructure/Privacy/PrivacyExporter.php:62
+msgid "Order ID"
+msgstr ""
+
+#: src/Infrastructure/Privacy/PrivacyExporter.php:70
+msgid "Customer name snapshot"
+msgstr ""
+
+#: src/Infrastructure/Privacy/PrivacyExporter.php:74
+msgid "Created at"
+msgstr ""
+
+#. translators: %d: note id
+#: src/Infrastructure/Privacy/PrivacyExporter.php:84
+#, php-format
+msgid "Note #%d"
+msgstr ""
+
+#. translators: %d: media id
+#: src/Infrastructure/Privacy/PrivacyExporter.php:95
+#, php-format
+msgid "Photo metadata #%d"
+msgstr ""
+
+#: src/Infrastructure/Privacy/PrivacyRegistrar.php:47
+msgid "Fulfillment history, notes, and photo metadata."
+msgstr ""
+
+#: src/Infrastructure/SiteHealth/SiteHealthRegistrar.php:88
+msgid "MPCF has critical operational issues"
+msgstr ""
+
+#: src/Infrastructure/SiteHealth/SiteHealthRegistrar.php:95
+msgid "MPCF reports operational warnings"
+msgstr ""
+
+#: src/Infrastructure/SiteHealth/SiteHealthRegistrar.php:102
+msgid "MPCF operational checks passed"
+msgstr ""
+
+#: src/Infrastructure/SiteHealth/SiteHealthRegistrar.php:103
+msgid "Environment, schema, storage, and schedules look healthy. Run `wp mpcf doctor` for detail."
+msgstr ""
+
+#. translators: %d: additional finding count
+#: src/Infrastructure/SiteHealth/SiteHealthRegistrar.php:132
+#, php-format
+msgid "…and %d more. Use wp mpcf doctor for the full report."
+msgstr ""
+
+#: src/Infrastructure/SiteHealth/SiteHealthRegistrar.php:157
+msgid "MPCF"
 msgstr ""
 
 #: src/Woo/TrackingEmailExtension.php:121
