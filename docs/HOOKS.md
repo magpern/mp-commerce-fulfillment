@@ -23,6 +23,7 @@ Milestone 2).
 | `woocommerce_order_status_processing` | action | `Woo\IntakeHooks::handle_order_paid()` | default | Same intake path — covers gateways/manual-order flows that go straight to `processing` without firing `payment_complete`. |
 | `mpcf_process_intake` | action + Action Scheduler | `Woo\IntakeHooks::process_scheduled_intake()` | default | Action Scheduler fallback retry when a synchronous intake attempt fails; does not reschedule itself on further failure. Scheduled via `as_enqueue_async_action()` in group `mpcf` — see `docs/PERSISTED_DATA.md`. |
 | `mpcf_purge_photo_retention` | action + Action Scheduler | `Infrastructure\Scheduling\PhotoRetentionScheduler::run()` | default | Daily bounded package-photo byte purge (group `mpcf`). Overlap blocked by transient lock. Registered on `init` via `ensure_scheduled()`. |
+| `mpcf_analytics_daily_rollup` | action + Action Scheduler | `Infrastructure\Scheduling\AnalyticsRollupScheduler::run()` | default | Nightly ROLLUP of closed UTC days into `mpcf_analytics_daily` (group `mpcf`). Overlap blocked by transient lock. Does not rewrite current-version historical rows. |
 | `woocommerce_order_status_cancelled` | action | `Woo\RefundObserver::handle_order_cancelled()` | default | Store-order bridge: proposes cancel/flag-problem per `inbound_cancel_behavior` (not supplier receiving — see ADR-0007). |
 | `woocommerce_order_fully_refunded` | action | `Woo\RefundObserver::handle_order_fully_refunded()` | default | Store-order bridge: proposes cancel/flag-problem per `inbound_refund_behavior` (not supplier receiving — see ADR-0007). |
 | `woocommerce_order_partially_refunded` | action | `Woo\RefundObserver::handle_order_partially_refunded()` | default | Always flags the fulfillment `problem` — no automatic-cancel setting exists for a partial refund. |
@@ -156,6 +157,14 @@ Global audit events (via `DomainEvent::global_event`):
 Wave scans reuse `scan.item_picked` / `scan.corrected` with payload fields
 `wave_id` and `allocation_fulfillment_id`. Wave undo uses transient
 `mpcf_wave_scan_undo_{user}_{wave}` (TTL 30 minutes).
+
+## M9 Operational Analytics
+
+M9 adds no public WordPress filters. Analytics is read-only REST
+`/mpcf/v1/analytics/…` plus admin screen `mpcf-analytics` and WP-CLI
+`wp mpcf analytics backfill|rebuild`. Nightly Action Scheduler hook
+`mpcf_analytics_daily_rollup` materializes closed UTC days. No workflow
+mutation hooks.
 
 All other v1.0 extension surfaces (`mpcf_workflows`, `mpcf_event` +
 per-type actions, `mpcf_intake_should_create`) remain documented in

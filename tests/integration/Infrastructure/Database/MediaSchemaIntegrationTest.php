@@ -28,7 +28,7 @@ final class MediaSchemaIntegrationTest extends WP_UnitTestCase {
 		$migrator = new Migrator();
 		$migrator->migrate();
 
-		self::assertSame( 7, $migrator->current_version() );
+		self::assertSame( 8, $migrator->current_version() );
 
 		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
 		self::assertNotNull( $exists );
@@ -82,7 +82,7 @@ final class MediaSchemaIntegrationTest extends WP_UnitTestCase {
 		$migrator->migrate();
 		$migrator->migrate();
 
-		self::assertSame( 7, $migrator->current_version() );
+		self::assertSame( 8, $migrator->current_version() );
 
 		global $wpdb;
 		$table  = Schema::table( Schema::MEDIA );

@@ -15,14 +15,22 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
 /**
- * Append-only audit log guard. `WpdbEventRepository` is the only class
- * allowed to name `Schema::EVENTS` (mirroring `WpdbFulfillmentRepository`'s
- * own "only class that reads or writes" convention), and that one class
- * must never contain an `UPDATE`/`DELETE` mutation against it.
+ * Append-only audit log guard. `WpdbEventRepository` is the write owner;
+ * `WpdbAnalyticsEventSource` is an additional **read-only** consumer for
+ * M9 analytics (Part XI). Neither class may UPDATE/DELETE `mpcf_events`.
  */
 final class AuditAppendOnlyGuardTest extends TestCase {
 
 	private const OWNING_FILE = 'Infrastructure/Database/WpdbEventRepository.php';
+
+	/**
+	 * Additional read-only consumers allowed to name Schema::EVENTS.
+	 *
+	 * @var list<string>
+	 */
+	private const READ_ONLY_ALLOWED = array(
+		'Infrastructure/Database/WpdbAnalyticsEventSource.php',
+	);
 
 	public function test_only_wpdbeventrepository_names_the_events_table(): void {
 		$violations = $this->scan_for_events_table_reference( dirname( __DIR__, 2 ) . '/src' );
@@ -34,6 +42,14 @@ final class AuditAppendOnlyGuardTest extends TestCase {
 		$contents = (string) file_get_contents( dirname( __DIR__, 2 ) . '/src/' . self::OWNING_FILE );
 
 		self::assertSame( array(), $this->mutation_violations( $contents, self::OWNING_FILE ) );
+	}
+
+	public function test_analytics_event_source_is_read_only(): void {
+		foreach ( self::READ_ONLY_ALLOWED as $relative ) {
+			$contents = (string) file_get_contents( dirname( __DIR__, 2 ) . '/src/' . $relative );
+			self::assertSame( array(), $this->mutation_violations( $contents, $relative ) );
+			self::assertFalse( str_contains( $contents, '->insert(' ), $relative . ' must not insert events.' );
+		}
 	}
 
 	public function test_the_table_reference_scan_catches_a_second_class_naming_the_events_table(): void {
@@ -86,7 +102,9 @@ final class AuditAppendOnlyGuardTest extends TestCase {
 			// Schema.php itself defines and creates the table (migration
 			// step 1) — naming the constant there is the definition, not a
 			// second reader/writer.
-			if ( self::OWNING_FILE === $relative || 'Infrastructure/Database/Schema.php' === $relative ) {
+			if ( self::OWNING_FILE === $relative
+				|| 'Infrastructure/Database/Schema.php' === $relative
+				|| in_array( $relative, self::READ_ONLY_ALLOWED, true ) ) {
 				continue;
 			}
 

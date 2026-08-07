@@ -46,9 +46,10 @@ final class Migrator {
 	 * `mpcf_package_items`, D19/ADR-0005), step 5 creates
 	 * `mpcf_documents` (§10). M6 raises it to 6: step 6 creates
 	 * `mpcf_media` (Part VIII package photography). M8 raises it to 7:
-	 * step 7 creates `mpcf_waves` and `mpcf_wave_members` (Part X).
+	 * step 7 creates `mpcf_waves` and `mpcf_wave_members` (Part X). M9
+	 * raises it to 8: step 8 creates `mpcf_analytics_daily` (Part XI).
 	 */
-	public const TARGET = 7;
+	public const TARGET = 8;
 
 	/**
 	 * Test-only step map override.
@@ -140,6 +141,7 @@ final class Migrator {
 			5 => array( $this, 'step_5_documents_table' ),
 			6 => array( $this, 'step_6_media_table' ),
 			7 => array( $this, 'step_7_wave_tables' ),
+			8 => array( $this, 'step_8_analytics_daily' ),
 		);
 	}
 
@@ -293,6 +295,25 @@ final class Migrator {
 		global $wpdb;
 
 		foreach ( Schema::wave_create_statements() as $sql ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
+			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $this->table_name_from_ddl( $sql ) ) ) );
+
+			if ( null !== $exists ) {
+				continue;
+			}
+
+			$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
+		}
+	}
+
+	/**
+	 * M9: creates `mpcf_analytics_daily` (Part XI). Idempotent via the same
+	 * `SHOW TABLES LIKE` guard {@see step_1_initial_tables()} uses.
+	 */
+	private function step_8_analytics_daily(): void {
+		global $wpdb;
+
+		foreach ( Schema::analytics_daily_create_statements() as $sql ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Static DDL from Schema, no user input.
 			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $this->table_name_from_ddl( $sql ) ) ) );
 

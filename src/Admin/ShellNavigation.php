@@ -56,6 +56,15 @@ final class ShellNavigation {
 			);
 		}
 
+		if ( ! function_exists( 'current_user_can' ) || current_user_can( \MPCF\Capabilities::VIEW_ANALYTICS ) ) {
+			$items[] = new SectionNavItemViewModel(
+				__( 'Analytics', 'mp-commerce-fulfillment' ),
+				admin_url( 'admin.php?page=' . AnalyticsPage::SLUG ),
+				'dashicons-chart-area',
+				AnalyticsPage::SLUG === $current_slug
+			);
+		}
+
 		if ( ! function_exists( 'current_user_can' ) || current_user_can( \MPCF\Capabilities::MANAGE_SETTINGS ) ) {
 			$items[] = new SectionNavItemViewModel(
 				__( 'Settings', 'mp-commerce-fulfillment' ),

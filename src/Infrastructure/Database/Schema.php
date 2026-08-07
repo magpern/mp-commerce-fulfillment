@@ -94,6 +94,12 @@ final class Schema {
 	public const WAVE_MEMBERS = 'mpcf_wave_members';
 
 	/**
+	 * Unprefixed table name for daily analytics rollups (Part XI / M9),
+	 * added by step 8.
+	 */
+	public const ANALYTICS_DAILY = 'mpcf_analytics_daily';
+
+	/**
 	 * Name of the unique index enforcing intake idempotency at the database
 	 * level (added by {@see \MPCF\Infrastructure\Database\Migrator}'s
 	 * second step — see {@see fulfillments_order_unique_index_ddl()}).
@@ -131,6 +137,7 @@ final class Schema {
 	 */
 	public static function all_tables(): array {
 		return array(
+			self::table( self::ANALYTICS_DAILY ),
 			self::table( self::WAVE_MEMBERS ),
 			self::table( self::WAVES ),
 			self::table( self::NOTES ),
@@ -354,6 +361,17 @@ final class Schema {
 	}
 
 	/**
+	 * `CREATE TABLE` statements for M9 analytics rollups (Migrator step 8).
+	 *
+	 * @return list<string>
+	 */
+	public static function analytics_daily_create_statements(): array {
+		return array(
+			self::analytics_daily_ddl(),
+		);
+	}
+
+	/**
 	 * DDL for `mpcf_shipments` — the consignment (one carrier handover).
 	 * Architecture Plan §IV.6: indexed on `fulfillment_id` (the workspace's
 	 * only lookup path), `status` (a future tracking-sync sweep), and
@@ -533,6 +551,31 @@ final class Schema {
 			picked_at DATETIME NULL,
 			PRIMARY KEY  (wave_id, fulfillment_id),
 			KEY fulfillment_id (fulfillment_id)
+		) ENGINE=InnoDB ROW_FORMAT=DYNAMIC {$charset_collate};";
+	}
+
+	/**
+	 * DDL for `mpcf_analytics_daily` — UTC-day × warehouse rollups (Part XI).
+	 * Counters and durations stored as deterministic JSON; no PII.
+	 */
+	private static function analytics_daily_ddl(): string {
+		$table           = self::table( self::ANALYTICS_DAILY );
+		$charset_collate = self::charset_collate();
+
+		return "CREATE TABLE {$table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			`utc_date` DATE NOT NULL,
+			warehouse_id BIGINT UNSIGNED NOT NULL DEFAULT 1,
+			rollup_version INT UNSIGNED NOT NULL,
+			counters_json LONGTEXT NOT NULL,
+			durations_json LONGTEXT NOT NULL,
+			source_event_max_id BIGINT UNSIGNED NULL,
+			computed_at DATETIME NOT NULL,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY utc_date_warehouse (`utc_date`, warehouse_id),
+			KEY rollup_version (rollup_version)
 		) ENGINE=InnoDB ROW_FORMAT=DYNAMIC {$charset_collate};";
 	}
 

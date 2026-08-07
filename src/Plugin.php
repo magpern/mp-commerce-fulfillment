@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace MPCF;
 
 use MPCF\Admin\Assets;
+use MPCF\Admin\AnalyticsPage;
 use MPCF\Admin\DashboardPage;
 use MPCF\Admin\DocumentsPage;
 use MPCF\Admin\FulfillmentDetailPage;
@@ -19,12 +20,15 @@ use MPCF\Admin\QueuePage;
 use MPCF\Admin\SettingsPage;
 use MPCF\Admin\WavePage;
 use MPCF\Admin\WorkspacePage;
+use MPCF\Application\Analytics\AnalyticsCsvExporter;
+use MPCF\Application\Analytics\AnalyticsService;
 use MPCF\Application\DocumentHistoryService;
 use MPCF\Application\DocumentService;
 use MPCF\Application\Notifications\NotificationConfigurationService;
 use MPCF\Application\Notifications\NotificationDispatcher;
 use MPCF\Application\Notifications\NotificationFactory;
 use MPCF\Application\Notifications\NotificationService;
+use MPCF\Api\Rest\AnalyticsController;
 use MPCF\Api\Rest\AssignmentController;
 use MPCF\Api\Rest\CarriersController;
 use MPCF\Api\Rest\DocumentsController;
@@ -57,16 +61,21 @@ use MPCF\Application\TransitionContextFactory;
 use MPCF\Application\Wave\WaveScanService;
 use MPCF\Application\Wave\WaveService;
 use MPCF\Application\WorkflowService;
+use MPCF\Cli\AnalyticsCommand;
 use MPCF\Cli\BackfillCommand;
 use MPCF\Documents\HtmlRenderer;
 use MPCF\Documents\TemplateRegistry;
 use MPCF\Domain\Scan\ScanResolver;
 use MPCF\Domain\Workflow\StandardWorkflow;
 use MPCF\Domain\Workflow\WorkflowDefinition;
+use MPCF\Engine\Analytics\AnalyticsEngine;
 use MPCF\Engine\GuardRegistry;
 use MPCF\Engine\WorkflowEngine;
 use MPCF\Infrastructure\Carriers\BundledCarrierRegistry;
 use MPCF\Infrastructure\Database\Migrator;
+use MPCF\Infrastructure\Database\WpdbAnalyticsDailyRepository;
+use MPCF\Infrastructure\Database\WpdbAnalyticsDiagnosticsReader;
+use MPCF\Infrastructure\Database\WpdbAnalyticsEventSource;
 use MPCF\Infrastructure\Database\WpdbDocumentRepository;
 use MPCF\Infrastructure\Database\WpdbEventRepository;
 use MPCF\Infrastructure\Database\WpdbFulfillmentItemRepository;
@@ -82,6 +91,7 @@ use MPCF\Infrastructure\Files\ProtectedDocumentStore;
 use MPCF\Infrastructure\Files\ProtectedPhotoStore;
 use MPCF\Infrastructure\Media\GdImageProcessor;
 use MPCF\Infrastructure\Notifications\EmailChannel;
+use MPCF\Infrastructure\Scheduling\AnalyticsRollupScheduler;
 use MPCF\Infrastructure\Scheduling\PhotoRetentionScheduler;
 use MPCF\Infrastructure\Scan\TransientScanCorrectionStore;
 use MPCF\Infrastructure\SystemClock;
@@ -299,6 +309,16 @@ final class Plugin {
 		( new IntakeHooks( $intake ) )->register();
 		( new PhotoRetentionScheduler( $photo_retention ) )->register();
 
+		$analytics_engine  = new AnalyticsEngine( new WpdbAnalyticsEventSource(), new WpdbAnalyticsDailyRepository() );
+		$analytics_service = new AnalyticsService(
+			$analytics_engine,
+			$clock,
+			$definition,
+			new WpdbAnalyticsDiagnosticsReader()
+		);
+		$analytics_csv     = new AnalyticsCsvExporter();
+		( new AnalyticsRollupScheduler( $analytics_service ) )->register();
+
 		$shipping_service = new ShippingService(
 			$fulfillments,
 			$items,
@@ -345,6 +365,7 @@ final class Plugin {
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			( new BackfillCommand( $orders, $intake ) )->register();
+			( new AnalyticsCommand( $analytics_service ) )->register();
 		}
 
 		// Architecture Plan §IV.9: mpcf/v1 is unconditional, not gated on
@@ -443,6 +464,7 @@ final class Plugin {
 				new PhotosController( $photo_service, $workflow_service, $detail_service ),
 				new ScanController( $scan_service, $workflow_service ),
 				new WavesController( $wave_service, $wave_scan, $document_service ),
+				new AnalyticsController( $analytics_service, $analytics_csv ),
 			)
 		) )->register();
 	}
@@ -551,13 +573,24 @@ final class Plugin {
 			$settings
 		);
 		$wave_page      = new WavePage( $shell, $renderer );
+		$analytics_page = new AnalyticsPage(
+			$shell,
+			$renderer,
+			new AnalyticsService(
+				new AnalyticsEngine( new WpdbAnalyticsEventSource(), new WpdbAnalyticsDailyRepository() ),
+				$clock,
+				$definition,
+				new WpdbAnalyticsDiagnosticsReader()
+			),
+			new AnalyticsCsvExporter()
+		);
 
 		( new Menu(
 			DashboardPage::SLUG,
 			__( 'Fulfillment', 'mp-commerce-fulfillment' ),
 			'dashicons-archive',
 			Capabilities::VIEW_QUEUE,
-			array( $dashboard_page, $queue_page, $orders_page, $documents_page, $settings_page )
+			array( $dashboard_page, $queue_page, $orders_page, $documents_page, $analytics_page, $settings_page )
 		) )->register();
 
 		$hidden_pages = array( $detail_page, $workspace_page, $wave_page );

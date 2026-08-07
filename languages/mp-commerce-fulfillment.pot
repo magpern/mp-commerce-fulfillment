@@ -2,7 +2,7 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Commerce Fulfillment 0.8.0\n"
+"Project-Id-Version: Commerce Fulfillment 0.9.0\n"
 "Report-Msgid-Bugs-To: https://github.com/magpern/mp-commerce-fulfillment/issues\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -38,6 +38,259 @@ msgstr ""
 
 #: mp-commerce-fulfillment.php:90
 msgid "Commerce Fulfillment requires WooCommerce to be installed and active."
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:88
+msgid "Operational Analytics"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:95
+#: src/Admin/ShellNavigation.php:61
+msgid "Analytics"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:147
+msgid "Overview"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:148
+#: src/Admin/AnalyticsPage.php:308
+msgid "Reports"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:149
+msgid "Diagnostics"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:169
+msgid "Today (UTC live)"
+msgstr ""
+
+#. translators: %s: UTC date Y-m-d
+#: src/Admin/AnalyticsPage.php:173
+#, php-format
+msgid "UTC day: %s — historical trends use nightly rollups; Mission Control is unchanged."
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:179
+msgid "Created today"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:180
+#: src/Admin/DashboardPage.php:201
+msgid "Packed today"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:181
+#: src/Admin/DashboardPage.php:202
+msgid "Shipped today"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:182
+msgid "Open queue"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:183
+msgid "Exceptions"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:184
+msgid "Waves completed"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:187
+msgid "Notification failure rate"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:202
+msgid "Waves today"
+msgstr ""
+
+#. translators: 1: completed count 2: abandoned count
+#: src/Admin/AnalyticsPage.php:206
+#, php-format
+msgid "Completed: %1$d · Abandoned: %2$d"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:220
+msgid "Stage Timeline"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:222
+msgid "Queued → Picking"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:223
+msgid "Picking → Picked"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:224
+msgid "Picked → Packing"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:225
+msgid "Packing → Packed"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:226
+msgid "Packed → Shipped"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:227
+msgid "Queued → Shipped"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:230
+msgid "Stage transition"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:231
+msgid "Average (s)"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:232
+msgid "p50 (s)"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:233
+msgid "p90 (s)"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:234
+msgid "Samples"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:256
+msgid "Queue ageing"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:258
+msgid "0–1 h"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:259
+msgid "1–4 h"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:260
+msgid "4–24 h"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:261
+msgid "1–3 d"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:262
+msgid ">3 d"
+msgstr ""
+
+#. translators: 1: open count 2: exception count
+#: src/Admin/AnalyticsPage.php:277
+#, php-format
+msgid "Open: %1$d · Exceptions: %2$d"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:318
+msgid "Export throughput CSV (UTF-8)"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:321
+msgid "UTC date"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:322
+msgid "Source"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:323
+msgid "Created"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:324
+#: src/Admin/OrdersPage.php:298
+#: src/Admin/WorkspacePage.php:684
+#: src/Admin/WorkspaceStageGuidance.php:145
+#: src/Application/OrdersNextAction.php:103
+#: templates/documents/packing-slip.php:121
+msgid "Packed"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:325
+#: src/Admin/OrdersPage.php:299
+#: src/Admin/WorkspacePage.php:466
+#: src/Admin/WorkspaceStageGuidance.php:151
+#: src/Application/OrdersNextAction.php:104
+msgid "Shipped"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:346
+msgid "Top failure reasons (today)"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:347
+msgid "Rejections"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:348
+msgid "Scan"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:349
+#: src/Admin/SettingsPage.php:309
+msgid "Notifications"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:352
+msgid "Slow fulfillments (≥4h in state)"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:356
+msgid "Stalled / paused waves"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:370
+msgid "None recorded today."
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:388
+msgid "No rows."
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:392
+#: src/Admin/DocumentsPage.php:133
+msgid "ID"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:393
+msgid "Label"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:394
+#: src/Admin/QueuePage.php:458
+#: src/Admin/QueuePage.php:556
+#: src/Admin/QueuePage.php:722
+#: src/Admin/WorkspacePage.php:388
+msgid "State"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:395
+msgid "Age (s)"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:396
+msgid "Reason"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:397
+msgid "Link"
+msgstr ""
+
+#: src/Admin/AnalyticsPage.php:410
+#: src/Admin/DashboardPage.php:199
+#: src/Admin/OrdersPage.php:189
+#: src/Admin/OrdersPage.php:206
+#: src/Admin/QueuePage.php:475
+msgid "Open"
 msgstr ""
 
 #: src/Admin/CustomerNameDisplay.php:29
@@ -91,23 +344,8 @@ msgstr ""
 msgid "Today"
 msgstr ""
 
-#: src/Admin/DashboardPage.php:199
-#: src/Admin/OrdersPage.php:189
-#: src/Admin/OrdersPage.php:206
-#: src/Admin/QueuePage.php:475
-msgid "Open"
-msgstr ""
-
 #: src/Admin/DashboardPage.php:200
 msgid "In exception"
-msgstr ""
-
-#: src/Admin/DashboardPage.php:201
-msgid "Packed today"
-msgstr ""
-
-#: src/Admin/DashboardPage.php:202
-msgid "Shipped today"
 msgstr ""
 
 #: src/Admin/DocumentsPage.php:62
@@ -170,10 +408,6 @@ msgstr ""
 
 #: src/Admin/DocumentsPage.php:130
 msgid "No documents match these filters."
-msgstr ""
-
-#: src/Admin/DocumentsPage.php:133
-msgid "ID"
 msgstr ""
 
 #: src/Admin/DocumentsPage.php:134
@@ -485,7 +719,7 @@ msgid "Order status"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:185
-#: src/Plugin.php:557
+#: src/Plugin.php:590
 msgid "Fulfillment"
 msgstr ""
 
@@ -552,21 +786,6 @@ msgstr ""
 #: src/Admin/WorkspaceStageGuidance.php:139
 #: src/Application/OrdersNextAction.php:102
 msgid "Packing"
-msgstr ""
-
-#: src/Admin/OrdersPage.php:298
-#: src/Admin/WorkspacePage.php:684
-#: src/Admin/WorkspaceStageGuidance.php:145
-#: src/Application/OrdersNextAction.php:103
-#: templates/documents/packing-slip.php:121
-msgid "Packed"
-msgstr ""
-
-#: src/Admin/OrdersPage.php:299
-#: src/Admin/WorkspacePage.php:466
-#: src/Admin/WorkspaceStageGuidance.php:151
-#: src/Application/OrdersNextAction.php:104
-msgid "Shipped"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:300
@@ -683,13 +902,6 @@ msgstr ""
 msgid "Queue filters"
 msgstr ""
 
-#: src/Admin/QueuePage.php:458
-#: src/Admin/QueuePage.php:556
-#: src/Admin/QueuePage.php:722
-#: src/Admin/WorkspacePage.php:388
-msgid "State"
-msgstr ""
-
 #: src/Admin/QueuePage.php:460
 #: src/Admin/QueuePage.php:557
 msgid "Age"
@@ -793,7 +1005,7 @@ msgid "Fulfillment Settings"
 msgstr ""
 
 #: src/Admin/SettingsPage.php:121
-#: src/Admin/ShellNavigation.php:61
+#: src/Admin/ShellNavigation.php:70
 msgid "Settings"
 msgstr ""
 
@@ -887,10 +1099,6 @@ msgstr ""
 
 #: src/Admin/SettingsPage.php:289
 msgid "Age after which image bytes are purged (0 = keep forever; 1–120 months). Soft-deleted and active photos are both eligible. Metadata and audit events are always retained. There is no purge-now control."
-msgstr ""
-
-#: src/Admin/SettingsPage.php:309
-msgid "Notifications"
 msgstr ""
 
 #: src/Admin/SettingsPage.php:310

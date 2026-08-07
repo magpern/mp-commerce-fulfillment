@@ -4,7 +4,7 @@ Tags: woocommerce, fulfillment, warehouse, shipping, picking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.8.0
+Stable tag: 0.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,14 @@ Performance Order Storage (HPOS).
 3. WooCommerce 8.2+ must be installed and active.
 
 == Changelog ==
+
+= 0.9.0 =
+* Feat: Operational Analytics — AnalyticsEngine LIVE/ROLLUP/REBUILD and mpcf_analytics_daily (M9-A).
+* Feat: Analytics Overview with Stage Timeline and queue-ageing buckets (M9-B).
+* Feat: Reports and UTF-8 CSV exports from shared DTOs (M9-C).
+* Feat: Operational diagnostics lists and top failure reasons (M9-D).
+* Feat: CLI `wp mpcf analytics backfill|rebuild` and nightly AS rollup (M9-A/E).
+* REST: additive read-only `/mpcf/v1/analytics/…` behind `mpcf_view_analytics`.
 
 = 0.8.0 =
 * Feat: Wave & Batch Picking — wave aggregate, membership, lifecycle REST (M8-A).
