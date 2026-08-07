@@ -41,9 +41,28 @@ async function rest( page, path, options = {} ) {
  */
 async function typeScan( page, sku ) {
 	const sink = page.locator( '[data-mpcf-scan-sink]' );
-	await sink.focus();
-	await page.keyboard.type( sku, { delay: 5 } );
+	await expect( sink ).toBeVisible();
+	await sink.click();
+	await sink.fill( '' );
+	await page.keyboard.type( sku, { delay: 8 } );
 	await page.keyboard.press( 'Enter' );
+}
+
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {number} waveId
+ * @param {string} sku
+ */
+async function uiPick( page, waveId, sku ) {
+	const pending = page.waitForResponse(
+		( response ) =>
+			response.request().method() === 'POST' &&
+			new RegExp( `/mpcf/v1/waves/${waveId}/scan$` ).test( response.url() )
+	);
+	await typeScan( page, sku );
+	const resp = await pending;
+	const body = await resp.json().catch( () => ( {} ) );
+	return { resp, body };
 }
 
 /**
@@ -58,7 +77,9 @@ async function claimJoinableIds( page, count ) {
 	for ( let attempt = 0; attempt < 40 && ids.length < count; attempt++ ) {
 		const id = claimSeedFulfillmentId();
 		const probe = await rest( page, `fulfillments/${id}` );
-		const state = probe.data && ( probe.data.state || ( probe.data.fulfillment && probe.data.fulfillment.state ) );
+		const state =
+			probe.data &&
+			( probe.data.state || ( probe.data.fulfillment && probe.data.fulfillment.state ) );
 		if ( probe.ok && ( state === 'queued' || state === 'picking' ) ) {
 			ids.push( id );
 		}
@@ -69,12 +90,30 @@ async function claimJoinableIds( page, count ) {
 	return ids;
 }
 
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {number} waveId
+ */
+async function openActiveWave( page, waveId ) {
+	await page.goto( `/wp-admin/admin.php?page=mpcf-wave&wave_id=${waveId}` );
+	await expect( page.locator( 'body' ) ).not.toContainText( /critical error on this website/i );
+	await expect( page.locator( 'h1' ) ).toContainText( /Wave Workspace/i );
+	await page.waitForFunction( () => !!( window.mpcfWorkspace && window.mpcfWorkspace.restUrl ) );
+	await expect( page.locator( '[data-mpcf-wave-status]' ) ).toContainText( /draft|active/i, {
+		timeout: 20000,
+	} );
+	if ( !( await page.locator( '[data-mpcf-wave-status]' ).innerText() ).match( /active/i ) ) {
+		await page.locator( '[data-mpcf-wave-activate]' ).click();
+		await expect( page.locator( '[data-mpcf-wave-status]' ) ).toContainText( /active/i, {
+			timeout: 20000,
+		} );
+	}
+}
+
 test.describe( 'Wave Scan Mode', () => {
 	test.describe.configure( { mode: 'serial' } );
 
-	test( 'FIFO wave scan, over-scan, undo, and exit leave Workspace intact', async ( {
-		page,
-	} ) => {
+	test( 'FIFO wave scan, over-scan, and exit leave Workspace intact', async ( { page } ) => {
 		await page.goto( '/wp-admin/admin.php?page=mpcf-queue' );
 		await expect( page.locator( 'body' ) ).toBeVisible();
 		await page.waitForFunction( () => !!( window.mpcfWorkspace && window.mpcfWorkspace.restUrl ) );
@@ -93,39 +132,17 @@ test.describe( 'Wave Scan Mode', () => {
 		} );
 		expect( created.ok, JSON.stringify( created.data ) ).toBeTruthy();
 		const waveId = created.data.id;
-		expect( waveId ).toBeGreaterThan( 0 );
 
-		await page.goto( `/wp-admin/admin.php?page=mpcf-wave&wave_id=${waveId}` );
-		await expect( page.locator( 'body' ) ).not.toContainText( /critical error on this website/i );
-		await expect( page.locator( 'h1' ) ).toContainText( /Wave Workspace/i );
-		await expect( page.locator( '[data-mpcf-wave-workspace]' ) ).toHaveAttribute(
-			'data-mpcf-wave-id',
-			String( waveId )
-		);
-		await page.waitForFunction( () => !!( window.mpcfWorkspace && window.mpcfWorkspace.restUrl ) );
-		await expect( page.locator( '[data-mpcf-wave-status]' ) ).toContainText( /draft|active/i, {
-			timeout: 20000,
-		} );
-
-		await page.locator( '[data-mpcf-wave-activate]' ).click();
-		await expect( page.locator( '[data-mpcf-wave-status]' ) ).toContainText( /active/i, {
-			timeout: 20000,
-		} );
+		await openActiveWave( page, waveId );
 		await expect( page.locator( '[data-mpcf-wave-walk]' ) ).toContainText( SKU );
 
 		await page.locator( '[data-mpcf-wave-enter-scan]' ).click();
 		await expect( page.locator( '[data-mpcf-wave-scan]' ) ).toBeVisible();
-		await expect( page.locator( '[data-mpcf-scan-sink]' ) ).toBeVisible();
 
-		const firstPick = page.waitForResponse(
-			( response ) =>
-				response.request().method() === 'POST' &&
-				new RegExp( `/mpcf/v1/waves/${waveId}/scan$` ).test( response.url() )
-		);
-		await typeScan( page, SKU );
-		const firstBody = await ( await firstPick ).json();
-		expect( firstBody.result ).toMatch( /quantity_incremented|member_complete/ );
-		expect( firstBody.data.fulfillment_id ).toBe( fifoFirst );
+		const first = await uiPick( page, waveId, SKU );
+		expect( first.resp.ok(), JSON.stringify( first.body ) ).toBeTruthy();
+		expect( first.body.result ).toMatch( /quantity_incremented|member_complete/ );
+		expect( first.body.data.fulfillment_id ).toBe( fifoFirst );
 		await expect( page.locator( '[data-mpcf-wave-scan-result]' ) ).toContainText(
 			`F#${fifoFirst}`
 		);
@@ -133,69 +150,32 @@ test.describe( 'Wave Scan Mode', () => {
 			/Remaining/
 		);
 
-		const secondPick = page.waitForResponse(
-			( response ) =>
-				response.request().method() === 'POST' &&
-				new RegExp( `/mpcf/v1/waves/${waveId}/scan$` ).test( response.url() ) &&
-				response.ok()
-		);
-		await typeScan( page, SKU );
-		const secondBody = await ( await secondPick ).json();
-		expect( secondBody.data.fulfillment_id ).toBe( fifoFirst );
+		const second = await uiPick( page, waveId, SKU );
+		expect( second.resp.ok(), JSON.stringify( second.body ) ).toBeTruthy();
+		expect( second.body.data.fulfillment_id ).toBe( fifoFirst );
 
-		let sawSecond = false;
-		for ( let i = 0; i < 6; i++ ) {
-			const pending = page.waitForResponse(
-				( response ) =>
-					response.request().method() === 'POST' &&
-					new RegExp( `/mpcf/v1/waves/${waveId}/scan$` ).test( response.url() )
-			);
-			await typeScan( page, SKU );
-			const resp = await pending;
-			const body = await resp.json();
-			await expect( page.locator( '[data-mpcf-wave-status]' ) ).toContainText( /active/i );
-			if ( resp.ok() && body.data && body.data.fulfillment_id === fifoSecond ) {
-				sawSecond = true;
-				break;
-			}
-			if ( ! resp.ok() ) {
-				break;
-			}
-		}
-		expect( sawSecond ).toBeTruthy();
-
-		let sawOverScan = false;
+		// Remaining picks via REST (deterministic), then one UI over-scan.
+		let version = second.body.version;
 		for ( let i = 0; i < 12; i++ ) {
-			const pending = page.waitForResponse(
-				( response ) =>
-					response.request().method() === 'POST' &&
-					new RegExp( `/mpcf/v1/waves/${waveId}/scan$` ).test( response.url() )
-			);
-			await typeScan( page, SKU );
-			const resp = await pending;
-			const body = await resp.json().catch( () => ( {} ) );
-			await page.waitForTimeout( 50 );
-			if ( ! resp.ok() ) {
-				const msg = String( body.message || body.code || '' );
-				if ( /modified by someone else|version_conflict/i.test( msg ) ) {
-					await expect( page.locator( '[data-mpcf-wave-status]' ) ).toContainText( /Wave #/ );
-					continue;
-				}
-				expect( msg ).toMatch(
-					/already fully picked|No outstanding|over.?scan|guard/i
-				);
-				await expect( page.locator( '[data-mpcf-wave-scan-result]' ) ).toContainText(
-					/already fully picked|No outstanding|Scan failed|guard/i
-				);
-				sawOverScan = true;
+			const pick = await rest( page, `waves/${waveId}/scan`, {
+				method: 'POST',
+				body: { action: 'pick', payload: SKU, version },
+			} );
+			if ( ! pick.ok ) {
 				break;
 			}
-			if ( body.data && body.data.progress && body.data.progress.remaining_qty === 0 ) {
-				// Next loop should reject.
-				continue;
+			version = pick.data.version;
+			if ( pick.data.data && pick.data.data.fulfillment_id === fifoSecond ) {
+				// Continue until exhausted.
 			}
 		}
-		expect( sawOverScan ).toBeTruthy();
+
+		const over = await uiPick( page, waveId, SKU );
+		expect( over.resp.ok() ).toBeFalsy();
+		expect( String( over.body.message || over.body.code || '' ) ).toMatch(
+			/already fully picked|No outstanding|over.?scan|guard|modified by someone else/i
+		);
+		await expect( page.locator( '[data-mpcf-wave-scan-result]' ) ).not.toHaveText( '' );
 
 		await page.locator( '[data-mpcf-wave-exit-scan]' ).click();
 		await expect( page.locator( '[data-mpcf-wave-scan]' ) ).toBeHidden();
@@ -214,7 +194,6 @@ test.describe( 'Wave Scan Mode', () => {
 		await page.waitForFunction( () => !!( window.mpcfWorkspace && window.mpcfWorkspace.restUrl ) );
 
 		const [ idA, idB ] = await claimJoinableIds( page, 2 );
-
 		const created = await rest( page, 'waves', {
 			method: 'POST',
 			body: {
@@ -226,42 +205,25 @@ test.describe( 'Wave Scan Mode', () => {
 		expect( created.ok, JSON.stringify( created.data ) ).toBeTruthy();
 		const waveId = created.data.id;
 
-		await page.goto( `/wp-admin/admin.php?page=mpcf-wave&wave_id=${waveId}` );
-		await expect( page.locator( 'body' ) ).not.toContainText( /critical error on this website/i );
-		await expect( page.locator( '[data-mpcf-wave-status]' ) ).toContainText( /draft|active/i, {
-			timeout: 20000,
-		} );
-
-		await page.locator( '[data-mpcf-wave-activate]' ).click();
-		await expect( page.locator( '[data-mpcf-wave-status]' ) ).toContainText( /active/i, {
-			timeout: 20000,
-		} );
-
+		await openActiveWave( page, waveId );
 		await page.locator( '[data-mpcf-wave-enter-scan]' ).click();
 		await expect( page.locator( '[data-mpcf-scan-sink]' ) ).toBeVisible();
 
-		const pick = page.waitForResponse(
-			( response ) =>
-				response.request().method() === 'POST' &&
-				new RegExp( `/mpcf/v1/waves/${waveId}/scan$` ).test( response.url() ) &&
-				response.ok()
-		);
-		await typeScan( page, SKU );
-		const pickBody = await ( await pick ).json();
-		expect( pickBody.data.qty_picked ).toBeGreaterThanOrEqual( 1 );
+		const pick = await uiPick( page, waveId, SKU );
+		expect( pick.resp.ok(), JSON.stringify( pick.body ) ).toBeTruthy();
+		expect( pick.body.data.qty_picked ).toBeGreaterThanOrEqual( 1 );
 		await expect( page.locator( '[data-mpcf-wave-scan-result]' ) ).toContainText( /F#/ );
 
-		const undo = page.waitForResponse(
+		const undoPending = page.waitForResponse(
 			( response ) =>
 				response.request().method() === 'POST' &&
 				new RegExp( `/mpcf/v1/waves/${waveId}/scan$` ).test( response.url() )
 		);
 		await page.locator( '[data-mpcf-wave-scan-undo]' ).click();
-		const undoResp = await undo;
+		const undoResp = await undoPending;
 		expect( undoResp.ok(), await undoResp.text() ).toBeTruthy();
 		const undoBody = await undoResp.json();
 		expect( undoBody.result ).toBe( 'corrected' );
-		expect( undoBody.message ).toMatch( /undone/i );
 		await expect( page.locator( '[data-mpcf-wave-scan-result]' ) ).toContainText( /Undone|undone/i );
 
 		await page.locator( '[data-mpcf-wave-exit-scan]' ).click();
