@@ -180,6 +180,16 @@ final class CompositionRootTest extends TestCase {
 			'WaveScanService',
 			'WavesController',
 			'WavePage',
+			'AnalyticsEngine',
+			'WpdbAnalyticsEventSource',
+			'WpdbAnalyticsDailyRepository',
+			'WpdbAnalyticsDiagnosticsReader',
+			'AnalyticsService',
+			'AnalyticsCsvExporter',
+			'AnalyticsRollupScheduler',
+			'AnalyticsCommand',
+			'AnalyticsController',
+			'AnalyticsPage',
 		);
 		$disallowed = array_values( array_diff( $matches[1], $allowed ) );
 
