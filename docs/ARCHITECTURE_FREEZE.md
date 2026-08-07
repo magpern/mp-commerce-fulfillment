@@ -1,57 +1,72 @@
 # Architecture freeze inventory
 
-**Status: DRAFT — structure finalized for v1.0 approval**  
-Prepared during M10 (`v0.10.0`); structure completed under the **v1.0 Architecture Freeze & Production Readiness** program (`docs/plans/V1_PRODUCTION_READINESS.md`).
+**Status: ACTIVE**  
+**Approved:** Phase **P1 — Architecture Freeze Approval** (2026-08-07)  
+**Baseline release:** `v0.10.0` (`bd40c05` planning tip; freeze applies to shipped `v0.10.0` contracts)  
+**Program:** `docs/plans/V1_PRODUCTION_READINESS.md`
 
-**Becomes ACTIVE at tag `v1.0.0` (program phase P4 — Release).** Until then this document is the approval inventory: classify every public contract, gather evidence, and gate production. Additive `0.x` changes require Product Owner approval and an update to this inventory before freeze activation. Production deploy of the published ZIP is program phase **P5**.
+**P1 record:** Architecture Freeze approved during Phase P1. Every FROZEN surface below was verified to exist in released code. No runtime changes were required. Surfaces named in architecture prose but **not implemented** are listed under **Deferred (not frozen)** — they were **not invented**.
 
-**Program note:** This is **not** M11 and **not** a feature milestone. Runtime implementation for freeze activation is limited to the administrative `v1.0.0` release after certification evidence (P1–P3) is complete.
+**Program note:** This is **not** M11 and **not** a feature milestone. Administrative `v1.0.0` (P4) bumps the version triad and publishes the immutable ZIP; production deploy is **P5**. No new functionality before `v1.0.0`.
 
 ---
 
 ## Legend
 
-| Class | Meaning at / after 1.0 |
+| Class | Meaning |
 |---|---|
-| **FROZEN** | Semantics and shapes fixed for `1.x`; breaking change → `2.0` + Accepted ADR |
+| **FROZEN** | Semantics and shapes fixed for `1.x`; breaking change → `2.0` + Accepted ADR + PO approval |
 | **MAY EVOLVE ADDITIVELY** | Append-only within `1.x` — new fields, routes, hooks, tables/columns via migrator, new checker ids |
 | **INTERNAL** | Not a public contract; may change in any `1.x` patch/minor without major bump |
-
-At freeze activation, every public surface below must have an explicit **FROZEN** or **INTERNAL** (or additive) classification. Ambiguity is a P1 exit blocker.
+| **DEFERRED** | Documented intent only — **not shipped**; must not be treated as a public contract until implemented and reclassified |
 
 ---
 
-## Versioning policy (FROZEN at 1.0)
+## Versioning policy (FROZEN)
 
 | Rule | Detail |
 |---|---|
-| SemVer for the plugin | `MAJOR.MINOR.PATCH` in header / `MPCF_VERSION` / `readme.txt` Stable tag (triad parity) |
+| SemVer | `MAJOR.MINOR.PATCH` in header / `MPCF_VERSION` / `readme.txt` Stable tag (triad parity) |
 | `1.x` line | No breaking changes to FROZEN surfaces |
-| Breaking change | Requires `2.0.0` + Accepted ADR in this repo (and every affected sibling if ADR-0007 boundary moves) |
-| Schema | Additive migrator steps only within `1.x`; never rewrite history of shipped columns' semantics |
+| Breaking change | Requires `2.0.0` + Accepted ADR (+ sibling ADRs if ADR-0007 boundary moves) + PO approval |
+| Schema | Additive migrator steps only within `1.x`; never rewrite shipped column semantics |
 | Tags | Annotated `v*` tags drive GitHub Release ZIP; never retag a published version |
 
 ---
 
-## Backward compatibility policy (FROZEN at 1.0)
+## Backward compatibility policy (FROZEN)
 
 | Rule | Detail |
 |---|---|
-| Upgrade path | `0.10.0` → `1.0.0` and any `1.x` → later `1.y` must activate without data loss for operational tables |
-| Rollback | Plugin ZIP rollback restores **code behavior**, not anonymized/deleted content; schema is never downgraded automatically (`docs/ops/ROLLBACK.md`) |
-| Clients | REST clients, WP-CLI scripts, and hook consumers relying on FROZEN shapes must keep working across `1.x` |
-| Defaults | New settings keys MUST ship with safe defaults so upgrades do not require immediate operator action |
+| Upgrade | `0.10.0` → `1.0.0` and any `1.x` → later `1.y` activate without operational data loss |
+| Rollback | ZIP rollback restores **code behavior**, not anonymized/deleted content; **no** automatic schema downgrade |
+| Clients | REST / WP-CLI / shipped hook consumers of FROZEN shapes keep working across `1.x` |
+| Defaults | New settings keys MUST ship with safe defaults |
 
 ---
 
-## Deprecation policy (FROZEN at 1.0)
+## Deprecation policy (FROZEN)
 
 | Rule | Detail |
 |---|---|
 | Within `1.x` | FROZEN surfaces are **not** removed or reshaped |
-| Soft deprecation | MAY mark additive successors as preferred in docs; old FROZEN path remains until `2.0` |
-| Communication | Deprecations recorded in `CHANGELOG` / release notes and this inventory |
-| Hard removal | Only in `2.0` with migration ADR and upgrade notes |
+| Soft deprecation | Successors may be preferred in docs; old FROZEN path remains until `2.0` |
+| Communication | Recorded in release notes + this inventory |
+| Hard removal | Only in `2.0` with migration ADR |
+
+---
+
+## Governance when ACTIVE
+
+Any change that modifies a **FROZEN** contract requires:
+
+1. an Architecture Decision Record (**ADR**),
+2. an explicit **compatibility assessment**, and
+3. **Product Owner approval**.
+
+All **`v1.x`** development must remain **backward compatible** unless a future **`v2.0`** roadmap explicitly supersedes this policy.
+
+Additive evolution (**MAY EVOLVE ADDITIVELY**) still requires documentation updates to this inventory and relevant public docs (`API.md`, `HOOKS.md`, etc.) in the same release.
 
 ---
 
@@ -76,7 +91,7 @@ At freeze activation, every public surface below must have an explicit **FROZEN*
 
 | Owner | Domain |
 |---|---|
-| **MPCF** | Outbound fulfillment, picking, packing, shipments, documents, photos, waves, analytics of fulfillment ops, audit, queue |
+| **MPCF** | Outbound fulfillment, picking, packing, shipments, documents, photos, waves, ops analytics, audit, queue |
 | **wc-inventory-overview** | Inbound inventory, stock ledger, locations, receiving |
 | **WooCommerce** | Catalog, orders, checkout, customer record |
 
@@ -84,112 +99,124 @@ No cross-plugin table access. Integration via documented hooks/API only.
 
 ---
 
-## Aggregates & workflow (FROZEN semantics)
+## PHP public APIs
 
-| Aggregate | Notes | Class |
+| Surface | Class | Notes |
 |---|---|---|
-| `Fulfillment` | Standard workflow states; optimistic `version`; single writer | FROZEN |
-| `Shipment` / `Package` | ADR-0005; shipment status ≠ fulfillment state | FROZEN |
-| `Wave` | M8 lifecycle; ends at `picked` | FROZEN |
-| `Document` record | Append render rows; reprint lineage via events | FROZEN |
-| `Media` (photos) | Soft-delete + retention purge | FROZEN |
-
-**MAY EVOLVE ADDITIVELY:** new workflow definitions via `mpcf_workflows`; new guards as data.
+| Third-party PHP class API (`Application\*`, `Domain\*`, repositories) | **INTERNAL** | Not a supported integrator contract; use REST / shipped hooks / CLI |
+| Plugin bootstrap constants (`MPCF_VERSION`, paths) | **FROZEN** meaning | Version triad parity required |
+| `MPCF\Capabilities` slug strings | **FROZEN** | See Capabilities |
+| `MPCF\Settings` option key meanings | **FROZEN** | New keys additive |
 
 ---
 
 ## REST `mpcf/v1` (FROZEN shapes)
 
-Additive-only from the `v0.2.0` tag. Stable error codes: `mpcf_forbidden`, `mpcf_not_found`, `mpcf_invalid_payload`, `mpcf_version_conflict`, `mpcf_guard_rejected`.
+Verified present in `src/Api/Rest/*` and `docs/API.md`. Stable error codes: `mpcf_forbidden`, `mpcf_not_found`, `mpcf_invalid_payload`, `mpcf_version_conflict`, `mpcf_guard_rejected`.
 
-| Area | Surface | Class |
+| Area | Routes (summary) | Class |
 |---|---|---|
-| Fulfillments | Queue/detail/transitions/items/scan/notes/assignment | FROZEN |
-| Shipments / packages | CRUD, ship | FROZEN |
-| Documents | render, content, reprint | FROZEN |
-| Photos | upload, list, delete | FROZEN |
-| Waves | Wave API | FROZEN |
-| Analytics | Read-only overview/reports/diagnostics | FROZEN |
-| Carriers | GET registry | FROZEN |
-| Diagnostics | **No** REST diagnostics routes (CLI / Site Health only) | FROZEN policy |
+| Fulfillments | GET/POST transitions, items, notes, assignment | FROZEN |
+| Scan | `POST /fulfillments/{id}/scan` | FROZEN |
+| Shipments / packages | CRUD + ship + notify + notification-status | FROZEN |
+| Documents | render, list, content, reprint | FROZEN |
+| Photos | list/upload/get/content/thumb/delete | FROZEN |
+| Carriers | `GET /carriers` | FROZEN |
+| Waves | create/list/get/members/lifecycle/walk/scan/documents | FROZEN |
+| Analytics | overview, timeline, queue-ageing, waves, diagnostics, reports, export | FROZEN |
+| Diagnostics REST | **None** (CLI / Site Health only) | FROZEN **policy** |
 
-**MAY EVOLVE ADDITIVELY:** new routes, optional response fields, new query params.  
-**Authoritative list:** `docs/API.md`.
+**MAY EVOLVE ADDITIVELY:** new routes, optional response fields, new query params.
 
 ---
 
-## CLI (classification)
+## CLI (verified)
 
-| Command family | Class |
+| Command | Class |
 |---|---|
-| `wp mpcf doctor` | MAY EVOLVE ADDITIVELY (flags, checker ids, JSON fields) |
-| `wp mpcf validate <target>` | MAY EVOLVE ADDITIVELY (new targets additive) |
-| `wp mpcf repair <target> [--yes]` | MAY EVOLVE ADDITIVELY; **FROZEN policy:** dry-run default, bounded targets, no “fix everything” |
+| `wp mpcf doctor` | MAY EVOLVE ADDITIVELY |
+| `wp mpcf validate <target>` | MAY EVOLVE ADDITIVELY (`schema\|storage\|schedules\|consistency\|fulfillments\|waves\|analytics`) |
+| `wp mpcf repair <target> [--yes]` | MAY EVOLVE ADDITIVELY; **FROZEN policy:** dry-run default; targets only `schedules\|storage-dirs\|schema\|capabilities`; no “fix everything” |
 | `wp mpcf audit verify` | MAY EVOLVE ADDITIVELY |
-| `wp mpcf analytics …`, intake | MAY EVOLVE ADDITIVELY |
+| `wp mpcf analytics backfill\|rebuild` | MAY EVOLVE ADDITIVELY |
+| `wp mpcf intake backfill` | MAY EVOLVE ADDITIVELY |
 
-**INTERNAL:** checker implementation classes; SQL in diagnostics readers.
+**INTERNAL:** checker class structure; diagnostics SQL.
 
 ---
 
-## Hooks & filters (see `docs/HOOKS.md`)
+## Hooks & filters (shipped only)
 
-| Hook / filter | Class |
-|---|---|
-| `mpcf_event` + per-type actions | FROZEN |
-| `mpcf_workspace_flags` | FROZEN |
-| `mpcf_document_types`, `mpcf_document_template`, `mpcf_document_model` | FROZEN |
-| `mpcf_carriers` | FROZEN |
-| `mpcf_intake_should_create`, `mpcf_workflows` | FROZEN (when registered) |
-| WP privacy exporter/eraser registration behavior | FROZEN |
-| `site_status_tests` (`mpcf_operational`) | INTERNAL adapter (WordPress core surface) |
+| Hook | Exists in code? | Class |
+|---|---|---|
+| `mpcf_workspace_flags` | Yes | FROZEN |
+| `mpcf_document_types` | Yes | FROZEN |
+| `mpcf_document_template` | Yes | FROZEN |
+| `mpcf_document_model` | Yes | FROZEN |
+| `mpcf_carriers` | Yes | FROZEN |
+| `wp_privacy_personal_data_exporters` / `erasers` (MPCF ids) | Yes | FROZEN behavior |
+| `woocommerce_privacy_remove_order_personal_data` (sympathy) | Yes | FROZEN behavior |
+| `site_status_tests` (`mpcf_operational`) | Yes | INTERNAL adapter |
+| AS: `mpcf_process_intake`, `mpcf_purge_photo_retention`, `mpcf_analytics_daily_rollup` | Yes | FROZEN hook names / group `mpcf` |
 
 **MAY EVOLVE ADDITIVELY:** new documented filters/actions in `HOOKS.md`.
 
 ---
 
-## Domain events (`mpcf_events`)
+## Deferred (not frozen) — do not invent
 
-Append-only hash-chained log. Payload contracts for shipped types are stable within `1.x`.
+Named in architecture prose / older drafts but **not registered** in `v0.10.0` code (`docs/HOOKS.md` § M9 explicitly):
 
-| Family | Examples | Class |
+| Surface | Status |
+|---|---|
+| `mpcf_event` + per-type WP actions (`mpcf_fulfillment_state_changed`, …) | **DEFERRED** — in-process `Application\EventDispatcher` only; no WP `do_action` bridge shipped |
+| `mpcf_workflows` filter | **DEFERRED** |
+| `mpcf_intake_should_create` filter | **DEFERRED** |
+
+Implementing any deferred surface in `1.x` is **additive** (new public hook) and requires inventory update + docs; it is **not** a silent FROZEN assumption today.
+
+---
+
+## Domain / audit events (`mpcf_events` table)
+
+Table semantics and append-only hash chain: **FROZEN**.  
+Privacy eraser must not rewrite `payload` / `hash` / `prev_hash`: **FROZEN**.
+
+Shipped event-type families (payload contracts stable within `1.x`):
+
+| Family | Examples (verified in Application) | Class |
 |---|---|---|
-| Workflow | `fulfillment.state_changed`, `items.picked` / `packed` | FROZEN |
-| Shipping | `shipment.*`, `package.created` | FROZEN |
+| Workflow | `fulfillment.created`, `fulfillment.state_changed`, `fulfillment.assigned`, `fulfillment.unassigned`, `items.picked`, `items.packed` | FROZEN |
+| Shipping | `shipment.*`, `package.created` / `updated` / `deleted` | FROZEN |
 | Documents | `document.rendered`, `document.reprinted` | FROZEN |
 | Notifications | `notification.sent` / `failed` / `suppressed` | FROZEN |
-| Scan | `scan.item_picked` / `packed` / `corrected` | FROZEN |
-| Wave | `wave.*` | FROZEN |
-| Maintenance | `maintenance.repair.*` | MAY EVOLVE ADDITIVELY |
+| Photos | `photo.captured` / `deleted` / `purged` | FROZEN |
+| Scan | `scan.item_picked` / `item_packed` / `corrected` | FROZEN |
+| Wave | `wave.created`, `wave.member_*`, `wave.activated` / `paused` / `resumed` / `completed` / `abandoned` | FROZEN |
+| Maintenance | `maintenance.repair.*` (M10) | MAY EVOLVE ADDITIVELY |
 
-**INTERNAL:** hash computation, canonicalization helpers, `PayloadGuard` implementation details.
-
-**FROZEN behavior:** privacy eraser must not rewrite `payload` / `hash` / `prev_hash`.
-
----
-
-## Database / schema (`mpcf_db_version`)
-
-| Item | Class |
-|---|---|
-| Semantics of columns in tables shipped through migrator TARGET **8** | FROZEN |
-| New tables/columns/indexes via new migrator steps | MAY EVOLVE ADDITIVELY |
-| Automatic schema downgrade on plugin rollback | **Forbidden** (ops policy) |
-
-Baseline at freeze planning: **TARGET 8** (`v0.10.0`). Any TARGET bump before `v1.0.0` requires PO approval and inventory update.
-
-Authoritative DDL: `docs/PERSISTED_DATA.md` + `Schema` / `Migrator`.
+**INTERNAL:** hash computation, canonicalization, `PayloadGuard` internals.
 
 ---
 
-## Capabilities (`mpcf_*`)
+## Database / migrations
 
 | Item | Class |
 |---|---|
-| Existing capability slugs and role bundles (`operator` / `lead` / admin grants) | FROZEN |
-| New capabilities for new `1.x` features | MAY EVOLVE ADDITIVELY |
+| Migrator **TARGET 8** table/column semantics (`mpcf_fulfillments`, items, events, notes, shipments, packages, package_items, documents, media, waves, wave_members, analytics_daily) | FROZEN |
+| New migrator steps / tables / columns / indexes | MAY EVOLVE ADDITIVELY |
+| Automatic schema downgrade on ZIP rollback | **Forbidden** |
 
-All checks via `MPCF\Capabilities` — never hardcoded role names in business logic.
+---
+
+## Capabilities (FROZEN slugs)
+
+Verified in `MPCF\Capabilities`:  
+`mpcf_view_queue`, `mpcf_process_fulfillments`, `mpcf_manage_shipments`, `mpcf_add_notes`, `mpcf_capture_photos`, `mpcf_delete_photos`, `mpcf_render_documents`, `mpcf_cancel_fulfillment`, `mpcf_view_audit`, `mpcf_view_analytics`, `mpcf_view_operator_stats`, `mpcf_manage_settings`.
+
+Roles: `mpcf_warehouse_operator`, `mpcf_warehouse_lead` (+ admin/shop_manager full grants).
+
+**MAY EVOLVE ADDITIVELY:** new capability slugs for new features.
 
 ---
 
@@ -197,33 +224,46 @@ All checks via `MPCF\Capabilities` — never hardcoded role names in business lo
 
 | Item | Class |
 |---|---|
-| Meaning of existing keys (bridge, notification strategy, photo limits, wave limits, branding, …) | FROZEN |
-| New keys with defaults; settings shape version bumps | MAY EVOLVE ADDITIVELY |
+| Meaning of shipped keys (bridge, operator mode, documents branding, notification strategy + copy, photo limits/retention, wave limits, uninstall flag, …) — schema_version **9** | FROZEN |
+| New keys with defaults | MAY EVOLVE ADDITIVELY |
 
 ---
 
-## Pipelines (public contracts)
+## Pipelines (verified)
 
 | Pipeline | Public surface | Class |
 |---|---|---|
-| **Documents** | REST + templates + `mpcf_document_*` hooks | FROZEN |
-| **Notifications** | Settings strategy enum + WC email extension hook (WC-owned delivery) | FROZEN strategy |
-| **Photos** | REST + caps + retention AS hook `mpcf_purge_photo_retention` | FROZEN |
-| **Wave** | REST `/waves…` + walk document type | FROZEN |
-| **Analytics** | REST read-only + CSV + CLI backfill/rebuild + AS `mpcf_analytics_daily_rollup` | FROZEN DTO semantics |
-| **Scan** | REST `POST …/scan` | FROZEN |
+| Documents | REST + `mpcf_document_*` + templates | FROZEN |
+| Notifications | Strategy enum + WC email path + notify REST | FROZEN strategy |
+| Package photography | REST + caps + retention AS hook | FROZEN |
+| Scan mode | REST scan (+ wave scan) | FROZEN |
+| Wave picking | REST `/waves…` + `wave_picking_list` | FROZEN |
+| Analytics | REST read-only + CSV + CLI + AS rollup | FROZEN DTO semantics |
 
-**INTERNAL:** template PHP markup, rollup calculators, AS lock transients, protected-store path layout internals (relative-path rule remains FROZEN via ADR-0004).
+**INTERNAL:** template markup, rollup calculators, AS lock transients, protected-store internals (relative-path rule remains via ADR-0004).
 
 ---
 
-## Extension points (FROZEN policy)
+## Aggregates & workflow (FROZEN semantics)
 
-1. Integrate via documented hooks and REST — **no private backdoors**.
+| Aggregate | Class |
+|---|---|
+| `Fulfillment` (standard workflow, optimistic `version`, single writer) | FROZEN |
+| `Shipment` / `Package` (ADR-0005) | FROZEN |
+| `Wave` (ends at `picked`) | FROZEN |
+| Document / Media records | FROZEN |
+
+**MAY EVOLVE ADDITIVELY:** new workflow definitions **only after** `mpcf_workflows` (or successor) is implemented and documented — until then Standard workflow remains the sole shipped definition.
+
+---
+
+## Extension policy (FROZEN)
+
+1. Integrate via **shipped** documented hooks and REST — no private backdoors.
 2. Duplicate business state in another plugin is prohibited.
-3. Moving ownership across ADR-0007 requires Accepted ADR in **every** affected repo.
-4. Breaking REST/hook/schema semantics → major version + migration ADR.
-5. Release ZIP must remain installable without Node/Composer on the merchant host (ADR-0006).
+3. Moving ownership across ADR-0007 requires Accepted ADR in every affected repo.
+4. Breaking REST/hook/schema semantics → major version + migration ADR + PO approval.
+5. Release ZIP remains installable without Node/Composer on the merchant host (ADR-0006).
 
 ---
 
@@ -235,45 +275,34 @@ All checks via `MPCF\Capabilities` — never hardcoded role names in business lo
 | Eraser | Anonymize snapshots/notes/photos; retain chain + order links |
 | WC sympathy | Order anonymization → MPCF erase |
 
-See `docs/ops/privacy.md`.
-
 ---
 
-## Explicitly INTERNAL (may change any `1.x` release)
+## Explicitly INTERNAL
 
 - Admin screen markup/CSS (except documented hook outputs)
-- `CheckerRegistry` / checker class structure
+- `CheckerRegistry` / checker implementations
 - SQL in `Infrastructure/Database/`
-- MPDS vendored copy paths
+- In-process `EventDispatcher` subscriber wiring
+- MPDS vendored paths
 - Browser/Playwright harness (not shipped)
 - Performance seed scripts
-- Site Health HTML presentation (check semantics feed from shared registry)
+- Site Health HTML presentation
 
 ---
 
-## Freeze activation gate (`v1.0.0`)
+## P1 approval checklist (complete)
 
-At **`v1.0.0` tag** (program phase **P4** — Release Candidate Approval & Release):
+| Surface family | Verified in `v0.10.0` code | Classification complete |
+|---|---|---|
+| REST | Yes | Yes |
+| CLI | Yes | Yes |
+| Hooks (shipped) | Yes | Yes |
+| Deferred hooks | Confirmed absent | Deferred — not frozen |
+| Domain/audit events | Yes | Yes |
+| Schema TARGET 8 | Yes | Yes |
+| Capabilities | Yes | Yes |
+| Settings | Yes | Yes |
+| Pipelines | Yes | Yes |
+| Governance policies | Yes | Yes |
 
-1. This document status changes **DRAFT → ACTIVE**.
-2. Certification evidence from `docs/plans/V1_PRODUCTION_READINESS.md` phases **P1–P3** is complete and PO-approved.
-3. No open FROZEN-surface ambiguities remain.
-4. Production deploy (**P5**) uses **only** the published GitHub Release ZIP for `v1.0.0`.
-
-**M10 delivered the draft.** The v1.0 program finalizes classification and evidence. **`v1.0.0` is an administrative release** — no feature work.
-
----
-
-## Governance when ACTIVE
-
-Once this document is **ACTIVE**:
-
-Any change that modifies a **FROZEN** contract requires:
-
-1. an Architecture Decision Record (**ADR**),
-2. an explicit **compatibility assessment**, and
-3. **Product Owner approval**.
-
-All **`v1.x`** development must remain **backward compatible** unless a future **`v2.0`** roadmap explicitly supersedes this policy.
-
-Additive evolution (**MAY EVOLVE ADDITIVELY**) still requires documentation updates to this inventory and the relevant public docs (`API.md`, `HOOKS.md`, etc.) in the same release.
+**Exit:** Freeze **ACTIVE**. No runtime implementation performed in P1.

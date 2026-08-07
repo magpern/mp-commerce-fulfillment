@@ -1,10 +1,10 @@
 # v1.0 — Architecture Freeze & Production Readiness Program
 
-**Status:** Planning complete — **implementation not started**.  
+**Status:** Planning complete — **P1 COMPLETE**. **P2 READY TO START** (not started).  
 **Kind:** Certification / evidence program — **not M11**, **not a feature milestone**.  
 **Baseline:** `main` / released **`v0.10.0`** (M0–M10 closed). Production **not** yet deployed.  
-**Freeze inventory:** `docs/ARCHITECTURE_FREEZE.md` (**DRAFT**, structure finalized for approval).  
-**Target administrative release:** **`v1.0.0`** (no new functionality).
+**Freeze inventory:** `docs/ARCHITECTURE_FREEZE.md` — **ACTIVE** (approved Phase P1, 2026-08-07).  
+**Target administrative release:** **`v1.0.0`** (no new functionality) at Phase P4.
 
 This plan designs the final certification program before MPCF is declared production-ready and the architecture freeze becomes **ACTIVE**.
 
@@ -59,24 +59,24 @@ Re-verify these at the start of **each** phase.
 
 ## 4. Program phases
 
-| Phase | Name | Outcome |
-|---|---|---|
-| **P1** | Architecture Freeze | Freeze inventory approved for activation; all public contracts classified |
-| **P2** | Regression Certification | M0–M10 behavioral verification matrix green (no features) |
-| **P3** | Operational Certification | Perf / security / a11y / privacy / DR / monitoring evidence recorded |
-| **P4** | v1.0 Release Candidate Approval & Release | Tag **`v1.0.0`**; freeze → **ACTIVE**; immutable GitHub Release ZIP |
-| **P5** | Production Deployment & Hypercare | Deploy **that exact** published artifact; monitor; close hypercare |
+| Phase | Name | Status | Outcome |
+|---|---|---|---|
+| **P1** | Architecture Freeze | **COMPLETE** | Freeze inventory **ACTIVE**; contracts classified & verified |
+| **P2** | Regression Certification | **READY TO START** | M0–M10 behavioral verification matrix (no features) |
+| **P3** | Operational Certification | Not started | Perf / security / a11y / privacy / DR / monitoring evidence |
+| **P4** | v1.0 Release Candidate Approval & Release | Not started | Tag **`v1.0.0`**; immutable GitHub Release ZIP |
+| **P5** | Production Deployment & Hypercare | Not started | Deploy published ZIP; hypercare; production complete |
 
 **Binding order: P1 → P2 → P3 → P4 → P5.**
 
-Lifecycle (mature release process):
+Lifecycle:
 
-1. Certify the code (P1–P3).
-2. Tag **`v1.0.0`** and publish the release artifact (P4).
-3. Deploy that exact artifact to production (P5).
-4. Monitor production (hypercare) and declare production complete (P5 exit).
+1. Certify contracts (P1) — **done**.
+2. Certify behavior & operations (P2–P3).
+3. Tag **`v1.0.0`** and publish the release artifact (P4).
+4. Deploy that exact artifact; hypercare (P5).
 
-Do **not** tag after production has already been running an untagged or differently built tree. The GitHub Release ZIP is the immutable deployable.
+Do **not** tag after production has already been running an untagged build. The GitHub Release ZIP is the immutable deployable.
 
 ---
 
@@ -115,14 +115,18 @@ Finalize and PO-approve `docs/ARCHITECTURE_FREEZE.md` so every public contract i
 
 ### 5.4 Exit criteria
 
-- Freeze inventory has **no unclassified public surfaces**.
-- PO written approval: “Freeze structure approved; remains DRAFT until `v1.0.0`.”
-- No runtime code changes required for P1 exit (docs-only).
+- [x] Freeze inventory has **no unclassified public surfaces** (deferred surfaces explicitly listed, not invented).
+- [x] PO phase execution: Architecture Freeze **ACTIVE** as of P1 (2026-08-07).
+- [x] No runtime code changes required for P1 exit (docs-only).
 
 ### 5.5 Artifacts
 
-- Updated `docs/ARCHITECTURE_FREEZE.md` (still DRAFT)
-- Short `docs/plans/` or release-notes appendix: P1 sign-off date + approvers
+- `docs/ARCHITECTURE_FREEZE.md` — **ACTIVE**
+- This plan: **P1 COMPLETE**, **P2 READY TO START**
+
+### 5.6 P1 completion note
+
+Verified against `v0.10.0` code: REST, CLI, shipped hooks, events, schema TARGET 8, capabilities, settings, pipelines. Deferred (not frozen): `mpcf_event` WP bridge, `mpcf_workflows`, `mpcf_intake_should_create`.
 
 ---
 
@@ -218,7 +222,7 @@ PO-approve the certified codebase as the **v1.0.0 release candidate**, publish t
 ### 8.3 Work (administrative release only)
 
 1. Confirm version triad → `1.0.0` (header / `MPCF_VERSION` / Stable tag) — **version bump only**.
-2. Set `ARCHITECTURE_FREEZE.md` status **DRAFT → ACTIVE** (same release commit).
+2. Confirm `ARCHITECTURE_FREEZE.md` remains **ACTIVE** (activated in P1; no status regression).
 3. Full CI green; local build ZIP; release-audit.
 4. Merge if needed; create annotated tag **`v1.0.0`** on the release commit.
 5. Push tag; wait for GitHub Release workflow.
@@ -233,7 +237,7 @@ PO-approve the certified codebase as the **v1.0.0 release candidate**, publish t
 ### 8.5 Exit criteria
 
 - GitHub Release **`v1.0.0`** live with installable ZIP
-- Freeze document **ACTIVE**
+- Freeze document remains **ACTIVE** (from P1)
 - Published asset SHA recorded; artifact is the **only** allowed production install source for P5
 - Roadmap notes release published; hypercare/production still open until P5 closes
 
@@ -345,17 +349,19 @@ Post-1.0 capabilities remain in Architecture Plan §20 / roadmap “Future capab
 
 MPCF is **production-ready and program-complete** when:
 
-1. P1–P3 certification evidence is recorded and PO-approved.
-2. **`v1.0.0` is tagged and published** (P4); freeze inventory is **ACTIVE**.
+1. P1 freeze is **ACTIVE** and P2–P3 certification evidence is recorded and PO-approved.
+2. **`v1.0.0` is tagged and published** (P4).
 3. Production runs that **exact** published ZIP (P5); hypercare checklist closed.
-4. No feature delta beyond version/docs freeze activation landed for `v1.0.0`.
+4. No feature delta beyond version/docs for `v1.0.0`.
 
 ---
 
-## 13. Planning checkpoint
+## 13. Planning / phase checkpoint
 
 | Item | Value |
 |---|---|
 | Planning completed | 2026-08-07 |
-| Runtime implementation | **Not started** |
-| Next action | PO review of this plan + freeze inventory structure; then **P1 Freeze Approval** GO |
+| **P1** | **COMPLETE** — freeze ACTIVE |
+| **P2** | **READY TO START** — runtime implementation **not** started |
+| P3–P5 | Not started |
+| Next action | PO GO to begin **P2 Regression Certification** |

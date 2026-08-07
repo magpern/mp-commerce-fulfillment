@@ -91,16 +91,15 @@ actual state before work starts.
     `docs/ARCHITECTURE_FREEZE.md`. Migrator **TARGET remains 8**. Evidence:
     `docs/M10_RELEASE_REPORT.md`, Architecture Plan Part XII. Production not
     deployed as part of M10. **M10 closed.**
-11. **v1.0 — Architecture Freeze & Production Readiness** — **Planning
-    complete. Implementation not started.** This is **not M11** and **not** a
-    feature milestone. Certification program phases P1–P5 (freeze approval,
-    regression certification, operational certification, administrative
-    `v1.0.0` release, then production deployment & hypercare) are defined in
-    `docs/plans/V1_PRODUCTION_READINESS.md`. Binding order: certify → tag
-    `v1.0.0` → deploy that exact ZIP → hypercare. Freeze inventory structure
-    is finalized for approval in `docs/ARCHITECTURE_FREEZE.md` (**DRAFT**
-    until `v1.0.0`). **No runtime implementation until PO GO on P1.**
-    **No new functionality before `v1.0.0`.**
+11. **v1.0 — Architecture Freeze & Production Readiness** — **P1 COMPLETE**
+    (Architecture Freeze **ACTIVE**, 2026-08-07). **P2 READY TO START** —
+    Regression Certification; **runtime implementation for P2 has not
+    started.** This is **not M11** and **not** a feature milestone.
+    Remaining phases: P2 regression → P3 operational certification → P4
+    administrative `v1.0.0` release → P5 production deploy & hypercare
+    (`docs/plans/V1_PRODUCTION_READINESS.md`). Binding order: certify →
+    tag `v1.0.0` → deploy that exact ZIP → hypercare. **No new
+    functionality before `v1.0.0`.**
 
 ## Future capabilities (not scheduled)
 
