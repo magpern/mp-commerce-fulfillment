@@ -1,6 +1,6 @@
 # Performance baseline methodology (~50k fulfillments)
 
-**Status:** Methodology defined; **live 50k timings pending measurement on RC dogfood**.
+**Status:** Methodology defined; **50k timings recorded (P3 Operational Certification, 2026-08-07)**.
 
 ## Purpose
 
@@ -11,59 +11,36 @@ Extend the M1/M2 **10k** queue proof (`docs/QUEUE_PERFORMANCE_VALIDATION.md`) to
 | Scale | Evidence | Result |
 |---|---|---|
 | 10k fulfillments | `tests/integration/Performance/QueuePerformanceProofTest.php` | Documented in `QUEUE_PERFORMANCE_VALIDATION.md` — no unindexed scans |
-| 50k fulfillments | **Not yet run on reference hardware** | Pending |
+| 50k fulfillments | `tests/integration/Performance/OperationalScale50kCertificationTest.php` + `phpunit-performance-50k.xml.dist` | Recorded in `docs/certification/p3-perf-50k-timings.log` and `docs/certification/P3_OPERATIONAL_CERTIFICATION_REPORT.md` |
 
-Do **not** cite invented millisecond timings until recorded here from a reproducible run.
+Do **not** cite invented millisecond timings — use the certification log.
 
-## How to run (when ready)
+## How to run
 
-1. Use integration harness pattern from `QueuePerformanceProofTest` — bulk SQL seed (not domain-layer intake) for volume.
-2. Target distribution: mirror 10k proof (state mix, assignment, event types M2+) scaled 5×.
-3. Run via dedicated PHPUnit config (exclude from default CI — same rationale as 10k proof):
-   ```bash
-   # Example — exact command in test file docblock when 50k variant exists
-   vendor/bin/phpunit -c phpunit-performance.xml.dist \
-     tests/integration/Performance/QueuePerformanceProofTest.php
-   ```
-4. Alternatively: disposable env + `wp eval-file` seed script (future) matching integration fixtures.
-5. Capture **server-side** timings only (PHP/MySQL); exclude browser paint.
+```bash
+docker run --rm --network mpcf-test-net -v "$PWD":/app -w /app \
+  -e WP_DB_HOST=mpcf-test-db -e WP_DB_NAME=wordpress_test \
+  -e WP_DB_USER=root -e WP_DB_PASS=root \
+  mpcf-test-runner:latest \
+  vendor/bin/phpunit -c phpunit-performance-50k.xml.dist
+```
 
-## Metrics to capture (RC dogfood)
+## P3 results (2026-08-07)
 
-Record date, host spec, PHP/MySQL versions, and p50/p95 where applicable:
+| Item | Value |
+|---|---|
+| Host | Biopentra Dev VPS — 6 vCPU, 11 GiB RAM |
+| DB | MariaDB 11.4.12 |
+| Dataset | **50,000** fulfillments; **619,650** events |
+| Queue initial p95 | ~10 ms (indexed) |
+| Workspace open p95 | ~6 ms (indexed) |
+| Doctor p95 | ~469 ms |
+| Consistency validate p95 | ~303 ms |
+| Peak PHP memory | ~1.33 GiB |
 
-| Surface | Operation | Metric |
-|---|---|---|
-| Queue | First page list (default filters) | Wall time + query count |
-| Queue | Search by customer name prefix | Wall time |
-| Dashboard | Today throughput widgets | Wall time |
-| Workspace | Open one `packed` fulfillment (shipments + items) | Wall time |
-| Waves | List open waves + one wave detail | Wall time |
-| Analytics | Overview ROLLUP mode (30-day range) | Wall time |
-| Analytics | LIVE mode same range (compare) | Wall time |
-| Doctor | Full run | Wall time + exit code |
-| Validate | `consistency` + `schema` | Wall time |
-
-Also record: `mpcf_events` row count, `uploads/mpcf/` disk bytes, doctor `capacity.*` output.
-
-## Acceptance criteria (draft)
-
-- Queue list and workspace open remain **indexed** (EXPLAIN / no full table scan on fulfillments for list shapes).
-- Doctor completes in **operator-tolerable** time on dogfood host (threshold TBD after first run).
-- No N+1 regression vs 10k proof patterns.
+**Note:** End-to-end customer-prefix search listing may EXPLAIN as `ALL` when the IN-list is very large; the search **lookup** remains indexed. Recorded as non-blocking operational note.
 
 ## When to re-run
 
 - Any migrator step or index change on `mpcf_fulfillments`, `mpcf_events`, or queue query shapes.
 - Major WooCommerce or MariaDB version bump on production-like hardware.
-
-## Placeholder results
-
-```
-Date:       pending RC dogfood
-Environment: pending
-50k seed:   pending
-Timings:    pending measurement
-```
-
-Update this section after first successful 50k run.

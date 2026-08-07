@@ -23,12 +23,17 @@ if ( ! function_exists( 'wc_create_order' ) ) {
 // projects, plus a cushion for CI retries.
 const MPCF_SEED_ORDER_COUNT = 60;
 
-$product = new WC_Product_Simple();
-$product->set_name( 'Browser Test Widget' );
-$product->set_regular_price( '19.99' );
-$product->set_sku( 'BROWSER-TEST-WIDGET' );
-$product->set_manage_stock( false );
-$product->save();
+$existing_id = wc_get_product_id_by_sku( 'BROWSER-TEST-WIDGET' );
+if ( $existing_id ) {
+	$product = wc_get_product( $existing_id );
+} else {
+	$product = new WC_Product_Simple();
+	$product->set_name( 'Browser Test Widget' );
+	$product->set_regular_price( '19.99' );
+	$product->set_sku( 'BROWSER-TEST-WIDGET' );
+	$product->set_manage_stock( false );
+	$product->save();
+}
 
 $order_ids       = array();
 $fulfillment_ids = array();

@@ -35,7 +35,7 @@ Rollback procedure: `docs/ops/ROLLBACK.md`.
 | Admin | Site Health aggregate test (Tools → Site Health) |
 | Privacy | WP personal data exporter/eraser; WC order anonymization sympathy |
 | Maintenance audit | `maintenance.*` global events for repairs |
-| Docs | `docs/ops/*`, `docs/SECURITY_REVIEW.md`, draft `ARCHITECTURE_FREEZE.md` |
+| Docs | `docs/ops/*`, `docs/SECURITY_REVIEW.md`, ACTIVE `ARCHITECTURE_FREEZE.md` |
 
 No new REST routes. No Mission Control redesign. No workflow changes.
 

@@ -1,0 +1,11 @@
+seed complete packed_id=47251 tracking=TRACK-647251 search_order=637501
+dataset fulfillments=50000 events=619650 scale=5
+P3-A Queue initial load (open states LIMIT 20) | cold=7.98ms p50=9.04ms p95=10.03ms peak_mem=1429233664 key=created_at type=index
+P3-A Queue search customer prefix Alex (end-to-end) | cold=53.07ms p50=56.06ms p95=59.87ms peak_mem=1429233664 key=n/a type=ALL
+P3-A Workspace open packed fulfillment | cold=2.09ms p50=3.32ms p95=5.59ms peak_mem=1429233664 key=fulfillment_id type=ref
+P3-A Dashboard open_count | cold=5.49ms p50=6.24ms p95=7.49ms peak_mem=1429233664 key=state_warehouse type=range
+P3-A Dashboard packed_today | cold=27.29ms p50=38.63ms p95=42.47ms peak_mem=1429233664 key=created_at type=range
+P3-A doctor full run | cold=395.61ms p50=451.26ms p95=468.73ms peak_mem=1429233664 key=rollup_version type=range
+P3-A validate schema (SchemaChecker) | cold=3.45ms p50=7.20ms p95=7.56ms peak_mem=1429233664 key=n/a type=n/a
+P3-A validate consistency (ConsistencyChecker) | cold=255.86ms p50=279.98ms p95=303.33ms peak_mem=1429233664 key=state_warehouse type=ref
+P3-A Queue numeric search 637501 | cold=0.79ms p50=1.37ms p95=3.01ms peak_mem=1429233664 key=PRIMARY type=const

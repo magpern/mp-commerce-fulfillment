@@ -92,15 +92,15 @@ actual state before work starts.
     `docs/M10_RELEASE_REPORT.md`, Architecture Plan Part XII. Production not
     deployed as part of M10. **M10 closed.**
 11. **v1.0 — Architecture Freeze & Production Readiness** — **P1 COMPLETE**
-    (Architecture Freeze **ACTIVE**, 2026-08-07). **P2 COMPLETE**
-    (Regression Certification — see
-    `docs/certification/P2_REGRESSION_CERTIFICATION_REPORT.md`). **P3 READY
-    TO START** — Operational Certification; **not started.** This is
-    **not M11** and **not** a feature milestone. Remaining phases: P3
-    operational certification → P4 administrative `v1.0.0` release → P5
-    production deploy & hypercare (`docs/plans/V1_PRODUCTION_READINESS.md`).
-    Binding order: certify → tag `v1.0.0` → deploy that exact ZIP →
-    hypercare. **No new functionality before `v1.0.0`.**
+    (Architecture Freeze **ACTIVE**, 2026-08-07). **P2 COMPLETE**. **P3
+    COMPLETE** (Operational Certification — see
+    `docs/certification/P3_OPERATIONAL_CERTIFICATION_REPORT.md`). **P4 READY
+    TO START** — v1.0 Release Candidate Approval & Release; **not started.**
+    This is **not M11** and **not** a feature milestone. Remaining phases:
+    P4 administrative `v1.0.0` release → P5 production deploy & hypercare
+    (`docs/plans/V1_PRODUCTION_READINESS.md`). Binding order: certify →
+    tag `v1.0.0` → deploy that exact ZIP → hypercare. **No new
+    functionality before `v1.0.0`.**
 
 ## Future capabilities (not scheduled)
 

@@ -1,10 +1,11 @@
 # v1.0 — Architecture Freeze & Production Readiness Program
 
-**Status:** Planning complete — **P1 COMPLETE**. **P2 COMPLETE**. **P3 READY TO START** (not started).  
+**Status:** Planning complete — **P1 COMPLETE**. **P2 COMPLETE**. **P3 COMPLETE**. **P4 READY TO START** (not started).  
 **Kind:** Certification / evidence program — **not M11**, **not a feature milestone**.  
 **Baseline:** `main` / released **`v0.10.0`** (M0–M10 closed). Production **not** yet deployed.  
 **Freeze inventory:** `docs/ARCHITECTURE_FREEZE.md` — **ACTIVE** (approved Phase P1, 2026-08-07).  
 **P2 evidence:** `docs/certification/P2_REGRESSION_CERTIFICATION_REPORT.md` — verdict **PASS WITH DOCUMENTED NON-BLOCKING LIMITATIONS**.  
+**P3 evidence:** `docs/certification/P3_OPERATIONAL_CERTIFICATION_REPORT.md` — verdict **PASS WITH DOCUMENTED NON-BLOCKING LIMITATIONS**.  
 **Target administrative release:** **`v1.0.0`** (no new functionality) at Phase P4.
 
 This plan designs the final certification program before MPCF is declared production-ready and the architecture freeze becomes **ACTIVE**.
@@ -64,8 +65,8 @@ Re-verify these at the start of **each** phase.
 |---|---|---|---|
 | **P1** | Architecture Freeze | **COMPLETE** | Freeze inventory **ACTIVE**; contracts classified & verified |
 | **P2** | Regression Certification | **COMPLETE** | M0–M10 behavioral verification matrix (no features) |
-| **P3** | Operational Certification | **READY TO START** | Perf / security / a11y / privacy / DR / monitoring evidence |
-| **P4** | v1.0 Release Candidate Approval & Release | Not started | Tag **`v1.0.0`**; immutable GitHub Release ZIP |
+| **P3** | Operational Certification | **COMPLETE** | Perf / security / a11y / privacy / DR / monitoring evidence |
+| **P4** | v1.0 Release Candidate Approval & Release | **READY TO START** | Tag **`v1.0.0`**; immutable GitHub Release ZIP |
 | **P5** | Production Deployment & Hypercare | Not started | Deploy published ZIP; hypercare; production complete |
 
 **Binding order: P1 → P2 → P3 → P4 → P5.**
@@ -206,13 +207,14 @@ Prove the plugin is operable, securable, and recoverable at production-relevant 
 
 ### 7.3 Exit criteria
 
-- Each stream has recorded evidence or an explicit PO deferral with risk acceptance.
-- No open critical security findings.
-- Support one-pager published under `docs/ops/`.
+- Each stream has recorded evidence or an explicit PO deferral with risk acceptance. **Met** — see `docs/certification/P3_OPERATIONAL_CERTIFICATION_REPORT.md`.
+- No open critical security findings. **Met**.
+- Support one-pager published under `docs/ops/`. **Met** — `docs/ops/SUPPORT.md`.
 
 ### 7.4 Artifacts
 
-- Updated performance baseline, security addendum, DR/backup logs, support one-pager
+- Updated performance baseline (`docs/ops/PERFORMANCE_BASELINE.md`), P3 certification report, DR/backup logs under `/tmp/mpcf-p3-cert/`, support one-pager (`docs/ops/SUPPORT.md`).
+- **Status: COMPLETE** (2026-08-07). Verdict: **PASS WITH DOCUMENTED NON-BLOCKING LIMITATIONS**. **P4 READY TO START** (not started).
 
 ---
 
@@ -372,6 +374,7 @@ MPCF is **production-ready and program-complete** when:
 | Planning completed | 2026-08-07 |
 | **P1** | **COMPLETE** — freeze ACTIVE |
 | **P2** | **COMPLETE** — regression certified (see P2 report) |
-| **P3** | **READY TO START** — not started |
-| P4–P5 | Not started |
-| Next action | PO GO to begin **P3 Operational Certification** |
+| **P3** | **COMPLETE** — operational certified (see P3 report) |
+| **P4** | **READY TO START** — not started |
+| P5 | Not started |
+| Next action | PO GO to begin **P4 v1.0 Release Candidate Approval & Release** |
