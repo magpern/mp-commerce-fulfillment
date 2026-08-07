@@ -76,15 +76,13 @@ actual state before work starts.
    Ends at `picked`; packing remains per-fulfillment. ADR-0007 unchanged.
    Evidence: `docs/M8_RELEASE_REPORT.md`, `docs/ARCHITECTURE_PLAN.md` Part X.
    Production not deployed as part of M8.
-9. **M9 — Operational Analytics & Insights (Analytics I)** — **RC on
-   `feature/m9-operational-analytics` targeting `v0.9.0`.** Runtime
-   implementation complete (schema 8 / `mpcf_analytics_daily`,
-   AnalyticsEngine LIVE/ROLLUP/REBUILD, Analytics admin, REST, CSV, CLI,
-   diagnostics). Evidence: `docs/M9_RELEASE_REPORT.md`, Architecture Plan
-   Part XI. **Not merged / tagged / published** until PO GO. **M10 must
-   not start.** GitHub Actions was unavailable at RC due to account
-   billing/spending-limit (PO waiver for start; last green main CI was
-   M8 merge `31158595754`); local validation mandatory.
+9. **M9 — Operational Analytics & Insights (Analytics I)** — **released as
+   `v0.9.0`** (PR #7 merged, tag pushed, Release workflow green, installable
+   zip published). Schema migrator **8** (`mpcf_analytics_daily`),
+   AnalyticsEngine LIVE/ROLLUP/REBUILD, Analytics admin, read-only REST,
+   CSV, CLI backfill/rebuild, nightly rollup scheduler. Evidence:
+   `docs/M9_RELEASE_REPORT.md`, Architecture Plan Part XI. Production not
+   deployed as part of M9. **M10 must not start** from this release alone.
 10. **M10 — Hardening & operational maturity** — not started.
 11. **1.0 — Commercial release** — not started.
 
