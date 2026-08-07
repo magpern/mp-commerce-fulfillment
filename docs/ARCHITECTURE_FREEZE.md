@@ -2,12 +2,12 @@
 
 **Status: ACTIVE**  
 **Approved:** Phase **P1 — Architecture Freeze Approval** (2026-08-07)  
-**Baseline release:** `v0.10.0` (`bd40c05` planning tip; freeze applies to shipped `v0.10.0` contracts)  
+**Baseline release:** `v0.10.0` contracts; canonical production artifact **`v1.0.0`** (P4, 2026-08-07) — administrative version bump only (see `docs/V1_RELEASE_REPORT.md`)  
 **Program:** `docs/plans/V1_PRODUCTION_READINESS.md`
 
 **P1 record:** Architecture Freeze approved during Phase P1. Every FROZEN surface below was verified to exist in released code. No runtime changes were required. Surfaces named in architecture prose but **not implemented** are listed under **Deferred (not frozen)** — they were **not invented**.
 
-**Program note:** This is **not** M11 and **not** a feature milestone. Administrative `v1.0.0` (P4) bumps the version triad and publishes the immutable ZIP; production deploy is **P5**. No new functionality before `v1.0.0`.
+**Program note:** This is **not** M11 and **not** a feature milestone. Administrative `v1.0.0` (P4) is **published**. Production deploy of that exact ZIP is **P5** (not started). Freeze remains **ACTIVE** for the `1.x` line.
 
 ---
 

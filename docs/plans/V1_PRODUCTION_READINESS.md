@@ -1,12 +1,13 @@
 # v1.0 — Architecture Freeze & Production Readiness Program
 
-**Status:** Planning complete — **P1 COMPLETE**. **P2 COMPLETE**. **P3 COMPLETE**. **P4 READY TO START** (not started).  
+**Status:** Planning complete — **P1 COMPLETE**. **P2 COMPLETE**. **P3 COMPLETE**. **P4 COMPLETE**. **P5 READY TO START** (not started).  
 **Kind:** Certification / evidence program — **not M11**, **not a feature milestone**.  
-**Baseline:** `main` / released **`v0.10.0`** (M0–M10 closed). Production **not** yet deployed.  
+**Baseline:** `main` / released **`v1.0.0`** (administrative; identical functionality to certified `v0.10.0`). Production **not** yet deployed.  
 **Freeze inventory:** `docs/ARCHITECTURE_FREEZE.md` — **ACTIVE** (approved Phase P1, 2026-08-07).  
 **P2 evidence:** `docs/certification/P2_REGRESSION_CERTIFICATION_REPORT.md` — verdict **PASS WITH DOCUMENTED NON-BLOCKING LIMITATIONS**.  
 **P3 evidence:** `docs/certification/P3_OPERATIONAL_CERTIFICATION_REPORT.md` — verdict **PASS WITH DOCUMENTED NON-BLOCKING LIMITATIONS**.  
-**Target administrative release:** **`v1.0.0`** (no new functionality) at Phase P4.
+**P4 evidence:** `docs/V1_RELEASE_REPORT.md` — GitHub Release **`v1.0.0`** published.  
+**Target production deploy:** Phase **P5** using the **exact** published `v1.0.0` ZIP.
 
 This plan designs the final certification program before MPCF is declared production-ready and the architecture freeze becomes **ACTIVE**.
 
@@ -66,7 +67,8 @@ Re-verify these at the start of **each** phase.
 | **P1** | Architecture Freeze | **COMPLETE** | Freeze inventory **ACTIVE**; contracts classified & verified |
 | **P2** | Regression Certification | **COMPLETE** | M0–M10 behavioral verification matrix (no features) |
 | **P3** | Operational Certification | **COMPLETE** | Perf / security / a11y / privacy / DR / monitoring evidence |
-| **P4** | v1.0 Release Candidate Approval & Release | **READY TO START** | Tag **`v1.0.0`**; immutable GitHub Release ZIP |
+| **P4** | v1.0 Release Candidate Approval & Release | **COMPLETE** | Tag **`v1.0.0`**; immutable GitHub Release ZIP |
+| **P5** | Production Deployment & Hypercare | **READY TO START** | Deploy published ZIP; hypercare |
 | **P5** | Production Deployment & Hypercare | Not started | Deploy published ZIP; hypercare; production complete |
 
 **Binding order: P1 → P2 → P3 → P4 → P5.**
@@ -247,10 +249,17 @@ PO-approve the certified codebase as the **v1.0.0 release candidate**, publish t
 
 ### 8.5 Exit criteria
 
-- GitHub Release **`v1.0.0`** live with installable ZIP
-- Freeze document remains **ACTIVE** (from P1)
-- Published asset SHA recorded; artifact is the **only** allowed production install source for P5
-- Roadmap notes release published; hypercare/production still open until P5 closes
+- GitHub Release **`v1.0.0`** live with installable ZIP — **Met**
+- Freeze document remains **ACTIVE** (from P1) — **Met**
+- Published asset SHA recorded; artifact is the **only** allowed production install source for P5 — **Met** (`docs/V1_RELEASE_REPORT.md`)
+- Roadmap notes release published; hypercare/production still open until P5 closes — **Met**
+
+### 8.6 P4 completion note (2026-08-07)
+
+- Merge: `8991408` (PR #10). Release commit: `38f0c42`. Tag: `v1.0.0`.
+- Release: https://github.com/magpern/mp-commerce-fulfillment/releases/tag/v1.0.0
+- Published SHA-256: `b236970280467149f2bd9ea16692afab46eeb25f5d5bdbc2186a54b95c41b9e4`
+- **P5 READY TO START.** Production not deployed. Freeze remains **ACTIVE**.
 
 ---
 
@@ -375,6 +384,6 @@ MPCF is **production-ready and program-complete** when:
 | **P1** | **COMPLETE** — freeze ACTIVE |
 | **P2** | **COMPLETE** — regression certified (see P2 report) |
 | **P3** | **COMPLETE** — operational certified (see P3 report) |
-| **P4** | **READY TO START** — not started |
-| P5 | Not started |
-| Next action | PO GO to begin **P4 v1.0 Release Candidate Approval & Release** |
+| **P4** | **COMPLETE** — `v1.0.0` published (see `docs/V1_RELEASE_REPORT.md`) |
+| **P5** | **READY TO START** — not started |
+| Next action | PO GO to begin **P5 Production Deployment & Hypercare** |

@@ -91,16 +91,15 @@ actual state before work starts.
     `docs/ARCHITECTURE_FREEZE.md`. Migrator **TARGET remains 8**. Evidence:
     `docs/M10_RELEASE_REPORT.md`, Architecture Plan Part XII. Production not
     deployed as part of M10. **M10 closed.**
-11. **v1.0 — Architecture Freeze & Production Readiness** — **P1 COMPLETE**
-    (Architecture Freeze **ACTIVE**, 2026-08-07). **P2 COMPLETE**. **P3
-    COMPLETE** (Operational Certification — see
-    `docs/certification/P3_OPERATIONAL_CERTIFICATION_REPORT.md`). **P4 READY
-    TO START** — v1.0 Release Candidate Approval & Release; **not started.**
-    This is **not M11** and **not** a feature milestone. Remaining phases:
-    P4 administrative `v1.0.0` release → P5 production deploy & hypercare
-    (`docs/plans/V1_PRODUCTION_READINESS.md`). Binding order: certify →
-    tag `v1.0.0` → deploy that exact ZIP → hypercare. **No new
-    functionality before `v1.0.0`.**
+11. **v1.0 — Architecture Freeze & Production Readiness** — **P1–P3 COMPLETE**.
+    **P4 COMPLETE** — administrative **`v1.0.0`** tagged and published
+    (immutable GitHub Release ZIP; see `docs/V1_RELEASE_REPORT.md`).
+    Architecture Freeze remains **ACTIVE**. **P5 READY TO START** —
+    production deploy of the **exact** published `v1.0.0` ZIP + hypercare;
+    **not started.** This is **not M11** and **not** a feature milestone.
+    Binding order remaining: deploy published ZIP → hypercare
+    (`docs/plans/V1_PRODUCTION_READINESS.md`). **No new functionality
+    before production cutover beyond documented P5 ops.**
 
 ## Future capabilities (not scheduled)
 
