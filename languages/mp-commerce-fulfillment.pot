@@ -2,7 +2,7 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Commerce Fulfillment 0.7.0\n"
+"Project-Id-Version: Commerce Fulfillment 0.8.0\n"
 "Report-Msgid-Bugs-To: https://github.com/magpern/mp-commerce-fulfillment/issues\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -419,6 +419,7 @@ msgstr ""
 #: src/Admin/OrdersPage.php:111
 #: src/Admin/OrdersPage.php:191
 #: src/Admin/ShellNavigation.php:43
+#: templates/documents/wave-picking-list.php:93
 msgid "Orders"
 msgstr ""
 
@@ -484,7 +485,7 @@ msgid "Order status"
 msgstr ""
 
 #: src/Admin/OrdersPage.php:185
-#: src/Plugin.php:523
+#: src/Plugin.php:557
 msgid "Fulfillment"
 msgstr ""
 
@@ -984,6 +985,70 @@ msgstr ""
 msgid "Fulfillment sections"
 msgstr ""
 
+#: src/Admin/WavePage.php:71
+#: src/Admin/WavePage.php:102
+msgid "Wave Workspace"
+msgstr ""
+
+#: src/Admin/WavePage.php:78
+msgid "Wave"
+msgstr ""
+
+#: src/Admin/WavePage.php:86
+msgid "You are not allowed to access this page."
+msgstr ""
+
+#: src/Admin/WavePage.php:105
+msgid "Open a wave from the Queue, or create one from selected fulfillments."
+msgstr ""
+
+#: src/Admin/WavePage.php:109
+#: src/Admin/WorkspacePage.php:461
+msgid "Back to Queue"
+msgstr ""
+
+#: src/Admin/WavePage.php:122
+msgid "Activate"
+msgstr ""
+
+#: src/Admin/WavePage.php:123
+msgid "Pause"
+msgstr ""
+
+#: src/Admin/WavePage.php:124
+msgid "Resume"
+msgstr ""
+
+#: src/Admin/WavePage.php:125
+msgid "Complete"
+msgstr ""
+
+#: src/Admin/WavePage.php:126
+msgid "Abandon"
+msgstr ""
+
+#: src/Admin/WavePage.php:127
+msgid "Print picking list"
+msgstr ""
+
+#: src/Admin/WavePage.php:128
+msgid "Enter Wave Scan Mode"
+msgstr ""
+
+#: src/Admin/WavePage.php:136
+msgid "Wave barcode scanner input"
+msgstr ""
+
+#: src/Admin/WavePage.php:137
+#: src/Admin/WorkspacePage.php:781
+msgid "Undo last scan"
+msgstr ""
+
+#: src/Admin/WavePage.php:138
+#: src/Admin/WorkspacePage.php:782
+msgid "Exit Scan Mode"
+msgstr ""
+
 #: src/Admin/WorkspacePage.php:221
 #: src/Admin/WorkspacePage.php:228
 msgid "Packing Workspace"
@@ -1009,10 +1074,6 @@ msgstr ""
 #: src/Admin/WorkspaceStageGuidance.php:165
 #: src/Admin/WorkspaceStageGuidance.php:189
 msgid "Next order"
-msgstr ""
-
-#: src/Admin/WorkspacePage.php:461
-msgid "Back to Queue"
 msgstr ""
 
 #: src/Admin/WorkspacePage.php:497
@@ -1188,14 +1249,6 @@ msgstr ""
 
 #: src/Admin/WorkspacePage.php:779
 msgid "Enter Packing Scan Mode"
-msgstr ""
-
-#: src/Admin/WorkspacePage.php:781
-msgid "Undo last scan"
-msgstr ""
-
-#: src/Admin/WorkspacePage.php:782
-msgid "Exit Scan Mode"
 msgstr ""
 
 #: src/Admin/WorkspacePage.php:783
@@ -1584,6 +1637,7 @@ msgstr ""
 #. translators: %s: render timestamp
 #: templates/documents/packing-slip.php:78
 #: templates/documents/picking-list.php:76
+#: templates/documents/wave-picking-list.php:65
 #, php-format
 msgid "Rendered %s"
 msgstr ""
@@ -1597,6 +1651,7 @@ msgstr ""
 
 #: templates/documents/packing-slip.php:118
 #: templates/documents/picking-list.php:104
+#: templates/documents/wave-picking-list.php:90
 msgid "SKU"
 msgstr ""
 
@@ -1617,6 +1672,7 @@ msgid "Package %1$d"
 msgstr ""
 
 #: templates/documents/picking-list.php:106
+#: templates/documents/wave-picking-list.php:89
 msgid "Location"
 msgstr ""
 
@@ -1626,4 +1682,27 @@ msgstr ""
 
 #: templates/documents/picking-list.php:110
 msgid "Remaining"
+msgstr ""
+
+#: templates/documents/wave-picking-list.php:29
+#: templates/documents/wave-picking-list.php:47
+msgid "Wave picking list"
+msgstr ""
+
+#. translators: 1: wave id, 2: wave state, 3: member summary
+#: templates/documents/wave-picking-list.php:53
+#, php-format
+msgid "Wave #%1$d · %2$s · %3$s"
+msgstr ""
+
+#: templates/documents/wave-picking-list.php:81
+msgid "Members"
+msgstr ""
+
+#: templates/documents/wave-picking-list.php:91
+msgid "Name"
+msgstr ""
+
+#: templates/documents/wave-picking-list.php:92
+msgid "Qty"
 msgstr ""

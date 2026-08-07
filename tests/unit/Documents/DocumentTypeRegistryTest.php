@@ -28,7 +28,8 @@ final class DocumentTypeRegistryTest extends TestCase {
 
 		self::assertArrayHasKey( 'packing_slip', $types );
 		self::assertArrayHasKey( 'picking_list', $types );
-		self::assertCount( 2, $types );
+		self::assertArrayHasKey( 'wave_picking_list', $types );
+		self::assertCount( 3, $types );
 	}
 
 	public function test_packing_slip_definition_is_valid(): void {

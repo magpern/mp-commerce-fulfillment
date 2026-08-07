@@ -175,6 +175,11 @@ final class CompositionRootTest extends TestCase {
 			'ProtectedDocumentStore',
 			'DocumentHistoryService',
 			'DocumentsPage',
+			'WpdbWaveRepository',
+			'WaveService',
+			'WaveScanService',
+			'WavesController',
+			'WavePage',
 		);
 		$disallowed = array_values( array_diff( $matches[1], $allowed ) );
 

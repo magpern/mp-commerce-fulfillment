@@ -109,7 +109,8 @@ else
 			"mp-commerce-fulfillment/uninstall.php" \
 			"mp-commerce-fulfillment/vendor/autoload.php" \
 			"mp-commerce-fulfillment/templates/documents/packing-slip.php" \
-			"mp-commerce-fulfillment/templates/documents/picking-list.php"; do
+			"mp-commerce-fulfillment/templates/documents/picking-list.php" \
+			"mp-commerce-fulfillment/templates/documents/wave-picking-list.php"; do
 			if zip_has "$ZIP_PATH" "$required"; then
 				pass "zip contains $required"
 			else

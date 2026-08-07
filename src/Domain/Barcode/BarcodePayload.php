@@ -27,6 +27,8 @@ final class BarcodePayload {
 
 	public const TYPE_VARIATION = 'V';
 
+	public const TYPE_WAVE = 'W';
+
 	public const MAX_LENGTH = 256;
 
 	public const FORMAT_VERSION = 1;
@@ -108,6 +110,15 @@ final class BarcodePayload {
 	 */
 	public static function variation( int $variation_id ): self {
 		return self::of( self::TYPE_VARIATION, $variation_id );
+	}
+
+	/**
+	 * Builds a wave identity payload.
+	 *
+	 * @param int $wave_id Wave id.
+	 */
+	public static function wave( int $wave_id ): self {
+		return self::of( self::TYPE_WAVE, $wave_id );
 	}
 
 	/**
@@ -239,6 +250,7 @@ final class BarcodePayload {
 				self::TYPE_PACKAGE,
 				self::TYPE_PRODUCT,
 				self::TYPE_VARIATION,
+				self::TYPE_WAVE,
 			),
 			true
 		);

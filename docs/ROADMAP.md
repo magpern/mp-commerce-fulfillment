@@ -69,13 +69,14 @@ actual state before work starts.
 7. **M7 — Barcode & scan mode** — **released as `v0.7.0`**. ScanService,
    Workspace Scan Mode, Code 128 document barcodes, MPCF payloads.
    Evidence: `docs/M7_RELEASE_REPORT.md`, `docs/ARCHITECTURE_PLAN.md` Part IX.
-8. **M8 — Wave & batch picking** — **planning complete** (Architecture Plan
-   Part X + `docs/plans/M8_WAVE_BATCH_PICKING_IMPLEMENTATION.md`). **Not
-   started** (no implementation branch). Awaits PO approval of Part X.
-   Target `v0.8.0`: Wave aggregate, combined walk document, Wave Scan Mode
-   (extends M7), Wave Workspace; ends at `picked`; packing remains
-   per-fulfillment. ADR-0007 unchanged.
-9. **M9 — Analytics I** — not started.
+8. **M8 — Wave & batch picking** — **RC / implementation complete on
+   `feature/m8-wave-batch-picking`** targeting `v0.8.0`. Wave aggregate +
+   migrator 7 / settings 9, combined walk document (`wave_picking_list` +
+   `MPCF:W`), Wave Scan Mode (FIFO), Wave Workspace + Queue create-wave.
+   Ends at `picked`; packing remains per-fulfillment. ADR-0007 unchanged.
+   Evidence: `docs/M8_RELEASE_REPORT.md`, `docs/ARCHITECTURE_PLAN.md` Part X.
+   **Not merged / tagged / published** until PO GO. **M9 must not start.**
+9. **M9 — Analytics I** — not started (blocked on M8 close).
 10. **M10 — Hardening & operational maturity** — not started.
 11. **1.0 — Commercial release** — not started.
 

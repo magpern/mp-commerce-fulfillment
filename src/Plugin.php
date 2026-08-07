@@ -17,6 +17,7 @@ use MPCF\Admin\OperatorMode;
 use MPCF\Admin\OrdersPage;
 use MPCF\Admin\QueuePage;
 use MPCF\Admin\SettingsPage;
+use MPCF\Admin\WavePage;
 use MPCF\Admin\WorkspacePage;
 use MPCF\Application\DocumentHistoryService;
 use MPCF\Application\DocumentService;
@@ -36,6 +37,7 @@ use MPCF\Api\Rest\PhotosController;
 use MPCF\Api\Rest\ScanController;
 use MPCF\Api\Rest\RestApi;
 use MPCF\Api\Rest\ShipmentsController;
+use MPCF\Api\Rest\WavesController;
 use MPCF\Application\AssignmentService;
 use MPCF\Application\DashboardService;
 use MPCF\Application\EventDispatcher;
@@ -52,6 +54,8 @@ use MPCF\Application\Scan\ScanService;
 use MPCF\Application\ShipmentAutoShipSubscriber;
 use MPCF\Application\ShippingService;
 use MPCF\Application\TransitionContextFactory;
+use MPCF\Application\Wave\WaveScanService;
+use MPCF\Application\Wave\WaveService;
 use MPCF\Application\WorkflowService;
 use MPCF\Cli\BackfillCommand;
 use MPCF\Documents\HtmlRenderer;
@@ -73,6 +77,7 @@ use MPCF\Infrastructure\Database\WpdbPackageItemRepository;
 use MPCF\Infrastructure\Database\WpdbPackageRepository;
 use MPCF\Infrastructure\Database\WpdbSearchQuery;
 use MPCF\Infrastructure\Database\WpdbShipmentRepository;
+use MPCF\Infrastructure\Database\WpdbWaveRepository;
 use MPCF\Infrastructure\Files\ProtectedDocumentStore;
 use MPCF\Infrastructure\Files\ProtectedPhotoStore;
 use MPCF\Infrastructure\Media\GdImageProcessor;
@@ -363,6 +368,33 @@ final class Plugin {
 			$clock
 		);
 
+		$assignments_svc = new AssignmentService( $fulfillments, $events, $dispatcher, $clock );
+		$wave_repo       = new WpdbWaveRepository();
+		$wave_service    = new WaveService(
+			$wave_repo,
+			$fulfillments,
+			$items,
+			$assignments_svc,
+			$workflow_service,
+			$events,
+			$dispatcher,
+			$clock,
+			$settings
+		);
+		$wave_scan       = new WaveScanService(
+			$wave_repo,
+			$fulfillments,
+			$items,
+			$packing_service,
+			$workflow_service,
+			$wave_service,
+			new ScanResolver(),
+			new TransientScanCorrectionStore(),
+			$events,
+			$dispatcher,
+			$clock
+		);
+
 		$document_repo    = new WpdbDocumentRepository();
 		$document_store   = new ProtectedDocumentStore();
 		$document_service = new DocumentService(
@@ -402,7 +434,7 @@ final class Plugin {
 					$workflow_service
 				),
 				new NotesController( new NoteService( $notes_repository, $clock ) ),
-				new AssignmentController( new AssignmentService( $fulfillments, $events, $dispatcher, $clock ) ),
+				new AssignmentController( $assignments_svc ),
 				new ShipmentsController( $shipping_service, $workflow_service, $detail_service ),
 				new PackagesController( $shipping_service, $workflow_service, $detail_service ),
 				new CarriersController( $carriers ),
@@ -410,6 +442,7 @@ final class Plugin {
 				new DocumentsController( $document_service, $document_history, $workflow_service, $detail_service ),
 				new PhotosController( $photo_service, $workflow_service, $detail_service ),
 				new ScanController( $scan_service, $workflow_service ),
+				new WavesController( $wave_service, $wave_scan, $document_service ),
 			)
 		) )->register();
 	}
@@ -517,6 +550,7 @@ final class Plugin {
 			$document_repo,
 			$settings
 		);
+		$wave_page      = new WavePage( $shell, $renderer );
 
 		( new Menu(
 			DashboardPage::SLUG,
@@ -526,7 +560,7 @@ final class Plugin {
 			array( $dashboard_page, $queue_page, $orders_page, $documents_page, $settings_page )
 		) )->register();
 
-		$hidden_pages = array( $detail_page, $workspace_page );
+		$hidden_pages = array( $detail_page, $workspace_page, $wave_page );
 
 		add_action(
 			'admin_menu',
