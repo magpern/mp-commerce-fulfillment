@@ -46,8 +46,7 @@ $product->set_sku( $sku );
 $product->set_manage_stock( true );
 $product->set_stock_quantity( 500 );
 $product->save();
-$product_id   = (int) $product->get_id();
-$stock_before = (int) $product->get_stock_quantity();
+$product_id = (int) $product->get_id();
 
 global $wpdb;
 $table = $wpdb->prefix . 'mpcf_fulfillments';
@@ -82,6 +81,10 @@ for ( $i = 0; $i < 5; $i++ ) {
 	}
 	$fulfillment_ids[] = $fid;
 }
+
+$product_after_orders = wc_get_product( $product_id );
+$stock_before = (int) $product_after_orders->get_stock_quantity();
+echo "stock_after_orders={$stock_before}\n";
 
 $create = new WP_REST_Request( 'POST', '/mpcf/v1/waves' );
 $create->set_body_params(
