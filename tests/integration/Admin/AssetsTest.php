@@ -105,6 +105,10 @@ final class AssetsTest extends WP_UnitTestCase {
 		self::assertStringContainsString( 'id="mpcf-wave-js-module"', $html );
 		self::assertTrue( wp_script_is( 'mpcf-mpds-toast', 'enqueued' ) );
 		self::assertTrue( wp_script_is( 'mpcf-mpds-scan-sink', 'enqueued' ) );
+
+		$inline = implode( "\n", wp_scripts()->get_data( 'mpcf-mpds-scan-sink', 'after' ) );
+		self::assertStringContainsString( 'mpcfWorkspace', $inline );
+		self::assertStringContainsString( 'restUrl', $inline );
 	}
 
 	public function test_workspace_scripts_are_registered_as_real_script_modules(): void {

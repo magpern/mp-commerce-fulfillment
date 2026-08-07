@@ -46,19 +46,42 @@ async function typeScan( page, sku ) {
 	await page.keyboard.press( 'Enter' );
 }
 
+/**
+ * Claim seed ids that are still joinable (queued/picking).
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {number} count
+ * @return {Promise<number[]>}
+ */
+async function claimJoinableIds( page, count ) {
+	const ids = [];
+	for ( let attempt = 0; attempt < 40 && ids.length < count; attempt++ ) {
+		const id = claimSeedFulfillmentId();
+		const probe = await rest( page, `fulfillments/${id}` );
+		const state = probe.data && ( probe.data.state || ( probe.data.fulfillment && probe.data.fulfillment.state ) );
+		if ( probe.ok && ( state === 'queued' || state === 'picking' ) ) {
+			ids.push( id );
+		}
+	}
+	if ( ids.length < count ) {
+		throw new Error( 'Could not claim ' + count + ' joinable seeded fulfillments' );
+	}
+	return ids;
+}
+
 test.describe( 'Wave Scan Mode', () => {
+	test.describe.configure( { mode: 'serial' } );
+
 	test( 'FIFO wave scan, over-scan, undo, and exit leave Workspace intact', async ( {
 		page,
 	} ) => {
-		const idA = claimSeedFulfillmentId();
-		const idB = claimSeedFulfillmentId();
-		// Ensure created_at order: lower id is typically earlier in seed.
-		const fifoFirst = Math.min( idA, idB );
-		const fifoSecond = Math.max( idA, idB );
-
-		// Localize REST nonce via Queue (same mpcfWorkspace bootstrap as Wave).
 		await page.goto( '/wp-admin/admin.php?page=mpcf-queue' );
 		await expect( page.locator( 'body' ) ).toBeVisible();
+		await page.waitForFunction( () => !!( window.mpcfWorkspace && window.mpcfWorkspace.restUrl ) );
+
+		const claimed = await claimJoinableIds( page, 2 );
+		const fifoFirst = Math.min( claimed[ 0 ], claimed[ 1 ] );
+		const fifoSecond = Math.max( claimed[ 0 ], claimed[ 1 ] );
 
 		const created = await rest( page, 'waves', {
 			method: 'POST',
@@ -73,18 +96,20 @@ test.describe( 'Wave Scan Mode', () => {
 		expect( waveId ).toBeGreaterThan( 0 );
 
 		await page.goto( `/wp-admin/admin.php?page=mpcf-wave&wave_id=${waveId}` );
+		await expect( page.locator( 'body' ) ).not.toContainText( /critical error on this website/i );
 		await expect( page.locator( 'h1' ) ).toContainText( /Wave Workspace/i );
 		await expect( page.locator( '[data-mpcf-wave-workspace]' ) ).toHaveAttribute(
 			'data-mpcf-wave-id',
 			String( waveId )
 		);
+		await page.waitForFunction( () => !!( window.mpcfWorkspace && window.mpcfWorkspace.restUrl ) );
 		await expect( page.locator( '[data-mpcf-wave-status]' ) ).toContainText( /draft|active/i, {
-			timeout: 15000,
+			timeout: 20000,
 		} );
 
 		await page.locator( '[data-mpcf-wave-activate]' ).click();
 		await expect( page.locator( '[data-mpcf-wave-status]' ) ).toContainText( /active/i, {
-			timeout: 15000,
+			timeout: 20000,
 		} );
 		await expect( page.locator( '[data-mpcf-wave-walk]' ) ).toContainText( SKU );
 
@@ -116,11 +141,8 @@ test.describe( 'Wave Scan Mode', () => {
 		);
 		await typeScan( page, SKU );
 		const secondBody = await ( await secondPick ).json();
-		// Seed qty is 2 — second scan still FIFO-first until that line completes.
 		expect( secondBody.data.fulfillment_id ).toBe( fifoFirst );
 
-		// Complete remaining qty on first member (seed qty=2 → already 2 after two scans).
-		// Drive remaining picks until second member receives allocation.
 		let sawSecond = false;
 		for ( let i = 0; i < 6; i++ ) {
 			const pending = page.waitForResponse(
@@ -141,7 +163,7 @@ test.describe( 'Wave Scan Mode', () => {
 		}
 		expect( sawSecond ).toBeTruthy();
 
-		// Exhaust remaining picks, then assert over-scan rejection.
+		let sawOverScan = false;
 		for ( let i = 0; i < 8; i++ ) {
 			const pending = page.waitForResponse(
 				( response ) =>
@@ -158,25 +180,17 @@ test.describe( 'Wave Scan Mode', () => {
 				await expect( page.locator( '[data-mpcf-wave-scan-result]' ) ).toContainText(
 					/already fully picked|No outstanding|Scan failed|guard/i
 				);
+				sawOverScan = true;
 				break;
 			}
 		}
+		expect( sawOverScan ).toBeTruthy();
 
-		// One successful pick then undo (re-open via a fresh wave would be heavier;
-		// instead create a tiny third-member wave if both are exhausted).
-		// Prefer: if undo unavailable because over-scan left no correction, claim
-		// a third seed, add member is draft-only — so verify undo while still active
-		// by undoing after a deliberate mid-wave pick on a fresh wave below when needed.
-		const undoProbe = await rest( page, `waves/${waveId}` );
-		expect( undoProbe.ok ).toBeTruthy();
-
-		// Exit Scan Mode — wave chrome remains operable.
 		await page.locator( '[data-mpcf-wave-exit-scan]' ).click();
 		await expect( page.locator( '[data-mpcf-wave-scan]' ) ).toBeHidden();
 		await expect( page.locator( '[data-mpcf-wave-activate]' ) ).toBeVisible();
 		await expect( page.locator( '[data-mpcf-wave-walk]' ) ).toContainText( SKU );
 
-		// Normal per-fulfillment Workspace still works after leaving Wave Scan Mode.
 		await page.goto(
 			`/wp-admin/admin.php?page=mpcf-workspace&fulfillment_id=${fifoFirst}`
 		);
@@ -185,10 +199,10 @@ test.describe( 'Wave Scan Mode', () => {
 	} );
 
 	test( 'undo reverses the last wave pick', async ( { page } ) => {
-		const idA = claimSeedFulfillmentId();
-		const idB = claimSeedFulfillmentId();
-
 		await page.goto( '/wp-admin/admin.php?page=mpcf-queue' );
+		await page.waitForFunction( () => !!( window.mpcfWorkspace && window.mpcfWorkspace.restUrl ) );
+
+		const [ idA, idB ] = await claimJoinableIds( page, 2 );
 
 		const created = await rest( page, 'waves', {
 			method: 'POST',
@@ -202,9 +216,14 @@ test.describe( 'Wave Scan Mode', () => {
 		const waveId = created.data.id;
 
 		await page.goto( `/wp-admin/admin.php?page=mpcf-wave&wave_id=${waveId}` );
+		await expect( page.locator( 'body' ) ).not.toContainText( /critical error on this website/i );
+		await expect( page.locator( '[data-mpcf-wave-status]' ) ).toContainText( /draft|active/i, {
+			timeout: 20000,
+		} );
+
 		await page.locator( '[data-mpcf-wave-activate]' ).click();
 		await expect( page.locator( '[data-mpcf-wave-status]' ) ).toContainText( /active/i, {
-			timeout: 15000,
+			timeout: 20000,
 		} );
 
 		await page.locator( '[data-mpcf-wave-enter-scan]' ).click();

@@ -246,10 +246,12 @@ final class Assets {
 		wp_enqueue_script( 'mpcf-mpds-scan-sink', MPCF_PLUGIN_URL . 'assets/mpds/js/scan-sink.js', array(), MPCF_VERSION, true );
 		wp_enqueue_script_module( 'mpcf-wave', MPCF_PLUGIN_URL . 'assets/admin/js/wave.js', array(), MPCF_VERSION );
 
-		wp_register_script( 'mpcf-wave-config', false, array(), MPCF_VERSION, true );
-		wp_enqueue_script( 'mpcf-wave-config' );
+		// Same localization pattern as the Packing Workspace: attach the
+		// REST config to the classic scan-sink handle. Script modules have
+		// no wp_add_inline_script() counterpart; api.js reads the global
+		// at call time.
 		wp_add_inline_script(
-			'mpcf-wave-config',
+			'mpcf-mpds-scan-sink',
 			sprintf(
 				'window.mpcfWorkspace = window.mpcfWorkspace || { restUrl: %s, nonce: %s };',
 				wp_json_encode( rest_url( 'mpcf/v1/' ) ),
@@ -263,16 +265,16 @@ final class Assets {
 	 */
 	private function enqueue_queue_wave_assets(): void {
 		wp_enqueue_script_module( 'mpcf-queue-wave', MPCF_PLUGIN_URL . 'assets/admin/js/queue-wave.js', array(), MPCF_VERSION );
-		wp_register_script( 'mpcf-queue-wave-config', false, array(), MPCF_VERSION, true );
-		wp_enqueue_script( 'mpcf-queue-wave-config' );
+		wp_enqueue_script( 'wp-api-request' );
 		wp_add_inline_script(
-			'mpcf-queue-wave-config',
+			'wp-api-request',
 			sprintf(
 				'window.mpcfWorkspace = window.mpcfWorkspace || { restUrl: %s, nonce: %s }; window.mpcfWavePage = %s;',
 				wp_json_encode( rest_url( 'mpcf/v1/' ) ),
 				wp_json_encode( wp_create_nonce( 'wp_rest' ) ),
 				wp_json_encode( admin_url( 'admin.php?page=' . WavePage::SLUG ) )
-			)
+			),
+			'before'
 		);
 	}
 
