@@ -164,6 +164,21 @@ the PR, not just asserted.
 | `PluginVersionTest` | The plugin header `Version:`, `MPCF_VERSION`, and `readme.txt` Stable tag agree. |
 | `ReleaseArtifactGuardTest` | No Node/Playwright artifact and no runtime Composer dependency ever reaches a release build (ADR-0006) — `bin/build-zip.sh`, `bin/release-audit.sh`, `.gitignore`, `composer.json`, and `package.json` all carry the required guard. |
 
+## M10 — diagnostics, privacy, repair (integration + unit)
+
+M10 adds operational surfaces tested against real WordPress + DB:
+
+| Area | Coverage |
+|---|---|
+| Doctor | `OperationalHardeningTest::test_doctor_passes_on_migrated_install` — structured results, read-only |
+| Repair dry-run / `--yes` | Storage dirs repair requires `--yes`; schedules/schema idempotent |
+| Privacy | Exporter/eraser round-trip on fixtures; hash chain survives erase (`AuditChainVerifier`) |
+| Site Health | Registration + aggregate test delegates to same `CheckerRegistry` as doctor |
+| Maintenance audit | Repair emits `maintenance.*` global events |
+| Unit | Per-checker fixtures, `RepairResult`, `AuditChainVerifier`, privacy anonymizer |
+
+CLI exit codes (`doctor` fail→1, `validate` fail→1, `audit verify --all` fail→1) are asserted in integration tests. No browser gate for Site Health — optional smoke only.
+
 ## Docker-only tooling
 
 The reference development host has no PHP, Composer, or Node installed —

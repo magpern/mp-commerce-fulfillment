@@ -13,6 +13,11 @@ Detail and (from Milestone 2) the Packing Workspace call. A transition
 submitted through this API and one submitted from the Fulfillment Detail
 screen produce identical database and audit outcomes (§IV.15 criterion 2).
 
+**M10 note:** Operational diagnostics (`wp mpcf doctor`, `validate`, `repair`,
+`audit verify`) and Site Health are **CLI/admin-only** — no new REST
+diagnostics routes in `v0.10.0`. Monitoring integrations should shell WP-CLI or
+read Site Health via WordPress core, not expect `/mpcf/v1/diagnostics`.
+
 ## Authentication
 
 - **Cookie + nonce** — the same session an admin screen uses. Send

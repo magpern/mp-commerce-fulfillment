@@ -169,3 +169,14 @@ mutation hooks.
 All other v1.0 extension surfaces (`mpcf_workflows`, `mpcf_event` +
 per-type actions, `mpcf_intake_should_create`) remain documented in
 `docs/ARCHITECTURE_PLAN.md` §16.2 as future milestones.
+
+## M10 — Site Health, privacy, WC sympathy
+
+| Hook | Type | File | Purpose |
+|---|---|---|---|
+| `site_status_tests` | filter | `Infrastructure\SiteHealth\SiteHealthRegistrar::register_tests()` | Adds direct test `mpcf_operational` — delegates to shared `CheckerRegistry` (same as `wp mpcf doctor`). |
+| `wp_privacy_personal_data_exporters` | filter | `Infrastructure\Privacy\PrivacyRegistrar::register_exporter()` | Registers exporter id `mpcf-fulfillment-data`. |
+| `wp_privacy_personal_data_erasers` | filter | `Infrastructure\Privacy\PrivacyRegistrar::register_eraser()` | Registers eraser id `mpcf-fulfillment-data`. |
+| `woocommerce_privacy_remove_order_personal_data` | action | `Woo\PrivacyHooks::on_order_anonymized()` | WC order anonymization → sympathetic MPCF erase (`PrivacyEraser::erase_for_order_id`). Priority 20. |
+
+M10 adds no public integrator filters for diagnostics. Operational tooling is CLI-first (`docs/ops/DOCTOR_AND_REPAIR.md`).
