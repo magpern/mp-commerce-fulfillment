@@ -387,7 +387,7 @@ final class Plugin {
 		$validation       = new ValidationService( $checker_registry );
 		$maintenance      = new MaintenanceAuditor( $events, $dispatcher, $clock );
 		$audit_verifier   = new AuditChainVerifier( $events );
-		$privacy_eraser = new PrivacyEraser();
+		$privacy_eraser   = new PrivacyEraser();
 		( new SiteHealthRegistrar( $checker_registry ) )->register();
 		( new PrivacyRegistrar( new PrivacyExporter(), $privacy_eraser ) )->register();
 		( new PrivacyHooks( $privacy_eraser ) )->register();
