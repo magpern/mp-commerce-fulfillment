@@ -25,7 +25,7 @@ Cron example (daily, alert on non-zero):
 
 | Checker id | Watches |
 |---|---|
-| `environment` | PHP/WP/WC versions, HPOS |
+| `environment` | PHP/WP floors, required PHP extensions, commerce platform helpers (`wc_get_orders`) — **not** a full WC-version/HPOS assertion |
 | `configuration` | Settings option shape, `mpcf_db_version` |
 | `permissions` | Role/cap grants |
 | `schema` | Tables, indexes, version match |

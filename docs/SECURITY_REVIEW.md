@@ -49,7 +49,13 @@ This document records **reviewed areas and outcomes**. It is not a penetration t
 
 1. Run `wp mpcf doctor` after every production deploy (documented in ops checklists).
 2. Limit WP-CLI and Application Password access on production.
-3. Complete 50k performance baseline on RC before declaring large-scale production readiness (`docs/ops/PERFORMANCE_BASELINE.md`).
+3. ~~Complete 50k performance baseline on RC~~ **Done in P3** — see `docs/ops/PERFORMANCE_BASELINE.md` and `docs/certification/P3_OPERATIONAL_CERTIFICATION_REPORT.md`.
+
+## P3 Operational Certification addendum (2026-08-07)
+
+**Method:** Re-ran structural security unit filter (40 OK), `OperationalHardening` + capability/privacy integration (11 OK), privacy exporter/eraser hook registration, CLI `--yes` dry-run defaults unchanged. No new public contracts. No FROZEN surface changes.
+
+**Outcome:** No release-blocking security or privacy defects. Prior recommendations 1–2 remain operational guidance. Recommendation 3 closed by P3-A.
 
 ## Regression gates
 

@@ -44,7 +44,7 @@ wp mpcf validate <target> [--format=table|json]
 Bounded repairs. **Dry-run by default** — no writes without `--yes`.
 
 ```bash
-wp mpcf repair <schedules|storage-dirs|schema> [--yes] [--format=table|json]
+wp mpcf repair <schedules|storage-dirs|schema|capabilities> [--yes] [--format=table|json]
 ```
 
 | Target | What it does |
