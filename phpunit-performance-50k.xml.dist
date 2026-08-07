@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	P3 Operational Certification — ~50k scale. Not CI.
+	See tests/integration/Performance/OperationalScale50kCertificationTest.php.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
+	bootstrap="tests/integration/bootstrap.php"
+	colors="true"
+	>
+	<testsuites>
+		<testsuite name="performance-50k">
+			<file>tests/integration/Performance/OperationalScale50kCertificationTest.php</file>
+		</testsuite>
+	</testsuites>
+</phpunit>
