@@ -30,7 +30,13 @@ final class AuditAppendOnlyGuardTest extends TestCase {
 	 */
 	private const READ_ONLY_ALLOWED = array(
 		'Infrastructure/Database/WpdbAnalyticsEventSource.php',
+		'Infrastructure/Database/WpdbDiagnosticsReader.php',
 	);
+
+	/**
+	 * GDPR actor anonymizer — may UPDATE actor_id / actor_label_snapshot only.
+	 */
+	private const GDPR_ANONYMIZER = 'Infrastructure/Database/WpdbEventPrivacyAnonymizer.php';
 
 	public function test_only_wpdbeventrepository_names_the_events_table(): void {
 		$violations = $this->scan_for_events_table_reference( dirname( __DIR__, 2 ) . '/src' );
@@ -50,6 +56,17 @@ final class AuditAppendOnlyGuardTest extends TestCase {
 			self::assertSame( array(), $this->mutation_violations( $contents, $relative ) );
 			self::assertFalse( str_contains( $contents, '->insert(' ), $relative . ' must not insert events.' );
 		}
+	}
+
+	public function test_gdpr_anonymizer_only_updates_actor_columns(): void {
+		$contents = (string) file_get_contents( dirname( __DIR__, 2 ) . '/src/' . self::GDPR_ANONYMIZER );
+		self::assertFalse( str_contains( $contents, '->delete(' ), 'GDPR anonymizer must not delete events.' );
+		self::assertFalse( stripos( $contents, 'DELETE FROM' ), 'GDPR anonymizer must not DELETE events.' );
+		self::assertFalse( str_contains( $contents, 'SET payload' ), 'GDPR anonymizer must not touch payload.' );
+		self::assertFalse( str_contains( $contents, 'prev_hash' ), 'GDPR anonymizer must not touch prev_hash.' );
+		self::assertFalse( str_contains( $contents, ', hash' ) || str_contains( $contents, ' hash =' ), 'GDPR anonymizer must not touch hash.' );
+		self::assertTrue( str_contains( $contents, 'actor_id' ), 'GDPR anonymizer must target actor_id.' );
+		self::assertTrue( str_contains( $contents, 'UPDATE' ), 'GDPR anonymizer updates actor columns.' );
 	}
 
 	public function test_the_table_reference_scan_catches_a_second_class_naming_the_events_table(): void {
@@ -104,6 +121,7 @@ final class AuditAppendOnlyGuardTest extends TestCase {
 			// second reader/writer.
 			if ( self::OWNING_FILE === $relative
 				|| 'Infrastructure/Database/Schema.php' === $relative
+				|| self::GDPR_ANONYMIZER === $relative
 				|| in_array( $relative, self::READ_ONLY_ALLOWED, true ) ) {
 				continue;
 			}
