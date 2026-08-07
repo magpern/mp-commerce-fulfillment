@@ -206,6 +206,7 @@ final class CompositionRootTest extends TestCase {
 			'ScheduleRepairService',
 			'StorageDirsRepairService',
 			'SchemaRepairService',
+			'CapabilitiesRepairService',
 			'AuditCommand',
 		);
 		$disallowed = array_values( array_diff( $matches[1], $allowed ) );

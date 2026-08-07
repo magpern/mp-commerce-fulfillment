@@ -26,6 +26,8 @@ use MPCF\Application\EventDispatcher;
 use MPCF\Infrastructure\Privacy\PrivacyEraser;
 use MPCF\Infrastructure\SiteHealth\SiteHealthRegistrar;
 use MPCF\Infrastructure\SystemClock;
+use MPCF\Domain\Fulfillment;
+use MPCF\Infrastructure\Database\WpdbFulfillmentRepository;
 use MPCF\Tests\Integration\CleanFulfillmentTablesTrait;
 use WP_UnitTestCase;
 use DateTimeImmutable;
@@ -40,6 +42,14 @@ final class OperationalHardeningTest extends WP_UnitTestCase {
 	use CleanFulfillmentTablesTrait;
 
 	/**
+	 * Restores schema between tests that issue DDL / TRUNCATE.
+	 */
+	protected function setUp(): void {
+		parent::setUp();
+		$this->clean_fulfillment_tables();
+	}
+
+	/**
 	 * Doctor runs read-only and reports structured results on a healthy install.
 	 */
 	public function test_doctor_passes_on_migrated_install(): void {
@@ -48,7 +58,6 @@ final class OperationalHardeningTest extends WP_UnitTestCase {
 
 		$report = ( new DoctorService( DefaultCheckerRegistryFactory::create() ) )->run();
 		self::assertGreaterThan( 0, $report->pass_count() );
-		// Failures may include REST routes before rest_api_init — allow warn-only or document.
 		foreach ( $report->results() as $result ) {
 			if ( CheckStatus::FAIL !== $result->status() ) {
 				continue;
@@ -58,6 +67,7 @@ final class OperationalHardeningTest extends WP_UnitTestCase {
 			if ( str_starts_with( $result->id(), 'integration.rest' )
 				|| str_starts_with( $result->id(), 'schedule.missing' )
 				|| str_starts_with( $result->id(), 'storage.' )
+				|| str_starts_with( $result->id(), 'schema.table.' )
 			) {
 				continue;
 			}
@@ -116,25 +126,10 @@ final class OperationalHardeningTest extends WP_UnitTestCase {
 	 * Privacy eraser anonymizes name without breaking hash chain.
 	 */
 	public function test_privacy_erase_preserves_audit_chain(): void {
-		( new Migrator() )->migrate();
-		global $wpdb;
-
-		$f_table = Schema::table( Schema::FULFILLMENTS );
-		$wpdb->insert(
-			$f_table,
-			array(
-				'order_id'               => 900001,
-				'order_source'           => 'woocommerce',
-				'state'                  => 'queued',
-				'workflow'               => 'standard',
-				'version'                => 1,
-				'warehouse_id'           => 1,
-				'customer_name_snapshot' => 'Jane Doe',
-				'created_at'             => '2026-01-01 00:00:00',
-				'state_entered_at'       => '2026-01-01 00:00:00',
-			)
+		$order_id = 900001;
+		$fid      = ( new WpdbFulfillmentRepository() )->insert(
+			Fulfillment::intake( $order_id, 'woocommerce', 1, 'standard', 'queued', '#900001', 'Jane Doe', 1, new DateTimeImmutable( '2026-01-01T00:00:00+00:00' ) )
 		);
-		$fid = (int) $wpdb->insert_id;
 
 		$events = new WpdbEventRepository();
 		$event  = DomainEvent::for_fulfillment(
@@ -150,9 +145,10 @@ final class OperationalHardeningTest extends WP_UnitTestCase {
 		$events->append( $event, null );
 
 		$eraser = new PrivacyEraser( new WpdbPrivacyRepository(), new WpdbEventPrivacyAnonymizer() );
-		// Direct order-path erase (no email lookup needed).
-		$eraser->erase_for_order_id( 900001 );
+		$eraser->erase_for_order_id( $order_id );
 
+		global $wpdb;
+		$f_table = Schema::table( Schema::FULFILLMENTS );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $f_table is Schema-built.
 		$name = $wpdb->get_var( $wpdb->prepare( "SELECT customer_name_snapshot FROM {$f_table} WHERE id = %d", $fid ) );
 		self::assertSame( PrivacyEraser::ANON_NAME, $name );

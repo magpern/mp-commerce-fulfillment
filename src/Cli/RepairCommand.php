@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace MPCF\Cli;
 
+use MPCF\Infrastructure\Diagnostics\Repair\CapabilitiesRepairService;
 use MPCF\Infrastructure\Diagnostics\Repair\ScheduleRepairService;
 use MPCF\Infrastructure\Diagnostics\Repair\SchemaRepairService;
 use MPCF\Infrastructure\Diagnostics\Repair\StorageDirsRepairService;
@@ -22,14 +23,16 @@ final class RepairCommand {
 	/**
 	 * Builds the command handler.
 	 *
-	 * @param ScheduleRepairService    $schedules Schedule repair.
-	 * @param StorageDirsRepairService $storage   Storage dirs repair.
-	 * @param SchemaRepairService      $schema    Schema repair.
+	 * @param ScheduleRepairService     $schedules     Schedule repair.
+	 * @param StorageDirsRepairService  $storage       Storage dirs repair.
+	 * @param SchemaRepairService       $schema        Schema repair.
+	 * @param CapabilitiesRepairService $capabilities  Capabilities repair.
 	 */
 	public function __construct(
 		private ScheduleRepairService $schedules,
 		private StorageDirsRepairService $storage,
-		private SchemaRepairService $schema
+		private SchemaRepairService $schema,
+		private CapabilitiesRepairService $capabilities
 	) {
 	}
 
@@ -44,7 +47,7 @@ final class RepairCommand {
 	 * ## OPTIONS
 	 *
 	 * <target>
-	 * : schedules|storage-dirs|schema
+	 * : schedules|storage-dirs|schema|capabilities
 	 *
 	 * [--yes]
 	 * : Apply mutation. Without this flag, dry-run only.
@@ -64,11 +67,12 @@ final class RepairCommand {
 			'schedules'     => $this->schedules->repair( $yes ),
 			'storage-dirs'  => $this->storage->repair( $yes ),
 			'schema'        => $this->schema->repair( $yes ),
+			'capabilities'  => $this->capabilities->repair( $yes ),
 			default         => null,
 		};
 
 		if ( null === $result ) {
-			WP_CLI::error( 'Usage: wp mpcf repair <schedules|storage-dirs|schema> [--yes]' );
+			WP_CLI::error( 'Usage: wp mpcf repair <schedules|storage-dirs|schema|capabilities> [--yes]' );
 		}
 
 		if ( 'json' === $format ) {

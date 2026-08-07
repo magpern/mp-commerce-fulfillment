@@ -65,6 +65,7 @@ use MPCF\Application\Diagnostics\AuditChainVerifier;
 use MPCF\Infrastructure\Diagnostics\DefaultCheckerRegistryFactory;
 use MPCF\Application\Diagnostics\DoctorService;
 use MPCF\Application\Diagnostics\MaintenanceAuditor;
+use MPCF\Infrastructure\Diagnostics\Repair\CapabilitiesRepairService;
 use MPCF\Infrastructure\Diagnostics\Repair\ScheduleRepairService;
 use MPCF\Infrastructure\Diagnostics\Repair\SchemaRepairService;
 use MPCF\Infrastructure\Diagnostics\Repair\StorageDirsRepairService;
@@ -399,7 +400,8 @@ final class Plugin {
 			( new RepairCommand(
 				new ScheduleRepairService( $maintenance ),
 				new StorageDirsRepairService( $maintenance ),
-				new SchemaRepairService( $maintenance )
+				new SchemaRepairService( $maintenance ),
+				new CapabilitiesRepairService( $maintenance )
 			) )->register();
 			( new AuditCommand( $audit_verifier ) )->register();
 		}

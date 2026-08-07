@@ -73,8 +73,8 @@ final class PermissionsChecker implements Checker {
 					CheckCategory::PERMISSIONS,
 					'Warehouse Lead is missing capabilities.',
 					implode( ', ', $missing ),
-					'Reactivate the plugin to grant missing capabilities.',
-					false,
+					'Reactivate the plugin or run: wp mpcf repair capabilities --yes',
+					true,
 					array( 'missing' => $missing )
 				);
 			}

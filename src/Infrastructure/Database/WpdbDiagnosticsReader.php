@@ -28,6 +28,18 @@ final class WpdbDiagnosticsReader {
 	public function consistency_counts(): array {
 		global $wpdb;
 
+		$empty = array(
+			'orphan_items'             => 0,
+			'orphan_shipments'         => 0,
+			'orphan_packages'          => 0,
+			'orphan_wave_members'      => 0,
+			'shipped_without_shipment' => 0,
+		);
+
+		if ( ! $this->table_exists( Schema::FULFILLMENTS ) ) {
+			return $empty;
+		}
+
 		$f = Schema::table( Schema::FULFILLMENTS );
 		$i = Schema::table( Schema::FULFILLMENT_ITEMS );
 		$s = Schema::table( Schema::SHIPMENTS );
@@ -69,6 +81,15 @@ final class WpdbDiagnosticsReader {
 	 */
 	public function capacity_counts(): array {
 		global $wpdb;
+
+		if ( ! $this->table_exists( Schema::FULFILLMENTS ) ) {
+			return array(
+				'fulfillments' => 0,
+				'events'       => 0,
+				'open_queue'   => 0,
+				'oldest_open'  => null,
+			);
+		}
 
 		$f = Schema::table( Schema::FULFILLMENTS );
 		$e = Schema::table( Schema::EVENTS );
