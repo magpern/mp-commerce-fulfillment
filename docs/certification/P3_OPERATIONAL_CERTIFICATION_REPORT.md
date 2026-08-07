@@ -181,6 +181,6 @@ No unresolved blocker for proceeding to P4 administrative release.
 
 | Field | Value |
 |---|---|
-| Final HEAD | *(set after commit)* |
-| PR | *(set after open)* |
-| CI run | *(set when green)* |
+| Final HEAD | `62c4bed` |
+| PR | https://github.com/magpern/mp-commerce-fulfillment/pull/10 |
+| CI run | *(pending — require full matrix green before merge)* |
