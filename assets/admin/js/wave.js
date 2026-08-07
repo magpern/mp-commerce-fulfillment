@@ -19,7 +19,7 @@ import { api } from './api.js';
 
 	let wave = null;
 	let scanActive = false;
-	let lastFocus = null;
+	let scanLock = false;
 
 	const els = {
 		status: root.querySelector('[data-mpcf-wave-status]'),
@@ -36,6 +36,20 @@ import { api } from './api.js';
 	async function load() {
 		const data = await api(`waves/${waveId}`);
 		wave = data;
+		render();
+	}
+
+	function applyWavePayload(data) {
+		wave = Object.assign({}, wave || {}, data);
+		if (data.progress) {
+			wave.progress = data.progress;
+		}
+		if (data.data && data.data.progress) {
+			wave.progress = data.data.progress;
+		}
+		if (data.data && data.data.wave_version) {
+			wave.version = data.data.wave_version;
+		}
 		render();
 	}
 
@@ -67,10 +81,7 @@ import { api } from './api.js';
 	async function mutate(path, body = {}) {
 		body.version = wave.version;
 		const data = await api(`waves/${waveId}/${path}`, { method: 'POST', body });
-		wave = Object.assign({}, wave, data);
-		if (data.progress) {
-			wave.progress = data.progress;
-		}
+		applyWavePayload(data);
 		await load();
 		return data;
 	}
@@ -115,29 +126,45 @@ import { api } from './api.js';
 	root.querySelector('[data-mpcf-wave-enter-scan]')?.addEventListener('click', () => setScan(true));
 	root.querySelector('[data-mpcf-wave-exit-scan]')?.addEventListener('click', () => setScan(false));
 	root.querySelector('[data-mpcf-wave-scan-undo]')?.addEventListener('click', async () => {
-		const data = await api(`waves/${waveId}/scan`, {
-			method: 'POST',
-			body: { action: 'undo', version: wave.version },
-		});
-		if (els.scanResult) {
-			els.scanResult.textContent = data.message || data.result || 'Undone';
+		if (scanLock || !wave) {
+			return;
 		}
-		await load();
+		scanLock = true;
+		try {
+			const data = await api(`waves/${waveId}/scan`, {
+				method: 'POST',
+				body: { action: 'undo', version: wave.version },
+			});
+			applyWavePayload(data);
+			if (els.scanResult) {
+				els.scanResult.textContent = data.message || data.result || 'Undone';
+			}
+			await load();
+		} catch (err) {
+			if (els.scanResult) {
+				els.scanResult.textContent = err.message || 'Undo failed';
+			}
+			await load().catch(() => {});
+		} finally {
+			scanLock = false;
+		}
 	});
 
 	document.addEventListener('data-mpcf-scan', async (event) => {
-		if (!scanActive || !wave) {
+		if (!scanActive || !wave || scanLock) {
 			return;
 		}
 		const payload = event.detail && event.detail.value;
 		if (!payload) {
 			return;
 		}
+		scanLock = true;
 		try {
 			const data = await api(`waves/${waveId}/scan`, {
 				method: 'POST',
 				body: { action: 'pick', payload, version: wave.version },
 			});
+			applyWavePayload(data);
 			if (els.scanResult) {
 				els.scanResult.textContent = `${data.message || data.result} (F#${(data.data && data.data.fulfillment_id) || ''})`;
 			}
@@ -150,6 +177,12 @@ import { api } from './api.js';
 			if (els.scanResult) {
 				els.scanResult.textContent = err.message || 'Scan failed';
 			}
+			// Stale version after a raced scan — refresh before the next wedge input.
+			if (err.code === 'mpcf_version_conflict' || /modified by someone else/i.test(err.message || '')) {
+				await load().catch(() => {});
+			}
+		} finally {
+			scanLock = false;
 		}
 	});
 

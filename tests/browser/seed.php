@@ -21,7 +21,7 @@ if ( ! function_exists( 'wc_create_order' ) ) {
 
 // Enough for packing + keyboard + accessibility across both browser
 // projects, plus a cushion for CI retries.
-const MPCF_SEED_ORDER_COUNT = 40;
+const MPCF_SEED_ORDER_COUNT = 60;
 
 $product = new WC_Product_Simple();
 $product->set_name( 'Browser Test Widget' );
