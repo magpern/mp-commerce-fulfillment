@@ -34,6 +34,7 @@ This document is the **authoritative architectural specification** for Commerce 
 | ADR-0007 inbound/outbound ownership | 2026-08-04 | ADR-0007 Accepted: inbound inventory domain assigned to `wc-inventory-overview`; MPCF outbound-only reaffirmed; D13 amended (location hierarchy removed from MPCF); §2.6 ownership registry added; M12 rewritten; §6.6 store-order bridge naming clarified. Documentation-only — no invariant, engine contract, schema, or public-surface change. |
 | M8 Wave & Batch Picking plan (Part X) | 2026-08-06 | Part X appended: definitive M8 execution plan (Wave aggregate, combined walk document, Wave Scan Mode extending M7, Workspace, concurrency/security/performance). Operation Context deferred (documented only). IX.21 updated to M7 closed/`v0.7.0`. Documentation-only — no runtime change; implementation requires PO approval of Part X. |
 | M9 Operational Analytics plan (Part XI) | 2026-08-07 | Part XI appended: definitive M9 — Operational Analytics & Insights execution plan (`mpcf_analytics_daily`, AnalyticsEngine LIVE/ROLLUP/REBUILD, UTC days, `ROLLUP_VERSION`, counters vs durations, nearest-rank percentiles, additive REST `/mpcf/v1/analytics/…`). §15 / §20 / schema reserved-name reconciled (`mpcf_stats_daily` → `mpcf_analytics_daily`; Analytics milestone is M9). M8 recorded closed at `v0.8.0`. Documentation-only — no runtime change; implementation requires PO approval of Part XI (approved 2026-08-07). |
+| M10 Operational Hardening plan (Part XII) | 2026-08-07 | Part XII appended: definitive M10 — Operational Hardening & Production Readiness execution plan (Site Health, `wp mpcf doctor`, repair/validation policy, privacy exporter/eraser, production checklists, baselines, `ARCHITECTURE_FREEZE.md` prep). §20 M10 version reconciled to **`v0.10.0`** (M9 already occupies `v0.9.0`). M9 recorded closed at `v0.9.0`. Documentation-only — no runtime change; implementation requires PO approval of Part XII. |
 
 ## Governance
 
@@ -771,7 +772,7 @@ Each milestone is a usable release, tagged, installable. Detailed execution plan
 | **M7** | 0.7.0 | Barcode & scan mode | Scan sink → pick/pack by SKU/EAN scan; scannable queue (slip barcode opens workspace); mismatch handling; kbd/scan-first workspace mode | — |
 | **M8** | 0.8.0 | Wave & batch picking | Wave aggregate (`mpcf_waves` / `mpcf_wave_members`); combined walk document; Wave Scan Mode (extends M7); wave → per-order packing handoff at `picked` | waves, wave_members |
 | **M9** | 0.9.0 | Operational Analytics & Insights (Analytics I) | `mpcf_analytics_daily` (UTC day × warehouse, `rollup_version`); AnalyticsEngine LIVE/ROLLUP/REBUILD; Analytics Dashboard (throughput, Stage Timeline avg+p50/p90 nearest-rank, queue-ageing buckets); Reports + CSV (same DTOs); operational diagnostics (top failure reasons); REST `/mpcf/v1/analytics/…` additive; operator stats behind D17; no Mission Control trend teasers | analytics_daily |
-| **M10** | 0.9.x → RC | Hardening & operational maturity | i18n complete, Site Health tests, `wp mpcf doctor`/`audit verify`, privacy exporter/eraser, performance baselines at 50k fulfillments, security review doc, `ARCHITECTURE_FREEZE.md`, compatibility matrix | — |
+| **M10** | 0.10.0 | Operational Hardening & Production Readiness | Site Health checks; `wp mpcf doctor`; env/config/permission/schedule/storage/analytics/notification health; queue/wave consistency validation; explicit repair utilities; privacy exporter/eraser; performance baselines; security review doc; production deploy/upgrade/rollback checklists; monitoring & capacity guidance; `ARCHITECTURE_FREEZE.md` prep for 1.0 | — |
 | **1.0** | 1.0.0 | Commercial release | Freeze public surface (hooks, REST v1, schema semantics, template contract) | — |
 | M11 | 1.1.0 | Returns & RMA | Return aggregate + workflow, return slip doc, customer-initiated intake hook, refund handoff to WC | returns, return_items |
 | M12 | 1.2.0 | Multi-warehouse queues & location-sorted picking | Per-warehouse queue UX and filters (existing `warehouse_id`); warehouse routing rules for outbound assignment; location-sorted pick path in Workspace and picking list **consuming** location data from `wc-inventory-overview` via a versioned contract; immutable `location_snapshot` at intake unchanged | — |
@@ -814,7 +815,7 @@ These are documented for architectural guidance only. They are **not** in the mi
 | R4 | Another fulfillment/status plugin fights the bridge (auto-complete plugins, custom statuses) | M | M | Bridge is configurable to passive; re-entrancy guard; Diagnostics-style passive conflict detection is a post-1.0 candidate | Conflict integration fixtures |
 | R5 | `mpcf_events` growth degrades queue/timeline | M | M | Events never join queue queries; timeline paginates; rollups at M9; archival guidance | Performance baselines (M10) at 50k/500k rows |
 | R6 | Queue slow on large stores | M | H | Indexed-only access paths designed up front (§7.1); seeded perf tests from M1, baseline doc like UMC's `PERFORMANCE_BASELINES.md` | `--group performance` CI leg |
-| R7 | Photo storage growth / server disk exhaustion | M | M | Server-side re-encode + size caps + retention purge + Site Health disk warning | M5 tests; Site Health (M9) |
+| R7 | Photo storage growth / server disk exhaustion | M | M | Server-side re-encode + size caps + retention purge + Site Health disk warning | M6 tests; Site Health (M10) |
 | R8 | MPDS vendoring drift or sync-script namespace-rewrite bugs | L | M | Manifest hash guard in every consumer; rewrite is deterministic and tested in the MPDS repo itself | `MpdsVendorGuardTest` |
 | R9 | HPOS/legacy divergence on customer sites (floor WC 8.2 still allows legacy storage) | M | H | I2: CRUD-only access works identically under both backends; integration suite runs HPOS-on with proof-test; a legacy-storage leg in the floor CI matrix | `HposProofTest` + floor leg |
 | R10 | GDPR exposure: photos/notes hold PII; per-operator stats | M | H | §17.4 inventory, exporter/eraser, retention, EXIF-GPS strip, D17 default-off operator stats | Privacy integration tests (M9) |
@@ -1951,9 +1952,10 @@ Stated explicitly so scope gravity (R12) has nothing to grab.
 - **M7:** batch picking, `BatchBuilder`, batch tables, print queue.
 - **M8:** Wave & batch picking (closed at `v0.8.0` — Part X).
 - **M9:** Operational Analytics & Insights — all analytics UI, rollups (`mpcf_analytics_daily`),
-  trends, Stage Timeline, diagnostics, operator stats behind D17 (Part XI).
-- **M10:** Site Health, `wp mpcf doctor`, privacy exporter/eraser, 50k-row baselines,
-  `ARCHITECTURE_FREEZE.md`, security review document.
+  trends, Stage Timeline, diagnostics, operator stats behind D17 (Part XI) — **closed at `v0.9.0`**.
+- **M10:** Operational Hardening & Production Readiness — Site Health, `wp mpcf doctor`,
+  repair/validation tools, privacy exporter/eraser, production checklists, baselines,
+  `ARCHITECTURE_FREEZE.md` prep (Part XII) — target **`v0.10.0`**.
 - **Post-1.0:** returns; the location hierarchy and location-sorted picking; `CarrierPort` label
   purchase and live tracking sync; webhooks and automation rules; scoped API keys; the tablet PWA;
   true split fulfillment (needs an ADR to relax `order_unique` — see §24.1 for distinction from
@@ -3424,8 +3426,301 @@ required; BI/Excel platform required; Mission Control redesign required;
 Site Health / privacy exporter pulled into M9; another agent dirties the
 tree; silent rewrite of historical rollups is demanded by a dependency.
 
-## XI.15 Planning status
+## XI.15 Planning / release status
 
-**Planning approved by Product Owner 2026-08-07** (documentation checkpoint).
-**Runtime implementation not started.** Execution checklist:
+**Planning approved by Product Owner 2026-08-07.**  
+**Runtime shipped and released as `v0.9.0`** (PR #7, tag `v0.9.0`, evidence
+`docs/M9_RELEASE_REPORT.md`). Execution checklist (historical):
 `docs/plans/M9_OPERATIONAL_ANALYTICS_IMPLEMENTATION.md`.
+
+**M10 planning** continues in Part XII; **M10 runtime must not start** until
+Part XII is PO-approved for implementation.
+
+---
+
+# Part XII — M10 Operational Hardening & Production Readiness (definitive execution plan)
+
+**Milestone purpose:** Make the warehouse system that already works (M0–M9)
+**operationally complete** for production use — diagnosable, recoverable,
+privacy-aware, documented for deploy/upgrade/rollback, and prepared for the
+public-surface freeze at **1.0** — without adding new warehouse capabilities.
+
+**Project progression context:**
+
+| Range | Role |
+|---|---|
+| M0–M3 | Execution engine |
+| M4–M5 | Operational outputs (documents, notifications) |
+| M6–M8 | Warehouse execution (photos, scanning, waves) |
+| M9 | Observability (closed at `v0.9.0`) |
+| **M10** | **Operational platform hardening** |
+| **1.0** | Commercial freeze (separate milestone after M10) |
+
+**Baseline:** green `main` @ `v0.9.0` (settings schema **9**, migrator target
+**8**, analytics daily rollups live). Target release: **`v0.10.0`**. Expected
+schema: **no new business tables**; migrator target remains **8** unless a
+hardening defect forces an additive, idempotent repair migration (ADR if so).
+
+**ADR-0007 remains authoritative.** No inventory, receiving, purchasing,
+supplier, or stock tooling. No Mission Control redesign. No Analytics redesign.
+
+**Product Owner decisions (binding — planning frozen in this Part; runtime
+awaits explicit implementation GO):**
+
+| # | Decision | Choice |
+|---|---|---|
+| 1 | Scope | Operational hardening & production readiness — **not** new warehouse features |
+| 2 | Ownership | `DoctorService` / health checkers own diagnostics; Site Health is a thin WP UI adapter; CLI is the primary operator tool; Application services never call Site Health APIs |
+| 3 | Default posture | **Read-only** diagnostics and reports by default |
+| 4 | Repair policy | Mutating repairs are **opt-in**, capability-gated, explicitly confirmed, audited, and never silent |
+| 5 | Failure classes | `environment` · `configuration` · `permissions` · `schema` · `consistency` · `storage` · `schedule` · `integration` · `capacity` |
+| 6 | Site Health | Registers WordPress Site Health tests that **delegate** to the same checkers as `wp mpcf doctor` — no duplicated logic |
+| 7 | Privacy | Register WP privacy **exporter** and **eraser** for MPCF-held customer-linked data (fulfillment snapshots, notes, photo metadata/paths); observe WC anonymization |
+| 8 | Schema | Prefer **zero** schema change; any repair migration is additive + idempotent and ADR-gated |
+| 9 | Analytics / waves / queue | Health checks **read** existing aggregates; they do not redesign Analytics UI or Mission Control |
+| 10 | Documentation deliverables | Production deploy, upgrade, rollback, monitoring, capacity, and DR guidance ship as canonical docs under `docs/` |
+| 11 | Freeze prep | Draft `ARCHITECTURE_FREEZE.md` content in M10; **1.0** applies the freeze formally |
+| 12 | Version | Ship as **`v0.10.0`**; do not skip to `1.0.0` inside M10 |
+
+## XII.1 Goals and non-goals
+
+### Goals
+
+1. One coherent **operational diagnostics** surface: environment, config,
+   capabilities, schedules, storage paths, analytics rollup health,
+   notification channel health, document/photo storage health.
+2. **Consistency verification** for queues (fulfillment state vs items /
+   shipments / packages) and waves (membership exclusivity, state coherence).
+3. **`wp mpcf doctor`** — human-readable aggregate report (pass / warn / fail
+   per check) suitable for support tickets and pre-flight before upgrades.
+4. **Site Health** integration mirroring doctor checks for merchants who never
+   open WP-CLI.
+5. **Repair & validation tools** with a strict read-only vs mutate policy.
+6. **`wp mpcf audit verify`** (hash-chain) remains first-class; extend coverage
+   and reporting as needed for production support.
+7. **Privacy exporter/eraser** registered with WordPress privacy tools.
+8. **Production hardening docs:** deploy / upgrade / rollback checklists;
+   monitoring recommendations; capacity guidance; long-running install notes;
+   disaster-recovery guidance (backup/restore of MPCF tables + media paths).
+9. **Performance baselines** at representative scale (target **50k**
+   fulfillments / commensurate events — record methodology and results).
+10. **Security review document** + compatibility matrix refresh
+    (`docs/COMPATIBILITY.md` / SECURITY).
+11. Prepare **`ARCHITECTURE_FREEZE.md`** for the subsequent 1.0 milestone.
+12. Complete remaining **i18n** gaps discovered in dogfood (POT/strings only —
+    no UX redesign).
+
+### Explicit non-goals (M10)
+
+New warehouse workflows; inventory / receiving / purchasing / stock; barcode
+redesign; analytics redesign or new metric families; Mission Control redesign;
+customer-facing storefront features; accounting / BI; carrier label purchase;
+returns / RMA; webhooks / automation rules; tablet PWA; silent destructive
+repairs; schema rewrites; breaking REST v1 changes.
+
+## XII.2 Operational philosophy
+
+1. **Detect before repair.** Every mutating command has a dry-run / report mode.
+2. **Least privilege.** Diagnostics readable by leads (`mpcf_manage_settings` or
+   a dedicated `mpcf_run_diagnostics` cap — finalize in M10-A; default reuse
+   existing manage/settings lead caps where sufficient).
+3. **No surprise writes.** Repairs require `--yes` (CLI) or an admin confirm
+   nonce (if any UI is added). Prefer CLI for mutations in M10.
+4. **Audit what you change.** Repair actions emit append-only events or a
+   dedicated `maintenance.*` event type with actor + summary payload (no PII
+   dumps).
+5. **Same checkers everywhere.** Site Health, doctor CLI, and any future REST
+   diagnostics endpoint share one Application-layer checker registry.
+6. **Outbound-only.** Health checks that touch WooCommerce use CRUD-only order
+   APIs (I2). No `wc-inventory-overview` coupling (ADR-0007).
+7. **Long-running installs.** Guidance assumes months/years of events and media;
+   archival *policy* is documented; automatic prune remains post-1.0 unless a
+   PO-approved optional CLI lands behind explicit flags.
+
+## XII.3 Layering and ownership
+
+```
+WP Site Health UI  ──┐
+wp mpcf doctor     ──┼──→  DoctorService / CheckerRegistry  →  individual Checkers
+Repair CLI         ──┘         │
+                               ├── read: repositories / filesystem / AS / options
+                               └── mutate (repair only): explicit Repair* services
+                                        → events + optional idempotent SQL fixes
+```
+
+| Concern | Owner | Must not |
+|---|---|---|
+| Check definitions | `Application\Diagnostics\*` (or `Doctor\*`) | Call WP Site Health APIs from Domain |
+| Site Health adapter | `Infrastructure\SiteHealth\*` or Admin thin wrapper | Reimplement check logic |
+| CLI doctor / repair / audit | `Cli\*` | Bypass Application services |
+| Privacy exporter/eraser | `Infrastructure\Privacy\*` | Delete audit rows that must remain; prefer anonymize |
+| Production docs | `docs/ops/*` (new) + ROADMAP/COMPATIBILITY/SECURITY updates | Live in PHP strings only |
+| Analytics health | Checker over `mpcf_analytics_daily` + scheduler hook | Rewrite AnalyticsEngine modes |
+| Photo/document storage | Checkers over known paths from Settings / Schema | Invent new stores |
+
+## XII.4 Failure classification
+
+Every check returns a structured result:
+
+| Field | Meaning |
+|---|---|
+| `id` | Stable machine id (`storage.photos.writable`) |
+| `status` | `pass` · `warn` · `fail` |
+| `class` | One of: environment, configuration, permissions, schema, consistency, storage, schedule, integration, capacity |
+| `message` | Human summary |
+| `remediation` | Actionable next step (doc link or repair command name) |
+| `data` | Optional structured detail (counts, paths) — no secrets |
+
+**Warn** = degraded but operable. **Fail** = incorrect results, data risk, or
+unsafe to upgrade until addressed.
+
+## XII.5 Validation vs repair policy
+
+### Validation (always safe)
+
+- Environment: PHP/WP/WC versions vs `docs/COMPATIBILITY.md`; HPOS on; AS present
+- Configuration: required settings keys; bridge mapping sanity; photo retention
+- Permissions: roles have expected caps; filesystem ownership assumptions
+- Schema: `mpcf_db_version` == migrator TARGET; required tables/indexes exist
+- Schedule: Action Scheduler groups/hooks for intake, photo retention, analytics
+  rollup — registered exactly once; no runaway pending counts beyond warn threshold
+- Storage: photo/document directories exist, writable, within free-space warn watermark
+- Analytics: rollup table present; obsolete `rollup_version` count; last successful
+  rollup age
+- Notifications: EmailChannel prerequisites; recent failure rates (read events)
+- Consistency: orphan package rows; wave members pointing at missing fulfillments;
+  fulfillments in `shipped` without shipment; hash-chain verify sample/full
+- Queue/wave: open-state counts vs Mission Control cards within tolerance (sanity)
+
+### Repair (mutating — explicit only)
+
+Allowed repair classes in M10 (each its own CLI subcommand or flagged mode):
+
+| Repair | Effect | Forbidden |
+|---|---|---|
+| Re-register schedules | Enschedules missing AS hooks | Mass-cancel unrelated AS |
+| Recreate missing storage dirs | `mkdir` plugin storage paths | Delete media files |
+| Idempotent schema catch-up | Re-run migrator `maybe_migrate()` | Drop tables; destructive ALTER |
+| Orphan link report→optional detach | Null/remove proven-orphan join rows after dry-run | Cascade-delete fulfillments |
+| Analytics obsolete rebuild nudge | Invokes existing `analytics rebuild` path | Silent LIVE→rollup rewrite without REBUILD |
+| Privacy erase | Anonymize snapshots / blur paths per WP eraser | Wipe entire audit history for unrelated actors |
+
+**Never in M10:** stock adjustments, workflow force-transitions as “repair”,
+bulk order status rewrites, inventory sync, silent hash-chain rewrite.
+
+## XII.6 CLI surface (indicative)
+
+| Command | Mode | Purpose |
+|---|---|---|
+| `wp mpcf doctor` | read-only | Full check suite; `--format=json\|table`; exit non-zero on any `fail` |
+| `wp mpcf doctor check=<id>` | read-only | Single check |
+| `wp mpcf audit verify <id>\|--all` | read-only | Hash-chain verify (extend existing) |
+| `wp mpcf validate queue\|waves\|schema\|storage` | read-only | Focused validators |
+| `wp mpcf repair schedules\|storage-dirs\|schema` | mutate + `--yes` | Bounded repairs above |
+| `wp mpcf analytics rebuild` | existing | Unchanged ownership (M9); doctor may *recommend* it |
+
+Exact argv shapes finalize in M10-A; additive within CLI — no removal of
+existing `intake backfill` / analytics commands.
+
+## XII.7 Site Health
+
+- Register tests via `WP_Site_Health` / `site_status_tests` filter.
+- Each test calls the shared checker; map `fail`→critical, `warn`→recommended,
+  `pass`→good.
+- Direct merchants to `wp mpcf doctor` for JSON detail when a check fails.
+- No custom admin page required beyond Site Health + existing Settings.
+
+## XII.8 Privacy (GDPR)
+
+Align with §17:
+
+- **Exporter:** for a requesting email/user, list linked fulfillments (order id,
+  state, timestamps), notes bodies, photo metadata (not raw binaries in the
+  export zip unless WP tools require file attach — prefer paths + hashes).
+- **Eraser:** anonymize `customer_name_snapshot` and related PII snapshots;
+  null actor ids when the subject is the actor; soft-delete or blur photo
+  files per retention rules; **do not** destroy hash-chain integrity by
+  deleting mid-chain events — anonymize payloads instead.
+- Hook WC order anonymization to run sympathetic MPCF anonymization.
+- Document retention vs erasure interaction in `docs/SECURITY.md` /
+  `docs/ops/privacy.md`.
+
+## XII.9 Production documentation set
+
+New canonical ops docs (paths indicative; land under `docs/ops/`):
+
+| Doc | Content |
+|---|---|
+| `docs/ops/PRODUCTION_DEPLOY.md` | Fresh install checklist; SWAG/proxy notes stay out of plugin — WP/Woo/HPOS/AS prerequisites |
+| `docs/ops/UPGRADE.md` | Version-to-version steps; migrator expectations; doctor pre/post |
+| `docs/ops/ROLLBACK.md` | Plugin rollback limitations (forward-compatible tables; analytics table retention lesson from M9) |
+| `docs/ops/MONITORING.md` | What to watch (AS failures, disk, doctor exit codes, notification failure rate) |
+| `docs/ops/CAPACITY.md` | Guidance at 10k / 50k fulfillments; event growth; media growth; when to archive |
+| `docs/ops/DISASTER_RECOVERY.md` | Backup scope: DB tables `mpcf_*` + media/document directories; restore order |
+| `docs/SECURITY_REVIEW.md` | M10 security review outcomes |
+| `ARCHITECTURE_FREEZE.md` | Draft freeze inventory for 1.0 (hooks, REST v1, schema semantics, templates) |
+
+## XII.10 Milestone packages
+
+| Package | Delivers | Does not |
+|---|---|---|
+| **M10-A** | Part XII approved; CheckerRegistry + result DTO; `wp mpcf doctor` read-only suite (env/config/caps/schema/schedule/storage/analytics/notification); unit fixtures per failure class | Site Health UI, repairs, privacy |
+| **M10-B** | Validation commands (queue/waves/schema/storage); repair CLI for schedules/storage-dirs/schema catch-up; dry-run + `--yes`; audit events for repairs; extend `audit verify` | Site Health, privacy exporter |
+| **M10-C** | Site Health adapters over same checkers; privacy exporter/eraser + WC anonymization sympathy; SECURITY/privacy docs | Mission Control changes |
+| **M10-D** | Ops docs (deploy/upgrade/rollback/monitoring/capacity/DR); 50k baseline methodology + recorded results; security review doc; compatibility matrix refresh; i18n gap pass; `ARCHITECTURE_FREEZE.md` draft | Shipping 1.0 tag |
+| **M10-E** | Dogfood doctor on long-lived dev; upgrade/rollback simulation from `v0.9.0`; RC ZIP + release-audit; version triad **`0.10.0`**; PR; PO GO → merge/tag/publish | Production deploy without separate PO order; M11/1.0 runtime |
+
+## XII.11 Acceptance criteria (falsifiable)
+
+1. `wp mpcf doctor` on a healthy `v0.10.0` install exits 0 with all checks `pass`
+   (or documented `warn` only).
+2. Deliberately breaking a check (e.g. remove analytics table name via test
+   double / rename in integration harness) yields `fail` + remediation naming
+   the repair or migrator path.
+3. Site Health shows the same fail/warn set as doctor for at least three
+   representative checks (parity test).
+4. `wp mpcf repair …` without `--yes` makes **zero** writes; with `--yes` writes
+   only the documented effect and emits an audit/maintenance event.
+5. Privacy exporter returns fulfillment-linked data for a fixture customer;
+   eraser anonymizes snapshots without dropping the event hash chain.
+6. Queue and wave validators detect seeded inconsistencies and do not false
+   positive on a clean dogfood dataset.
+7. Ops docs exist and are linked from ROADMAP / release report.
+8. Performance baseline artifact recorded for ~50k fulfillments (or documented
+   scaled subset with extrapolation method if VPS limits require).
+9. `ARCHITECTURE_FREEZE.md` draft lists public surfaces frozen at 1.0 intent.
+10. No inventory coupling; no workflow feature additions; PHPCS/unit/integration/
+    browser/POT/release-audit green; version triad `0.10.0`.
+
+## XII.12 Validation & testing
+
+| Tier | M10 focus |
+|---|---|
+| Unit | Checker pure logic; failure classification; repair dry-run guards; privacy anonymize helpers |
+| Integration | Doctor against real schema; Site Health registration; repair idempotency; privacy exporter/eraser; AS schedule re-register; audit verify pass/fail |
+| CLI | Exit codes; `--format=json` schema stability; `--yes` gating |
+| Browser | Optional smoke: Site Health screen lists MPCF tests (if practical in Playwright harness); no new warehouse UI |
+| Production simulation | Upgrade `v0.9.0` → `v0.10.0` ZIP; rollback plugin files; doctor before/after |
+| Performance | Baseline scripts under `tests/` or `docs/ops/` evidence — no silent prod load tests |
+| Structural | ADR-0007 / no inventory; Domain purity; Cli does not bypass Application |
+
+## XII.13 Release strategy
+
+Branch `feature/m10-operational-hardening` from `v0.9.0` / `main`. One PR.
+Version **`0.10.0`**. Tag `v0.10.0` only after PO GO. No production deploy
+in-milestone unless separately ordered. **Do not start 1.0 or M11** until M10
+closes.
+
+## XII.14 Stop conditions (runtime)
+
+Stop and report if: inventory data required; new warehouse workflow demanded;
+silent destructive repair demanded; Site Health logic forked from doctor;
+schema rewrite required without ADR; another agent dirties the tree; 1.0 freeze
+is conflated with M10 shipping.
+
+## XII.15 Planning status
+
+**Planning complete (documentation checkpoint) 2026-08-07.**  
+**Runtime implementation not started.** Awaits Product Owner approval of Part XII
+and an explicit implementation GO. Execution checklist:
+`docs/plans/M10_OPERATIONAL_HARDENING_IMPLEMENTATION.md`.
