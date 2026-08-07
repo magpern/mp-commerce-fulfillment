@@ -88,11 +88,19 @@ actual state before work starts.
     installable zip published). Site Health, `wp mpcf doctor`,
     validation/repair tools, privacy exporter/eraser, `docs/ops/*`,
     performance baseline methodology, `docs/SECURITY_REVIEW.md`, and draft
-    `docs/ARCHITECTURE_FREEZE.md` (remains DRAFT until v1.0 approval).
-    Migrator **TARGET remains 8**. Evidence: `docs/M10_RELEASE_REPORT.md`,
-    Architecture Plan Part XII. Production not deployed as part of M10.
-    **M10 closed.** **v1.0 rollout has not started.**
-11. **1.0 — Commercial release** — not started.
+    `docs/ARCHITECTURE_FREEZE.md`. Migrator **TARGET remains 8**. Evidence:
+    `docs/M10_RELEASE_REPORT.md`, Architecture Plan Part XII. Production not
+    deployed as part of M10. **M10 closed.**
+11. **v1.0 — Architecture Freeze & Production Readiness** — **Planning
+    complete. Implementation not started.** This is **not M11** and **not** a
+    feature milestone. Certification program phases P1–P5 (freeze approval,
+    regression certification, operational certification, administrative
+    `v1.0.0` release, then production deployment & hypercare) are defined in
+    `docs/plans/V1_PRODUCTION_READINESS.md`. Binding order: certify → tag
+    `v1.0.0` → deploy that exact ZIP → hypercare. Freeze inventory structure
+    is finalized for approval in `docs/ARCHITECTURE_FREEZE.md` (**DRAFT**
+    until `v1.0.0`). **No runtime implementation until PO GO on P1.**
+    **No new functionality before `v1.0.0`.**
 
 ## Future capabilities (not scheduled)
 
