@@ -4,7 +4,7 @@ Tags: woocommerce, fulfillment, warehouse, shipping, picking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.9.0
+Stable tag: 0.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,13 @@ Performance Order Storage (HPOS).
 3. WooCommerce 8.2+ must be installed and active.
 
 == Changelog ==
+
+= 0.10.0 =
+* Feat: Operational diagnostics — CheckerRegistry, `wp mpcf doctor`, Site Health (M10-A/C).
+* Feat: Validation and bounded repair CLI (`validate`, `repair` with dry-run/`--yes`) (M10-B).
+* Feat: Privacy exporter/eraser with audit-chain-preserving anonymization (M10-C).
+* Feat: `wp mpcf audit verify` hash-chain verification (M10-B).
+* Docs: Production ops pack and draft ARCHITECTURE_FREEZE.md (M10-D).
 
 = 0.9.0 =
 * Feat: Operational Analytics — AnalyticsEngine LIVE/ROLLUP/REBUILD and mpcf_analytics_daily (M9-A).
