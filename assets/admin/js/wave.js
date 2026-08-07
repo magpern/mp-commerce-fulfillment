@@ -139,15 +139,14 @@ import { api } from './api.js';
 			if (els.scanResult) {
 				els.scanResult.textContent = data.message || data.result || 'Undone';
 			}
-			await load();
 		} catch (err) {
 			if (els.scanResult) {
 				els.scanResult.textContent = err.message || 'Undo failed';
 			}
-			await load().catch(() => {});
 		} finally {
 			scanLock = false;
 		}
+		await load().catch(() => {});
 	});
 
 	document.addEventListener('data-mpcf-scan', async (event) => {
@@ -172,18 +171,17 @@ import { api } from './api.js';
 				const p = data.data.progress;
 				els.scanProgress.textContent = `Remaining lines ${p.remaining_lines} · qty ${p.remaining_qty}`;
 			}
-			await load();
 		} catch (err) {
 			if (els.scanResult) {
 				els.scanResult.textContent = err.message || 'Scan failed';
 			}
-			// Stale version after a raced scan — refresh before the next wedge input.
 			if (err.code === 'mpcf_version_conflict' || /modified by someone else/i.test(err.message || '')) {
 				await load().catch(() => {});
 			}
 		} finally {
 			scanLock = false;
 		}
+		await load().catch(() => {});
 	});
 
 	function escapeHtml(s) {
