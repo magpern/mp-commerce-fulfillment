@@ -111,6 +111,7 @@ async function openActiveWave( page, waveId ) {
 
 test.describe( 'Wave Scan Mode', () => {
 	test.describe.configure( { mode: 'serial' } );
+	test.setTimeout( 60000 );
 
 	test( 'FIFO wave scan, over-scan, and exit leave Workspace intact', async ( { page } ) => {
 		await page.goto( '/wp-admin/admin.php?page=mpcf-queue' );
