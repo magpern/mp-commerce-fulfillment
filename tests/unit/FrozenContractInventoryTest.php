@@ -169,13 +169,13 @@ final class FrozenContractInventoryTest extends TestCase {
 	}
 
 	/**
-	 * Version triad parity for the certification baseline release line.
+	 * Version triad parity for the certified v1.0 administrative release.
 	 */
-	public function test_version_triad_is_zero_ten_zero_until_v1_tag(): void {
+	public function test_version_triad_is_one_zero_zero(): void {
 		$header = (string) file_get_contents( dirname( __DIR__, 2 ) . '/mp-commerce-fulfillment.php' );
-		self::assertMatchesRegularExpression( '/\* Version:\s*0\.10\.0/', $header );
-		self::assertMatchesRegularExpression( "/define\(\s*'MPCF_VERSION',\s*'0\.10\.0'\s*\)/", $header );
+		self::assertMatchesRegularExpression( '/\* Version:\s*1\.0\.0/', $header );
+		self::assertMatchesRegularExpression( "/define\(\s*'MPCF_VERSION',\s*'1\.0\.0'\s*\)/", $header );
 		$readme = (string) file_get_contents( dirname( __DIR__, 2 ) . '/readme.txt' );
-		self::assertMatchesRegularExpression( '/Stable tag:\s*0\.10\.0/', $readme );
+		self::assertMatchesRegularExpression( '/Stable tag:\s*1\.0\.0/', $readme );
 	}
 }
