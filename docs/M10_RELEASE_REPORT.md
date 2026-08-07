@@ -48,10 +48,11 @@ See `docs/ops/PERFORMANCE_BASELINE.md` — methodology recorded; full 50k timing
 
 `docs/ARCHITECTURE_FREEZE.md` status: **DRAFT** — becomes binding at v1.0 approval only.
 
-## Stop confirmations
+## Local RC artifact
 
-- v0.10.0 not merged / tagged / published
-- Production not deployed
-- v1.0 rollout not started
-- No schema bump beyond TARGET 8
-- No inventory/receiving coupling
+| Item | Value |
+|---|---|
+| ZIP | `dist/mp-commerce-fulfillment-0.10.0.zip` |
+| SHA-256 | `65ad0bfa0d9fdb8491054b5aeac05289c5ebc58a6b3a5d3c2130127864476404` |
+
+CI will rebuild the ZIP on release; published SHA may differ from this local build.
