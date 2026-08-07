@@ -7,7 +7,7 @@
 
 **P1 record:** Architecture Freeze approved during Phase P1. Every FROZEN surface below was verified to exist in released code. No runtime changes were required. Surfaces named in architecture prose but **not implemented** are listed under **Deferred (not frozen)** — they were **not invented**.
 
-**Program note:** This is **not** M11 and **not** a feature milestone. Administrative `v1.0.0` (P4) is **published**. Production deploy of that exact ZIP is **P5** (not started). Freeze remains **ACTIVE** for the `1.x` line.
+**Program note:** This is **not** M11 and **not** a feature milestone. Administrative `v1.0.0` (P4) is **published**. Pre-production acceptance (P5) on `dev.biopentra.eu` is **COMPLETE**. Production deploy of that exact ZIP to `www.biopentra.eu` is **P6** (not started; PO GO required). Freeze remains **ACTIVE** for the `1.x` line.
 
 ---
 

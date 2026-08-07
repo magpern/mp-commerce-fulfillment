@@ -1,13 +1,14 @@
 # v1.0 — Architecture Freeze & Production Readiness Program
 
-**Status:** Planning complete — **P1 COMPLETE**. **P2 COMPLETE**. **P3 COMPLETE**. **P4 COMPLETE**. **P5 READY TO START** (not started).  
+**Status:** Planning complete — **P1–P4 COMPLETE**. **P5 COMPLETE**. **P6 READY TO START** (not started).  
 **Kind:** Certification / evidence program — **not M11**, **not a feature milestone**.  
-**Baseline:** `main` / released **`v1.0.0`** (administrative; identical functionality to certified `v0.10.0`). Production **not** yet deployed.  
+**Baseline:** Released **`v1.0.0`**. Pre-production acceptance on `dev.biopentra.eu` complete. Production (`www.biopentra.eu`) **not** deployed.  
 **Freeze inventory:** `docs/ARCHITECTURE_FREEZE.md` — **ACTIVE** (approved Phase P1, 2026-08-07).  
 **P2 evidence:** `docs/certification/P2_REGRESSION_CERTIFICATION_REPORT.md` — verdict **PASS WITH DOCUMENTED NON-BLOCKING LIMITATIONS**.  
 **P3 evidence:** `docs/certification/P3_OPERATIONAL_CERTIFICATION_REPORT.md` — verdict **PASS WITH DOCUMENTED NON-BLOCKING LIMITATIONS**.  
 **P4 evidence:** `docs/V1_RELEASE_REPORT.md` — GitHub Release **`v1.0.0`** published.  
-**Target production deploy:** Phase **P5** using the **exact** published `v1.0.0` ZIP.
+**P5 evidence:** `docs/certification/P5_ACCEPTANCE_REPORT.md` — verdict **PASS WITH MINOR DEFECTS**.  
+**Target production deploy:** Phase **P6** using the **exact** published `v1.0.0` ZIP (PO GO required).
 
 This plan designs the final certification program before MPCF is declared production-ready and the architecture freeze becomes **ACTIVE**.
 
@@ -68,17 +69,18 @@ Re-verify these at the start of **each** phase.
 | **P2** | Regression Certification | **COMPLETE** | M0–M10 behavioral verification matrix (no features) |
 | **P3** | Operational Certification | **COMPLETE** | Perf / security / a11y / privacy / DR / monitoring evidence |
 | **P4** | v1.0 Release Candidate Approval & Release | **COMPLETE** | Tag **`v1.0.0`**; immutable GitHub Release ZIP |
-| **P5** | Production Deployment & Hypercare | **READY TO START** | Deploy published ZIP; hypercare |
-| **P5** | Production Deployment & Hypercare | Not started | Deploy published ZIP; hypercare; production complete |
+| **P5** | Pre-Production Acceptance Testing | **COMPLETE** | Released ZIP on `dev.biopentra.eu` |
+| **P6** | Production Deployment & Hypercare | **READY TO START** | Deploy published ZIP to `www.biopentra.eu`; hypercare |
 
-**Binding order: P1 → P2 → P3 → P4 → P5.**
+**Binding order: P1 → P2 → P3 → P4 → P5 → P6.**
 
 Lifecycle:
 
 1. Certify contracts (P1) — **done**.
-2. Certify behavior & operations (P2–P3).
-3. Tag **`v1.0.0`** and publish the release artifact (P4).
-4. Deploy that exact artifact; hypercare (P5).
+2. Certify behavior & operations (P2–P3) — **done**.
+3. Tag **`v1.0.0`** and publish the release artifact (P4) — **done**.
+4. Pre-production acceptance on `dev.biopentra.eu` (P5) — **done**.
+5. Deploy that exact artifact to `www.biopentra.eu`; hypercare (P6) — **not started**.
 
 Do **not** tag after production has already been running an untagged build. The GitHub Release ZIP is the immutable deployable.
 
@@ -263,11 +265,20 @@ PO-approve the certified codebase as the **v1.0.0 release candidate**, publish t
 
 ---
 
-## 9. Phase P5 — Production Deployment & Hypercare
+### 9. Phase P5 — Pre-Production Acceptance Testing
+
+**Status: COMPLETE (2026-08-07).** Verdict: **PASS WITH MINOR DEFECTS**.  
+Evidence: `docs/certification/P5_ACCEPTANCE_REPORT.md`.  
+Acceptance environment: `https://dev.biopentra.eu` using published ZIP SHA `b2369702…`.  
+Production (`www.biopentra.eu`) not deployed — that is **P6**.
+
+---
+
+## 9b. Phase P6 — Production Deployment & Hypercare
 
 ### 9.1 Goal
 
-Deploy the **exact** published `v1.0.0` ZIP to production, verify operations, run hypercare, and declare production fully operational.
+Deploy the **exact** published `v1.0.0` ZIP to production (`www.biopentra.eu`), verify operations, run hypercare, and declare production fully operational.
 
 ### 9.2 Deployment checklist (summary)
 
@@ -385,5 +396,6 @@ MPCF is **production-ready and program-complete** when:
 | **P2** | **COMPLETE** — regression certified (see P2 report) |
 | **P3** | **COMPLETE** — operational certified (see P3 report) |
 | **P4** | **COMPLETE** — `v1.0.0` published (see `docs/V1_RELEASE_REPORT.md`) |
-| **P5** | **READY TO START** — not started |
-| Next action | PO GO to begin **P5 Production Deployment & Hypercare** |
+| **P5** | **COMPLETE** — pre-production acceptance (see `docs/certification/P5_ACCEPTANCE_REPORT.md`) |
+| **P6** | **READY TO START** — not started |
+| Next action | PO GO to begin **P6 Production Deployment & Hypercare** on `www.biopentra.eu` |
