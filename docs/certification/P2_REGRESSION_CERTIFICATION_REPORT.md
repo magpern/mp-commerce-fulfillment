@@ -6,7 +6,8 @@
 **Architecture Freeze:** **ACTIVE**  
 **Baseline release under test:** `v0.10.0`  
 **Starting HEAD:** `114c8d85bc077b77a11503d5c098a2f95c24a48d`  
-**Tested commit (certification tip):** see PR / final HEAD on this branch  
+**Tested commit (certification tip):** `ad0955341a3779957e1a272ae547cdf453e9c8b4`  
+**PR:** https://github.com/magpern/mp-commerce-fulfillment/pull/9  
 **Status:** COMPLETE  
 **Verdict:** **PASS WITH DOCUMENTED NON-BLOCKING LIMITATIONS**
 
@@ -76,7 +77,7 @@ Non-blocking limitations are documented below (local PHP 8.5 deprecation noise; 
 | ADR-0007 / no-inventory | **PASS** | `AnalyticsInventoryGuardTest` + related | — | No wc-inventory-overview table reads |
 | PHPCS | **PASS** | 452 files clean | — | `/tmp/mpcf-p2-phpcs.log` |
 | Build / release-audit | **PASS** | `bin/build-zip.sh` + `bin/release-audit.sh` | — | Release audit passed |
-| Full CI (PR) | **PENDING→required** | GitHub Actions on PR | — | Must be green before merge |
+| Full CI (PR) | **PASS** | Actions run `31202254183` on PR #9 | — | All jobs green incl. browser |
 
 ## Role / capability matrix (runtime)
 
@@ -149,8 +150,8 @@ composer install --no-dev && bash bin/build-zip.sh && bash bin/release-audit.sh
 - [x] P3 not started
 - [x] Production not deployed
 - [x] Certification commits only (test + docs)
-- [ ] PR CI green (gate before merge)
-- [ ] Do not merge until CI green + this report accepted
+- [x] PR CI green (Actions run `31202254183`)
+- [ ] Do not merge until this report is accepted (CI already green)
 
 ## Exit
 
