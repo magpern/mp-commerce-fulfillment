@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Commerce Fulfillment User Manual — v1.0.0</title>
+	<meta name="description" content="End-user manual for MP Commerce Fulfillment (Commerce Fulfillment) version 1.0.0.">
+	<link rel="stylesheet" href="assets/manual.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div class="layout">
+	<nav class="sidebar" id="sidebar" aria-label="Manual contents">
+		<button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="toc-list">Menu</button>
+		<p class="brand">Commerce Fulfillment</p>
+		<p class="brand-meta">User Manual · v1.0.0</p>
+		<label class="visually-hidden" for="nav-search" style="position:absolute;left:-9999px;">Search topics</label>
+		<input type="search" id="nav-search" class="nav-search" placeholder="Filter topics…" autocomplete="off">
+		<ul class="toc" id="toc-list">
+			<li><a href="#introduction">1. Introduction</a></li>
+			<li><a href="#roles">2. Roles and permissions</a></li>
+			<li><a href="#getting-started">3. Getting started</a></li>
+			<li><a href="#dashboard">4. Dashboard</a></li>
+			<li><a href="#queue">5. Queue</a></li>
+			<li><a href="#orders">6. Orders overview</a></li>
+			<li><a href="#workspace">7. Packing Workspace</a></li>
+			<li><a href="#picking">8. Picking</a></li>
+			<li><a href="#packing">9. Packing</a></li>
+			<li><a href="#shipping">10. Shipping and tracking</a></li>
+			<li><a href="#documents">11. Documents</a></li>
+			<li><a href="#photos">12. Package photography</a></li>
+			<li><a href="#scan">13. Barcode &amp; Scan Mode</a></li>
+			<li><a href="#waves">14. Wave &amp; batch picking</a></li>
+			<li><a href="#notifications">15. Tracking notifications</a></li>
+			<li><a href="#analytics">16. Analytics</a></li>
+			<li><a href="#settings">17. Settings</a></li>
+			<li><a href="#admin-health">18. Administration and health</a></li>
+			<li><a href="#troubleshooting">19. Troubleshooting</a></li>
+			<li><a href="#examples">20. Workflow examples</a></li>
+			<li><a href="#faq">21. FAQ</a></li>
+			<li><a href="#glossary">22. Glossary</a></li>
+			<li><a href="#appendix-cli">Appendix: CLI (administrators)</a></li>
+		</ul>
+	</nav>
+
+	<main class="main" id="main">
+		<header class="manual-header">
+			<h1>Commerce Fulfillment User Manual</h1>
+			<p><strong>Product:</strong> MP Commerce Fulfillment (plugin name in WordPress: <em>Commerce Fulfillment</em>)<br>
+			<strong>Manual version:</strong> matches plugin <strong>v1.0.0</strong></p>
+			<div class="badge-row">
+				<span class="badge badge-accent">v1.0.0</span>
+				<span class="badge">WordPress / WooCommerce</span>
+				<span class="badge">Warehouse operations</span>
+			</div>
+			<div class="callout callout-important">
+				<strong class="label">Important</strong>
+				This manual describes the released <strong>v1.0.0</strong> plugin. It does <strong>not</strong> claim that the plugin is deployed on your live storefront production site. Production cutover is a separate operational decision.
+			</div>
+		</header>
+
+		<!-- 1 -->
+		<section id="introduction" aria-labelledby="h-intro">
+			<h2 id="h-intro">1. Introduction</h2>
+
+			<h3>What Commerce Fulfillment does</h3>
+			<p>After a customer pays in WooCommerce, your warehouse still needs to pick items, pack them, capture evidence if required, print documents, ship packages, and keep an audit trail. <strong>Commerce Fulfillment</strong> owns that warehouse work:</p>
+			<ul>
+				<li>Creates a <strong>fulfillment</strong> when an order becomes paid / processing (intake).</li>
+				<li>Guides operators through picking, packing, shipping, and completion.</li>
+				<li>Stores documents, package photos, shipment tracking, and events.</li>
+				<li>Supports barcode Scan Mode and multi-order Wave picking.</li>
+				<li>Provides operational analytics and health checks for leads and administrators.</li>
+			</ul>
+
+			<h3>What it does not do</h3>
+			<ul>
+				<li>It does <strong>not</strong> replace WooCommerce checkout, products, customers, or payments.</li>
+				<li>It does <strong>not</strong> manage inventory receiving, purchase orders, stock ledgers, or bin locations (that is a separate inventory system).</li>
+				<li>It does <strong>not</strong> automatically change WooCommerce stock levels when you pick or pack.</li>
+				<li>It does <strong>not</strong> integrate with every carrier’s label API — you enter tracking and use your carrier tools as configured.</li>
+			</ul>
+
+			<h3>Terminology at a glance</h3>
+			<table>
+				<thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+				<tbody>
+					<tr><td>Order</td><td>The WooCommerce order (source of truth for payment and line items).</td></tr>
+					<tr><td>Fulfillment</td><td>Warehouse work for that order inside Commerce Fulfillment.</td></tr>
+					<tr><td>Queue</td><td>List of fulfillments waiting for warehouse action.</td></tr>
+					<tr><td>Packing Workspace</td><td>Screen where you pick, pack, ship, print, scan, and photograph one fulfillment.</td></tr>
+					<tr><td>Wave</td><td>A batch of fulfillments picked together in one walk.</td></tr>
+				</tbody>
+			</table>
+		</section>
+
+		<!-- 2 -->
+		<section id="roles" aria-labelledby="h-roles">
+			<h2 id="h-roles">2. Roles and permissions</h2>
+			<p>Commerce Fulfillment adds two warehouse roles and also grants its capabilities to WordPress <strong>Administrator</strong> and WooCommerce <strong>Shop Manager</strong>.</p>
+
+			<table>
+				<thead>
+					<tr><th>Capability area</th><th>Warehouse Operator</th><th>Warehouse Lead</th><th>Administrator / Shop Manager</th></tr>
+				</thead>
+				<tbody>
+					<tr><td>View Queue, Dashboard, Orders, Workspace</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+					<tr><td>Process fulfillments (pick / pack / stage changes)</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+					<tr><td>Manage shipments &amp; send tracking notifications</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+					<tr><td>Add notes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+					<tr><td>Capture photos</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+					<tr><td>Print / render documents</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+					<tr><td>Delete photos</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+					<tr><td>Cancel fulfillment</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+					<tr><td>View audit / analytics / operator stats</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+					<tr><td>Change Settings</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+				</tbody>
+			</table>
+
+			<div class="callout callout-admin">
+				<strong class="label">Administrator only</strong>
+				Assign the <strong>Warehouse Operator</strong> or <strong>Warehouse Lead</strong> role under Users in WordPress. Day-to-day warehouse staff should not rely on the Administrator role.
+			</div>
+		</section>
+
+		<!-- 3 -->
+		<section id="getting-started" aria-labelledby="h-start">
+			<h2 id="h-start">3. Getting started</h2>
+
+			<h3>Where it appears</h3>
+			<p>In wp-admin, open the left menu item <strong>Fulfillment</strong> (archive icon). The top bar of each Fulfillment screen shows <strong>Commerce Fulfillment</strong> — <em>Warehouse fulfillment workspace</em>.</p>
+
+			<h3>Main navigation</h3>
+			<ul>
+				<li><strong>Dashboard</strong> — attention metrics and today’s counts</li>
+				<li><strong>Queue</strong> — work list (open fulfillments)</li>
+				<li><strong>Orders</strong> — “where is my order?” overview across store status and fulfillment</li>
+				<li><strong>Documents</strong> — history of stored documents (if you can print documents)</li>
+				<li><strong>Analytics</strong> — operational reports (Lead / Admin)</li>
+				<li><strong>Settings</strong> — branding, photos, notifications (Lead / Admin)</li>
+			</ul>
+			<p>The <strong>Packing Workspace</strong> and <strong>Wave Workspace</strong> open from Queue (or similar deep links). They are not separate top-level menu items.</p>
+
+			<div class="workflow">
+				<strong>Operational overview</strong>
+				<div class="flow" aria-hidden="true">
+					<span>Paid order</span><span class="arrow">→</span>
+					<span>Queue</span><span class="arrow">→</span>
+					<span>Pick</span><span class="arrow">→</span>
+					<span>Pack</span><span class="arrow">→</span>
+					<span>Ship</span><span class="arrow">→</span>
+					<span>Notify</span>
+				</div>
+			</div>
+		</section>
+
+		<!-- 4 -->
+		<section id="dashboard" aria-labelledby="h-dash">
+			<h2 id="h-dash">4. Dashboard</h2>
+			<p>Menu: <strong>Fulfillment → Dashboard</strong>.</p>
+			<p>The Dashboard helps leads and operators see pressure points at a glance. Typical sections include:</p>
+			<ul>
+				<li><strong>Needs attention</strong> — exception or blocked work</li>
+				<li><strong>Oldest open</strong> — aging fulfillments</li>
+				<li><strong>Unassigned</strong> — work without an assignee</li>
+				<li><strong>Today</strong> — open count, exceptions, packed today, shipped today</li>
+			</ul>
+			<div class="callout callout-tip">
+				<strong class="label">Tip</strong>
+				Use the Dashboard to choose what to work next, then open <strong>Queue</strong> to claim a specific fulfillment.
+			</div>
+		</section>
+
+		<!-- 5 -->
+		<section id="queue" aria-labelledby="h-queue">
+			<h2 id="h-queue">5. Queue</h2>
+			<p>Menu: <strong>Fulfillment → Queue</strong> (page title: <strong>Fulfillment Queue</strong>).</p>
+			<p>The Queue lists fulfillments that need warehouse work. From here you typically:</p>
+			<ul>
+				<li>Find an order by search / filters (as shown on the page).</li>
+				<li>Open a fulfillment into the <strong>Packing Workspace</strong>.</li>
+				<li>Select several fulfillments and choose <strong>Create wave from selection</strong> for batch picking.</li>
+				<li>Use bulk document actions such as <strong>Print picking lists (max 25)…</strong> when available.</li>
+			</ul>
+			<div class="callout callout-important">
+				<strong class="label">Important</strong>
+				The Queue shows <em>fulfillment</em> work. A WooCommerce order that is not yet eligible for intake (for example unpaid) will not appear as warehouse work until intake creates a fulfillment.
+			</div>
+		</section>
+
+		<!-- 6 -->
+		<section id="orders" aria-labelledby="h-orders">
+			<h2 id="h-orders">6. Orders overview</h2>
+			<p>Menu: <strong>Fulfillment → Orders</strong>.</p>
+			<p>This screen is a read-only “Where is my order?” overview. It combines:</p>
+			<ul>
+				<li>WooCommerce / store order status (payment and store lifecycle), and</li>
+				<li>Commerce Fulfillment state when a fulfillment exists.</li>
+			</ul>
+			<p>It does <strong>not</strong> create fulfillments and does <strong>not</strong> change store or warehouse state. Use it for customer-service questions and to jump toward the right workspace when a fulfillment already exists.</p>
+			<div class="callout callout-tip">
+				<strong class="label">Tip</strong>
+				<strong>Processing</strong> in WooCommerce is not the same as <strong>Picking</strong> in Commerce Fulfillment. Always check the fulfillment state for warehouse progress.
+			</div>
+		</section>
+
+		<!-- 7 -->
+		<section id="workspace" aria-labelledby="h-workspace">
+			<h2 id="h-workspace">7. Packing Workspace</h2>
+			<p>Opened from Queue (and related links). Browser title: <strong>Packing Workspace</strong>.</p>
+			<p>This is the primary screen for a single fulfillment. Typical areas:</p>
+			<ul>
+				<li>Order / customer snapshot and current state</li>
+				<li>Line items with picked / packed quantities</li>
+				<li>Primary action (advance to the next allowed stage)</li>
+				<li>Shipments, packages, documents, photos, notes</li>
+				<li>Scan Mode controls when you are picking or packing</li>
+			</ul>
+
+			<h3>Lifecycle (standard path)</h3>
+			<div class="flow" aria-label="Standard fulfillment lifecycle">
+				<span>Queued</span><span class="arrow">→</span>
+				<span>Picking</span><span class="arrow">→</span>
+				<span>Picked</span><span class="arrow">→</span>
+				<span>Packing</span><span class="arrow">→</span>
+				<span>Packed</span><span class="arrow">→</span>
+				<span>Shipped</span><span class="arrow">→</span>
+				<span>Delivered</span><span class="arrow">→</span>
+				<span>Completed</span>
+			</div>
+			<p>You may also move work to <strong>Problem</strong>, <strong>Waiting</strong>, or <strong>Backordered</strong> (reason required), or <strong>Cancel</strong> if you have permission.</p>
+
+			<h3>Stale / version conflicts</h3>
+			<p>If two people update the same fulfillment, or a screen is left open too long, the plugin may reject a save with a version conflict message (for example asking you to reload). Reload the Workspace and retry so you do not overwrite newer work.</p>
+			<div class="callout callout-warning">
+				<strong class="label">Warning</strong>
+				Do not keep multiple browser tabs open on the same fulfillment during busy shipping — it increases conflict risk.
+			</div>
+		</section>
+
+		<!-- 8 -->
+		<section id="picking" aria-labelledby="h-picking">
+			<h2 id="h-picking">8. Picking</h2>
+			<ol>
+				<li>Open a queued fulfillment in the Packing Workspace.</li>
+				<li>Advance to <strong>Picking</strong> (primary action).</li>
+				<li>Increase picked quantities on each line until they match ordered quantities (checklist controls or Scan Mode).</li>
+				<li>When all lines are fully picked, advance to <strong>Picked</strong>, then to <strong>Packing</strong> when ready.</li>
+			</ol>
+			<p>You cannot mark a fulfillment <strong>Picked</strong> until every line is fully picked.</p>
+			<h3>Common picking errors</h3>
+			<ul>
+				<li>Trying to finish picking while a line is still short.</li>
+				<li>Scanning a barcode that does not match any line on this fulfillment.</li>
+				<li>Scanning more units than ordered (over-scan is rejected).</li>
+			</ul>
+		</section>
+
+		<!-- 9 -->
+		<section id="packing" aria-labelledby="h-packing">
+			<h2 id="h-packing">9. Packing</h2>
+			<ol>
+				<li>In <strong>Packing</strong>, set packed quantities for each line.</li>
+				<li>Under <strong>Packages</strong>, choose <strong>Add package</strong>.</li>
+				<li>Enter at least <strong>Weight</strong> (required to confirm the package). Length, width, and height are optional but recommended.</li>
+				<li>Add carrier / tracking information on the shipment as needed.</li>
+				<li>If sealed-package photos are required in Settings, capture at least one <strong>Sealed package</strong> photo before finishing.</li>
+				<li>Advance to <strong>Packed</strong> when all packing guards pass.</li>
+			</ol>
+			<div class="callout callout-important">
+				<strong class="label">Important</strong>
+				The plugin requires a recorded <strong>package weight</strong> before you can mark the fulfillment <strong>Packed</strong>. Dimensions are optional for that check, but entering them improves shipping accuracy.
+			</div>
+			<div class="callout callout-tip">
+				<strong class="label">Tip</strong>
+				You can create a shipment early while still packing, then fill package weight and tracking before the Packed / Shipped steps.
+			</div>
+		</section>
+
+		<!-- 10 -->
+		<section id="shipping" aria-labelledby="h-ship">
+			<h2 id="h-ship">10. Shipping and tracking</h2>
+			<ul>
+				<li>Create or open the shipment on the Workspace.</li>
+				<li>Choose a <strong>carrier</strong> (or leave the default / Other as configured).</li>
+				<li>Enter a <strong>tracking number</strong> (required before shipping on the standard path).</li>
+				<li>Ship the shipment (Workspace ship action). The fulfillment moves to <strong>Shipped</strong> when shipping succeeds.</li>
+			</ul>
+			<p>Later stages may include <strong>Delivered</strong> and <strong>Completed</strong> depending on your process.</p>
+			<div class="callout callout-admin">
+				<strong class="label">Administrator only</strong>
+				Default carrier and customer email wording are configured under <strong>Settings → Notifications</strong>.
+			</div>
+		</section>
+
+		<!-- 11 -->
+		<section id="documents" aria-labelledby="h-docs">
+			<h2 id="h-docs">11. Documents</h2>
+
+			<h3>Document types</h3>
+			<table>
+				<thead><tr><th>Document</th><th>Typical use</th><th>Notes</th></tr></thead>
+				<tbody>
+					<tr><td><strong>Picking list</strong></td><td>Pick from shelf</td><td>Available in early stages (queued / picking / picked). Can be bulk-printed from Queue (max 25).</td></tr>
+					<tr><td><strong>Packing slip</strong></td><td>Pack / include in carton</td><td>Available from packing onward; stored for reprint.</td></tr>
+					<tr><td><strong>Wave picking list</strong></td><td>Batch pick walk</td><td>Printed from the Wave Workspace.</td></tr>
+				</tbody>
+			</table>
+
+			<h3>In Workspace</h3>
+			<p>Use the <strong>Documents</strong> section and <strong>Print …</strong> actions for the documents allowed in the current stage. If none are available, the UI explains that no printable document is available in this stage.</p>
+
+			<h3>Document history</h3>
+			<p>Menu: <strong>Fulfillment → Documents</strong> — immutable outbound documents. <strong>Reprint</strong> streams the original stored file. Filters include type (picking list / packing slip), order/fulfillment, and date range. Wave picking lists are printed from Wave Workspace rather than filtered here as a wave type.</p>
+		</section>
+
+		<!-- 12 -->
+		<section id="photos" aria-labelledby="h-photos">
+			<h2 id="h-photos">12. Package photography</h2>
+			<p>Section title in Workspace: <strong>Package photos</strong>.</p>
+			<ul>
+				<li><strong>Contents</strong> — optional evidence of what went into the package.</li>
+				<li><strong>Sealed package</strong> — photo of the closed parcel. This is the type that satisfies a photo requirement.</li>
+			</ul>
+			<p>Upload via camera or file picker as provided in the UI. Preview photos from the gallery / lightbox controls.</p>
+			<ul>
+				<li><strong>Capture:</strong> Warehouse Operator and above (capture permission).</li>
+				<li><strong>Delete:</strong> Warehouse Lead / Administrator / Shop Manager only. Operators cannot soft-delete photos.</li>
+			</ul>
+			<p>When <strong>Require sealed-package photo</strong> is enabled in Settings, you cannot mark the fulfillment <strong>Packed</strong> until at least one active sealed-package photo exists. Retention (months) is configured by administrators; after retention, image files may be purged while audit metadata remains.</p>
+		</section>
+
+		<!-- 13 -->
+		<section id="scan" aria-labelledby="h-scan">
+			<h2 id="h-scan">13. Barcode &amp; Scan Mode</h2>
+			<p>In the Packing Workspace, open the <strong>Scan Mode</strong> panel.</p>
+			<ul>
+				<li><strong>Enter Picking Scan Mode</strong> when the fulfillment is in picking.</li>
+				<li><strong>Enter Packing Scan Mode</strong> when packing.</li>
+				<li>Use a keyboard-wedge scanner, or type a SKU and press Enter.</li>
+				<li><strong>Undo last scan</strong> corrects the previous successful scan.</li>
+				<li><strong>Exit Scan Mode</strong> returns to normal controls. Toggle <strong>Sound on / Sound off</strong> as needed.</li>
+			</ul>
+			<p>Status shows <strong>Ready</strong> and a <strong>Recent scans</strong> list.</p>
+			<table>
+				<thead><tr><th>Situation</th><th>What happens</th></tr></thead>
+				<tbody>
+					<tr><td>Unknown barcode</td><td>Rejected — no item on this fulfillment matches.</td></tr>
+					<tr><td>Over-scan</td><td>Rejected — item already fully picked or packed.</td></tr>
+					<tr><td>Wave barcode in Workspace Scan Mode</td><td>Rejected — wave barcodes belong in Wave Scan Mode.</td></tr>
+				</tbody>
+			</table>
+		</section>
+
+		<!-- 14 -->
+		<section id="waves" aria-labelledby="h-waves">
+			<h2 id="h-waves">14. Wave &amp; batch picking</h2>
+			<p>A <strong>wave</strong> groups several fulfillments for one combined picking walk.</p>
+			<ol>
+				<li>In Queue, select fulfillments and choose <strong>Create wave from selection</strong>.</li>
+				<li>Open the Wave Workspace.</li>
+				<li><strong>Activate</strong> the wave when you start the walk.</li>
+				<li>Print the <strong>wave picking list</strong> if needed.</li>
+				<li>Use <strong>Enter Wave Scan Mode</strong> for FIFO pick scanning across members (pick only — not pack).</li>
+				<li><strong>Pause</strong> / <strong>Resume</strong> as needed; <strong>Complete</strong> or <strong>Abandon</strong> when finished.</li>
+			</ol>
+			<div class="callout callout-important">
+				<strong class="label">Important</strong>
+				Wave Scan Mode only covers <strong>picking</strong>. Packing, photos, shipping, and notifications remain <strong>per fulfillment</strong> in each Packing Workspace after the wave pick is done.
+			</div>
+			<p>FIFO behavior means the system advances outstanding wave lines in order — scan the next expected item rather than packing inside the wave screen.</p>
+		</section>
+
+		<!-- 15 -->
+		<section id="notifications" aria-labelledby="h-notif">
+			<h2 id="h-notif">15. Tracking &amp; notifications</h2>
+			<p>After a shipment is shipped (or delivered), the Workspace shows notification status and a <strong>Send tracking notification</strong> button (requires shipment permission).</p>
+
+			<h3>Strategies (configured in Settings)</h3>
+			<table>
+				<thead><tr><th>Strategy label</th><th>Behaviour (conceptually)</th></tr></thead>
+				<tbody>
+					<tr><td>Completed-order email</td><td>Relies on WooCommerce completed-order style customer email path as configured.</td></tr>
+					<tr><td>MPCF shipped email</td><td>Commerce Fulfillment sends its shipped / tracking email.</td></tr>
+					<tr><td>Both</td><td>Both paths may apply per configuration.</td></tr>
+					<tr><td>Disabled</td><td>No automatic MPCF tracking email.</td></tr>
+				</tbody>
+			</table>
+			<p>Manual <strong>Send tracking notification</strong> can resend (forced) when operators need to retry after a failure. Status values you may see include sent, failed, suppressed, or none yet.</p>
+			<p>Carrier tracking links appear in customer messaging when tracking data and templates provide them.</p>
+		</section>
+
+		<!-- 16 -->
+		<section id="analytics" aria-labelledby="h-analytics">
+			<h2 id="h-analytics">16. Analytics</h2>
+			<p>Menu: <strong>Fulfillment → Analytics</strong> (capability required). Analytics is <strong>read-only</strong> — it does not change fulfillments.</p>
+			<ul>
+				<li><strong>Overview</strong> — today (UTC live) cards; <strong>Stage Timeline</strong> (averages); <strong>Queue ageing</strong> buckets; waves today.</li>
+				<li><strong>Reports</strong> — date presets and throughput table; <strong>Export throughput CSV (UTF-8)</strong>.</li>
+				<li><strong>Diagnostics</strong> — top failure reasons; slow fulfillments; stalled / paused waves.</li>
+			</ul>
+			<div class="callout callout-tip">
+				<strong class="label">Tip</strong>
+				Timeline and queue ageing live inside <strong>Overview</strong>, not as separate top-level tabs.
+			</div>
+			<p>If numbers look “stuck”, ask an administrator to confirm analytics rollup schedules are healthy (see Administration).</p>
+		</section>
+
+		<!-- 17 -->
+		<section id="settings" aria-labelledby="h-settings">
+			<h2 id="h-settings">17. Settings</h2>
+			<p>Menu: <strong>Fulfillment → Settings</strong> (Lead / Admin). Saving shows <strong>Settings saved.</strong></p>
+
+			<h3>Document branding</h3>
+			<table>
+				<thead><tr><th>Setting</th><th>Purpose</th></tr></thead>
+				<tbody>
+					<tr><td>Store display name</td><td>Name printed on documents</td></tr>
+					<tr><td>Address</td><td>Address block on documents</td></tr>
+					<tr><td>Footer / legal text</td><td>Footer text</td></tr>
+					<tr><td>Logo attachment ID</td><td>Media library attachment used as logo</td></tr>
+				</tbody>
+			</table>
+			<p>Empty optional fields are omitted. Historical stored documents keep the branding from when they were rendered.</p>
+
+			<h3>Package photography</h3>
+			<table>
+				<thead><tr><th>Setting</th><th>Default (v1.0.0)</th><th>Notes</th></tr></thead>
+				<tbody>
+					<tr><td>Require sealed-package photo</td><td>Off</td><td>When on, sealed photo required before Packed</td></tr>
+					<tr><td>Maximum photos per fulfillment</td><td>10</td><td>Range 1–100</td></tr>
+					<tr><td>Maximum upload size (MB)</td><td>12</td><td>Upload limit</td></tr>
+					<tr><td>Maximum image edge (px)</td><td>2000</td><td>Images may be resized</td></tr>
+					<tr><td>Retention (months)</td><td>12</td><td>0 = keep forever; otherwise 1–120</td></tr>
+				</tbody>
+			</table>
+
+			<h3>Notifications</h3>
+			<table>
+				<thead><tr><th>Setting</th><th>Notes</th></tr></thead>
+				<tbody>
+					<tr><td>Notification strategy</td><td>Completed-order email / MPCF shipped email / Both / Disabled</td></tr>
+					<tr><td>Default carrier</td><td>Prefills carrier selection where applicable</td></tr>
+					<tr><td>Sender name</td><td>Outbound From display name</td></tr>
+					<tr><td>Reply-to email</td><td>Reply address</td></tr>
+					<tr><td>Default email subject</td><td>Default: <em>Your order has shipped</em></td></tr>
+					<tr><td>Email introduction</td><td>Body intro</td></tr>
+					<tr><td>Tracking message footer</td><td>Footer under tracking details</td></tr>
+					<tr><td>Email signature</td><td>Closing signature</td></tr>
+				</tbody>
+			</table>
+			<div class="callout callout-important">
+				<strong class="label">Important</strong>
+				Operators can send tracking notifications from the Workspace when a shipment is shipped. Configure strategy and templates here before go-live.
+			</div>
+		</section>
+
+		<!-- 18 -->
+		<section id="admin-health" aria-labelledby="h-admin">
+			<h2 id="h-admin">18. Administration and health</h2>
+			<div class="callout callout-admin">
+				<strong class="label">Administrator only</strong>
+				This section is for site administrators and technical operators.
+			</div>
+
+			<h3>Site Health</h3>
+			<p>WordPress <strong>Tools → Site Health</strong> includes an <strong>MP Commerce Fulfillment</strong> check. Results may show critical issues, warnings, or that checks passed. Prefer resolving warnings before peak shipping hours.</p>
+
+			<h3>Doctor, validation, and repair (conceptual)</h3>
+			<p>Administrators can run read-only diagnostics and bounded repairs from the server (WP-CLI). Conceptually:</p>
+			<ul>
+				<li><strong>Doctor</strong> — overall operational health (environment, schema, storage, schedules, capacity).</li>
+				<li><strong>Validate</strong> — focused checks (schema, storage, schedules, consistency, and more).</li>
+				<li><strong>Repair</strong> — safe, limited fixes only (for example missing schedules or storage directories). Repairs are dry-run by default until explicitly confirmed.</li>
+				<li><strong>Audit verify</strong> — checks the append-only event hash chain for sample fulfillments.</li>
+			</ul>
+			<p>See the Appendix for command names. Day-to-day warehouse staff do not need CLI access.</p>
+
+			<h3>Scheduled jobs &amp; storage</h3>
+			<p>Background work (photo retention purge, analytics daily rollup) runs through Action Scheduler / WordPress cron. Storage lives under the site uploads area in a protected <code>mpcf</code> folder for photos and documents. If storage is not writable, document and photo features will fail until fixed.</p>
+		</section>
+
+		<!-- 19 -->
+		<section id="troubleshooting" aria-labelledby="h-trouble">
+			<h2 id="h-trouble">19. Troubleshooting</h2>
+			<table>
+				<thead><tr><th>Symptom</th><th>What to check</th></tr></thead>
+				<tbody>
+					<tr><td>Order not in Queue</td><td>Is the WooCommerce order paid/processing? Did intake create a fulfillment? Check Orders overview.</td></tr>
+					<tr><td>Cannot advance stage</td><td>Guards: quantities, package weight, sealed photo, tracking, permissions. Read the on-screen message.</td></tr>
+					<tr><td>Stale / version conflict</td><td>Reload Workspace; avoid duplicate tabs; retry.</td></tr>
+					<tr><td>Document unavailable</td><td>Wrong stage for that document type; missing print permission; storage problem (ask admin).</td></tr>
+					<tr><td>Notification failed</td><td>Strategy not Disabled? Customer email present? Retry <strong>Send tracking notification</strong>; ask admin to check mail.</td></tr>
+					<tr><td>Photo requirement not satisfied</td><td>Capture a <strong>Sealed package</strong> photo (not only Contents).</td></tr>
+					<tr><td>Scanner does not resolve SKU</td><td>SKU must match a line on <em>this</em> fulfillment; correct Scan Mode (picking vs packing); not a wave barcode in Workspace mode.</td></tr>
+					<tr><td>Wave cannot complete</td><td>Wave must be active for scanning; outstanding picks; try Pause/Resume; finish remaining members.</td></tr>
+					<tr><td>Analytics looks stale</td><td>Overview “today” is live UTC; reports may use rollups — ask admin about schedules / rebuild.</td></tr>
+					<tr><td>Insufficient permissions</td><td>Wrong role (Operator vs Lead); missing Documents / Analytics / Settings caps.</td></tr>
+				</tbody>
+			</table>
+		</section>
+
+		<!-- 20 -->
+		<section id="examples" aria-labelledby="h-examples">
+			<h2 id="h-examples">20. Common workflow examples</h2>
+
+			<div class="workflow">
+				<strong>A. Standard single order</strong>
+				<ol>
+					<li>Open <strong>Queue</strong> → select the fulfillment.</li>
+					<li>Workspace: start <strong>Picking</strong> → set quantities → <strong>Picked</strong>.</li>
+					<li>Start <strong>Packing</strong> → pack quantities → add package → enter <strong>weight</strong> → sealed photo if required.</li>
+					<li>Enter tracking → <strong>Packed</strong> → <strong>Ship</strong>.</li>
+					<li>Print packing slip as needed → <strong>Send tracking notification</strong> if required.</li>
+				</ol>
+			</div>
+
+			<div class="workflow">
+				<strong>B. Scanner-assisted order</strong>
+				<ol>
+					<li>Open Workspace → <strong>Enter Picking Scan Mode</strong>.</li>
+					<li>Scan each unit until lines are complete → exit Scan Mode → advance stages.</li>
+					<li>In packing, <strong>Enter Packing Scan Mode</strong> and scan to confirm packed quantities.</li>
+					<li>Finish package weight, photo, tracking, and ship as in example A.</li>
+				</ol>
+			</div>
+
+			<div class="workflow">
+				<strong>C. Wave picking several orders</strong>
+				<ol>
+					<li>Queue: select multiple fulfillments → <strong>Create wave from selection</strong>.</li>
+					<li>Activate wave → print wave picking list → <strong>Enter Wave Scan Mode</strong>.</li>
+					<li>Scan picks (FIFO) until the walk is done → Complete wave.</li>
+					<li>Open each fulfillment Workspace to pack, photograph, ship, and notify individually.</li>
+				</ol>
+			</div>
+		</section>
+
+		<!-- 21 -->
+		<section id="faq" aria-labelledby="h-faq">
+			<h2 id="h-faq">21. FAQ</h2>
+			<h3>Does picking reduce WooCommerce stock?</h3>
+			<p>No. Commerce Fulfillment does not mutate store stock as part of pick/pack.</p>
+			<h3>Why can’t I delete a photo?</h3>
+			<p>Operators can capture photos but only Leads / Administrators / Shop Managers can delete them.</p>
+			<h3>Where is “Mission Control”?</h3>
+			<p>There is no separate menu by that name in v1.0.0. Use <strong>Dashboard</strong> for operational attention metrics.</p>
+			<h3>Can I pack inside a wave?</h3>
+			<p>No. Waves are for batch picking. Pack and ship each fulfillment in its Packing Workspace.</p>
+			<h3>Is analytics live?</h3>
+			<p>Overview “today” metrics are live (UTC). Longer reports may use daily rollups maintained in the background.</p>
+		</section>
+
+		<!-- 22 -->
+		<section id="glossary" aria-labelledby="h-glossary">
+			<h2 id="h-glossary">22. Glossary</h2>
+			<table>
+				<thead><tr><th>Term</th><th>Definition</th></tr></thead>
+				<tbody>
+					<tr><td>Fulfillment</td><td>Warehouse execution record for one order.</td></tr>
+					<tr><td>Guard</td><td>Rule that must be true before a stage change (for example all items packed).</td></tr>
+					<tr><td>Intake</td><td>Creation of a fulfillment when an order becomes eligible (typically paid/processing).</td></tr>
+					<tr><td>Over-scan</td><td>Scanning more units than ordered for a line.</td></tr>
+					<tr><td>Sealed package photo</td><td>Photo type that satisfies a configured photo requirement.</td></tr>
+					<tr><td>Wave</td><td>Batch of fulfillments picked together.</td></tr>
+					<tr><td>Workspace</td><td>Packing Workspace for one fulfillment.</td></tr>
+				</tbody>
+			</table>
+		</section>
+
+		<!-- Appendix -->
+		<section id="appendix-cli" aria-labelledby="h-cli">
+			<h2 id="h-cli">Appendix: CLI commands (administrators)</h2>
+			<div class="callout callout-admin">
+				<strong class="label">Administrator only</strong>
+				Requires WP-CLI on the server. Prefer dry-run behaviour before applying repairs.
+			</div>
+			<ul>
+				<li><code>wp mpcf doctor</code> — operational diagnostics</li>
+				<li><code>wp mpcf validate &lt;target&gt;</code> — focused validation</li>
+				<li><code>wp mpcf repair &lt;target&gt; [--yes]</code> — bounded repair (confirm with <code>--yes</code>)</li>
+				<li><code>wp mpcf audit verify</code> — audit chain verification</li>
+				<li><code>wp mpcf analytics backfill|rebuild</code> — analytics maintenance</li>
+			</ul>
+			<p>Full operational detail lives in the plugin’s ops documentation for site administrators.</p>
+		</section>
+
+		<footer class="footer-meta">
+			<p>Commerce Fulfillment User Manual · Plugin version <strong>v1.0.0</strong> · Documentation only · Open this file locally; no network required.</p>
+		</footer>
+	</main>
+</div>
+
+<script>
+(function () {
+	var toggle = document.getElementById('nav-toggle');
+	var sidebar = document.getElementById('sidebar');
+	var search = document.getElementById('nav-search');
+	var links = document.querySelectorAll('#toc-list a');
+
+	if (toggle && sidebar) {
+		toggle.addEventListener('click', function () {
+			var open = sidebar.classList.toggle('is-open');
+			toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+		});
+	}
+
+	if (search) {
+		search.addEventListener('input', function () {
+			var q = search.value.trim().toLowerCase();
+			links.forEach(function (a) {
+				var li = a.parentElement;
+				var match = !q || a.textContent.toLowerCase().indexOf(q) !== -1;
+				li.style.display = match ? '' : 'none';
+			});
+		});
+	}
+
+	function setCurrent() {
+		var id = location.hash.replace(/^#/, '');
+		links.forEach(function (a) {
+			var href = a.getAttribute('href').replace(/^#/, '');
+			if (href && href === id) {
+				a.setAttribute('aria-current', 'true');
+			} else {
+				a.removeAttribute('aria-current');
+			}
+		});
+	}
+	window.addEventListener('hashchange', setCurrent);
+	setCurrent();
+})();
+</script>
+</body>
+</html>

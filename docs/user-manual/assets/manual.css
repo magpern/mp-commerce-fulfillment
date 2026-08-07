@@ -1,0 +1,415 @@
+/* MP Commerce Fulfillment v1.0.0 — User Manual (self-contained) */
+
+:root {
+	--ink: #1a1f24;
+	--muted: #5a6570;
+	--bg: #f7f5f1;
+	--surface: #ffffff;
+	--border: #d9d4cb;
+	--accent: #1f5c4a;
+	--accent-soft: #e6f0ec;
+	--warn-bg: #fbf3e0;
+	--warn-border: #c9952a;
+	--danger-bg: #f8e8e6;
+	--danger-border: #a94442;
+	--tip-bg: #e8f2f8;
+	--tip-border: #3a7ca5;
+	--admin-bg: #eee8f5;
+	--admin-border: #6b5b95;
+	--nav-w: 17.5rem;
+	--radius: 6px;
+	--font: Georgia, "Times New Roman", Times, serif;
+	--sans: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+	--mono: Consolas, "Courier New", monospace;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	scroll-behavior: smooth;
+	scroll-padding-top: 1rem;
+}
+
+body {
+	margin: 0;
+	font-family: var(--sans);
+	font-size: 1rem;
+	line-height: 1.55;
+	color: var(--ink);
+	background: var(--bg);
+}
+
+a {
+	color: var(--accent);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+	outline: 3px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.skip-link {
+	position: absolute;
+	left: -9999px;
+	top: 0;
+	background: var(--accent);
+	color: #fff;
+	padding: 0.5rem 1rem;
+	z-index: 100;
+}
+
+.skip-link:focus {
+	left: 0;
+}
+
+.layout {
+	display: grid;
+	grid-template-columns: var(--nav-w) 1fr;
+	min-height: 100vh;
+}
+
+.sidebar {
+	position: sticky;
+	top: 0;
+	align-self: start;
+	height: 100vh;
+	overflow: auto;
+	background: var(--surface);
+	border-right: 1px solid var(--border);
+	padding: 1.25rem 1rem 2rem;
+}
+
+.brand {
+	font-family: var(--font);
+	font-size: 1.15rem;
+	font-weight: 700;
+	margin: 0 0 0.25rem;
+	color: var(--ink);
+	line-height: 1.25;
+}
+
+.brand-meta {
+	font-size: 0.8rem;
+	color: var(--muted);
+	margin: 0 0 1rem;
+}
+
+.nav-search {
+	width: 100%;
+	padding: 0.45rem 0.6rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	font: inherit;
+	margin-bottom: 1rem;
+	background: var(--bg);
+}
+
+.toc {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.toc > li {
+	margin: 0.15rem 0;
+}
+
+.toc a {
+	display: block;
+	text-decoration: none;
+	color: var(--ink);
+	padding: 0.3rem 0.45rem;
+	border-radius: 4px;
+	font-size: 0.9rem;
+}
+
+.toc a:hover,
+.toc a[aria-current="true"] {
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+
+.toc .toc-sub {
+	list-style: none;
+	margin: 0 0 0.35rem 0.65rem;
+	padding: 0;
+}
+
+.toc .toc-sub a {
+	font-size: 0.8rem;
+	color: var(--muted);
+}
+
+.main {
+	padding: 1.75rem 2rem 4rem;
+	max-width: 52rem;
+}
+
+.manual-header {
+	border-bottom: 1px solid var(--border);
+	padding-bottom: 1.25rem;
+	margin-bottom: 2rem;
+}
+
+.manual-header h1 {
+	font-family: var(--font);
+	font-size: 2rem;
+	margin: 0 0 0.5rem;
+	line-height: 1.2;
+}
+
+.badge-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin: 0.75rem 0;
+}
+
+.badge {
+	display: inline-block;
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 0.2rem 0.55rem;
+	border-radius: 999px;
+	border: 1px solid var(--border);
+	background: var(--surface);
+}
+
+.badge-accent {
+	background: var(--accent-soft);
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+h2 {
+	font-family: var(--font);
+	font-size: 1.55rem;
+	margin: 2.5rem 0 0.85rem;
+	padding-top: 0.5rem;
+	border-top: 1px solid var(--border);
+}
+
+h2:first-of-type {
+	border-top: 0;
+	margin-top: 0;
+}
+
+h3 {
+	font-family: var(--font);
+	font-size: 1.2rem;
+	margin: 1.75rem 0 0.6rem;
+}
+
+h4 {
+	font-size: 1rem;
+	margin: 1.25rem 0 0.4rem;
+}
+
+p,
+li {
+	max-width: 65ch;
+}
+
+ul,
+ol {
+	padding-left: 1.25rem;
+}
+
+table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.92rem;
+	margin: 1rem 0 1.5rem;
+	background: var(--surface);
+}
+
+th,
+td {
+	border: 1px solid var(--border);
+	padding: 0.55rem 0.65rem;
+	text-align: left;
+	vertical-align: top;
+}
+
+th {
+	background: var(--accent-soft);
+	font-weight: 600;
+}
+
+.callout {
+	border-left: 4px solid var(--border);
+	background: var(--surface);
+	padding: 0.85rem 1rem;
+	margin: 1.1rem 0;
+	border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.callout strong.label {
+	display: block;
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	margin-bottom: 0.35rem;
+}
+
+.callout-important {
+	border-color: var(--warn-border);
+	background: var(--warn-bg);
+}
+
+.callout-tip {
+	border-color: var(--tip-border);
+	background: var(--tip-bg);
+}
+
+.callout-warning {
+	border-color: var(--danger-border);
+	background: var(--danger-bg);
+}
+
+.callout-admin {
+	border-color: var(--admin-border);
+	background: var(--admin-bg);
+}
+
+.workflow {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 1rem 1.1rem;
+	margin: 1rem 0 1.5rem;
+}
+
+.workflow ol {
+	margin: 0.5rem 0 0;
+}
+
+.flow {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.35rem;
+	margin: 0.75rem 0;
+	font-size: 0.9rem;
+}
+
+.flow span {
+	background: var(--accent-soft);
+	border: 1px solid var(--accent);
+	color: var(--accent);
+	padding: 0.25rem 0.55rem;
+	border-radius: 4px;
+	font-weight: 600;
+}
+
+.flow .arrow {
+	border: 0;
+	background: transparent;
+	color: var(--muted);
+	font-weight: 400;
+	padding: 0;
+}
+
+code,
+kbd {
+	font-family: var(--mono);
+	font-size: 0.88em;
+	background: #efece6;
+	padding: 0.1rem 0.35rem;
+	border-radius: 3px;
+}
+
+.footer-meta {
+	margin-top: 3rem;
+	padding-top: 1rem;
+	border-top: 1px solid var(--border);
+	font-size: 0.85rem;
+	color: var(--muted);
+}
+
+.nav-toggle {
+	display: none;
+}
+
+@media (max-width: 860px) {
+	.layout {
+		grid-template-columns: 1fr;
+	}
+
+	.sidebar {
+		position: static;
+		height: auto;
+		border-right: 0;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.sidebar .toc,
+	.sidebar .nav-search {
+		display: none;
+	}
+
+	.sidebar.is-open .toc,
+	.sidebar.is-open .nav-search {
+		display: block;
+	}
+
+	.nav-toggle {
+		display: inline-block;
+		margin-bottom: 0.75rem;
+		background: var(--accent);
+		color: #fff;
+		border: 0;
+		border-radius: var(--radius);
+		padding: 0.45rem 0.8rem;
+		font: inherit;
+		cursor: pointer;
+	}
+
+	.main {
+		padding: 1.25rem 1rem 3rem;
+	}
+}
+
+@media print {
+	.sidebar,
+	.nav-toggle,
+	.skip-link,
+	.nav-search {
+		display: none !important;
+	}
+
+	.layout {
+		display: block;
+	}
+
+	.main {
+		max-width: none;
+		padding: 0;
+	}
+
+	a[href]::after {
+		content: none;
+	}
+
+	.callout,
+	.workflow,
+	table {
+		break-inside: avoid;
+	}
+
+	h2 {
+		break-after: avoid;
+	}
+
+	body {
+		background: #fff;
+		color: #000;
+		font-size: 11pt;
+	}
+}
