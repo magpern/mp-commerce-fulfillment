@@ -33,6 +33,7 @@ This document is the **authoritative architectural specification** for Commerce 
 | M3 Ops UX / Part V | 2026-08-04 | Roadmap sequencing amendment: M3 becomes Ops UX (Workspace next-action + Orders + dogfood stabilization) for `v0.3.0`; Documents I moves to M4; later milestones +1. Mission Control A/B/C deferred. Part V appended (execution summary). No invariant, D-decision, layer rule, data-model semantic, engine contract, or public-surface rule altered. |
 | ADR-0007 inbound/outbound ownership | 2026-08-04 | ADR-0007 Accepted: inbound inventory domain assigned to `wc-inventory-overview`; MPCF outbound-only reaffirmed; D13 amended (location hierarchy removed from MPCF); §2.6 ownership registry added; M12 rewritten; §6.6 store-order bridge naming clarified. Documentation-only — no invariant, engine contract, schema, or public-surface change. |
 | M8 Wave & Batch Picking plan (Part X) | 2026-08-06 | Part X appended: definitive M8 execution plan (Wave aggregate, combined walk document, Wave Scan Mode extending M7, Workspace, concurrency/security/performance). Operation Context deferred (documented only). IX.21 updated to M7 closed/`v0.7.0`. Documentation-only — no runtime change; implementation requires PO approval of Part X. |
+| M9 Operational Analytics plan (Part XI) | 2026-08-07 | Part XI appended: definitive M9 — Operational Analytics & Insights execution plan (`mpcf_analytics_daily`, AnalyticsEngine LIVE/ROLLUP/REBUILD, UTC days, `ROLLUP_VERSION`, counters vs durations, nearest-rank percentiles, additive REST `/mpcf/v1/analytics/…`). §15 / §20 / schema reserved-name reconciled (`mpcf_stats_daily` → `mpcf_analytics_daily`; Analytics milestone is M9). M8 recorded closed at `v0.8.0`. Documentation-only — no runtime change; implementation requires PO approval of Part XI (approved 2026-08-07). |
 
 ## Governance
 
@@ -71,7 +72,7 @@ This document is the permanent architecture specification. On repo bootstrap (M0
 
 7. **Operator-first philosophy inside an MP Commerce ecosystem.** The product is designed for warehouse operators, not developers (§2.1 — speed, clarity, low cognitive load, auditability, minimal clicks, deterministic workflows; show exactly what the current step needs, never all of WooCommerce). It is the founding member of the MP Commerce plugin family (§2.2), sharing the design system and house conventions while remaining strictly runtime-independent.
 
-8. **Roadmap:** M0 bootstrap + design-system extraction → M1 fulfillment core (usable queue + workflow) → M2 Packing Workspace + REST → M3 Documents I → M4 Tracking & notifications → M5 Package photography → M6 Barcode & scan mode → M7 Batch picking → M8 Analytics I → M9 hardening/RC → **1.0** → Returns, multi-warehouse, label-buying carrier integrations, automation/webhooks, mobile.
+8. **Roadmap:** M0 bootstrap + design-system extraction → M1 fulfillment core (usable queue + workflow) → M2 Packing Workspace + REST → M3 Ops UX → M4 Documents I → M5 Tracking & notifications → M6 Package photography → M7 Barcode & scan mode → M8 Wave & batch picking → M9 Operational Analytics & Insights → M10 Hardening & operational maturity → **1.0** → Returns, multi-warehouse, label-buying carrier integrations, automation/webhooks, mobile. (Authoritative numbering: §20.)
 
 ---
 
@@ -482,7 +483,7 @@ Indexes: `(state, warehouse_id)`, `(order_id)`, `(assignee_type, assignee_id, st
 **`mpcf_documents`** (M3) — generation record (§10).
 `id, fulfillment_id (indexed), doc_type VARCHAR(64), template_version VARCHAR(32), file_path VARCHAR(255) NULL (NULL = rendered-to-print, not stored), rendered_by, created_at`
 
-Post-1.0 (schema reserved, not created early): `mpcf_batches` + `mpcf_batch_items` (M7); `mpcf_returns` + `mpcf_return_items`; `mpcf_stats_daily` (M8 rollups); `mpcf_search_index` (§9.3 — only if profiling demands it); `mpcf_webhooks`, `mpcf_api_keys`.
+Reserved / later milestones (not created early): `mpcf_returns` + `mpcf_return_items` (post-1.0); `mpcf_analytics_daily` (M9 rollups — Part XI); `mpcf_search_index` (§9.3 — only if profiling demands it); `mpcf_webhooks`, `mpcf_api_keys`. Wave tables (`mpcf_waves` / `mpcf_wave_members`) shipped in M8.
 
 Location hierarchy and item-to-location assignment are owned by **`wc-inventory-overview`** (ADR-0007, §2.6). MPCF does not create `mpcf_locations` or `mpcf_item_locations`. Future location-sorted picking consumes pick-path data from the inventory owner via a versioned contract; `location_snapshot` and `warehouse_id` remain MPCF-side execution hints and queue partitioning.
 
@@ -543,7 +544,7 @@ House discipline is no build step, no framework — and it stays. The Packing Wo
 
 ### 9.3 Screens
 
-**Dashboard** — an **operational workspace, not an analytics page** (P0): it answers *"what should we do next?"* before *"what happened?"*. Top band: next actions — the needs-attention list (problem/waiting, oldest first), oldest open fulfillments, unassigned work, and (post-1.0) carrier cut-off countdowns — each a one-click jump into the queue with filters pre-applied or straight into a workspace. Second band: today's operational stats (open, in exception, packed today, shipped today) as MPDS statistics cards, plus quick actions (print today's picking lists). Historical trends and charts live on the Analytics screen (M8), never here. The acceptance rule for any future dashboard widget: if it doesn't change what an operator or lead does in the next hour, it belongs on Analytics instead.
+**Dashboard** — an **operational workspace, not an analytics page** (P0): it answers *"what should we do next?"* before *"what happened?"*. Top band: next actions — the needs-attention list (problem/waiting, oldest first), oldest open fulfillments, unassigned work, and (post-1.0) carrier cut-off countdowns — each a one-click jump into the queue with filters pre-applied or straight into a workspace. Second band: today's operational stats (open, in exception, packed today, shipped today) as MPDS statistics cards, plus quick actions (print today's picking lists). Historical trends and charts live on the Analytics screen (M9 — Part XI), never here. Mission Control / Dashboard owns immediate attention; Analytics owns historical and operational analytics. The acceptance rule for any future dashboard widget: if it doesn't change what an operator or lead does in the next hour, it belongs on Analytics instead. No Analytics trend-teaser cards on Mission Control.
 
 **Fulfillment Queue** — the operational hub. MPDS data table: order number, customer, item count, state badge, age (time in current state, highlighted past thresholds), priority, assignee, warehouse (hidden until multi-warehouse). Filter bar: state (default "open"), assignee, age, search (order #, customer, SKU, tracking). Bulk actions: assign, print picking lists, advance state (guard-checked per row, partial-failure reported per row). Row click → drawer preview with "Open workspace" primary action. Keyboard: `j/k` row navigation, `Enter` opens, `/` focuses search. Saved filter views per user (`mpcf_ui_prefs`). Pagination server-side, indexed queries only — the queue must stay fast at 50k open rows (§21 R6).
 
@@ -555,7 +556,7 @@ House discipline is no build step, no framework — and it stays. The Packing Wo
 
 **Documents** — per-fulfillment print actions live in the workspace; this screen is batch-oriented (M3+): render picking lists for a selection, reprint history (from `mpcf_documents`), template settings link.
 
-**Analytics** (M8) — §15.
+**Analytics** (M9) — §15 and Part XI.
 
 **Settings** — MPDS settings cards: workflow (mapping + toggles for optional guards like photo-required), status bridge mapping, carriers, documents (store branding block, template options), photos (required/optional, retention), notifications, permissions/operator mode, advanced (uninstall policy). Sticky save bar with dirty-state tracking (MPDS module).
 
@@ -624,7 +625,7 @@ First-class trust feature: *prove what left the warehouse.*
 - **Actor snapshots:** `actor_label_snapshot` (display name at event time) so history stays legible after user deletion; `actor_id` nullable for erasure (§17.4).
 - **Rendering:** the Timeline (workspace, detail page) is a view over events with icon/label mapping per `event_type`; unknown types render generically (third-party events appear automatically).
 - **Investigation workflows (future direction, architecture-ready):** the event stream is designed to be *queried*, not merely displayed. Post-1.0, an Audit Explorer adds: global filtering (event type, actor, date range, warehouse), cross-fulfillment actor timelines ("everything operator X touched on Tuesday"), payload search, and audited export (CSV/JSON behind `mpcf_view_audit`, the export itself logged). An **investigation mode** builds on the same substrate: a lead pins a working set of fulfillments/events and attaches annotations — stored as new `investigation.*` events, because the audit log annotates itself and nothing is ever edited (I5 holds even for investigators). Schema cost today is nil; one additional index `(actor_type, actor_id, created_at)` lands with the explorer.
-- **Growth:** events are the largest table by far. Strategy: indexes only on real access paths (`fulfillment_id`, `event_type`, `created_at`); analytics reads move to rollups at M8; archival policy (export + prune fulfillments completed > N years) is a documented post-1.0 operation, not silent deletion.
+- **Growth:** events are the largest table by far. Strategy: indexes only on real access paths (`fulfillment_id`, `event_type`, `created_at`); analytics reads move to rollups at M9 (`mpcf_analytics_daily`); archival policy (export + prune fulfillments completed > N years) is a documented post-1.0 operation, not silent deletion.
 
 ---
 
@@ -641,10 +642,21 @@ Fulfillment notes are **not** WooCommerce order notes. WC order notes are custom
 
 ## 15. Analytics
 
-- **Source of truth is the event stream.** No separate instrumentation: state timestamps + events already encode queue depth, throughput, time-in-state, operator activity, carrier mix, exception rates. Analytics is a *read model*.
-- **Two tiers:** live queries for small windows (dashboard "today" cards — indexed queries on `mpcf_fulfillments`/`mpcf_events`), and `mpcf_stats_daily` rollups (M8; Action Scheduler nightly job + backfill CLI) for trends: per-day per-warehouse counters (created, packed, shipped, exceptions), duration percentiles (p50/p90 queued→shipped, packing duration), per-operator counters, per-carrier counters. `Engine\Analytics\*` calculators are pure (arrays in, metrics out) and unit-tested against synthetic event fixtures.
-- **Metrics roadmap:** M8 ships queue/throughput/speed/carrier basics; packing-error rate (problem-state reasons categorized), employee productivity views, and warehouse-throughput forecasting are Analytics II (post-1.0).
+Authoritative execution detail for the first analytics milestone is **Part XI — M9 Operational Analytics & Insights**. Summary:
+
+- **Product:** fulfillment-specific **operational observability**, not a generic BI / Analytics Framework (sibling “MP Commerce Analytics” remains a future family candidate — §2.2).
+- **Source of truth is the event stream** (+ existing fulfillment/wave/shipment/package/document/photo/scan/notification aggregates). No separate instrumentation and **no duplicate business state**. Analytics is a *read model*.
+- **Layering:** `AnalyticsService` → `AnalyticsEngine` → Calculators → Repositories. The engine has exactly three modes: **`LIVE`**, **`ROLLUP`**, **`REBUILD`**.
+- **Two tiers:** (1) **LIVE** indexed queries for the current **UTC** day / small windows / diagnostics lists; (2) **`mpcf_analytics_daily`** rollups for closed UTC days via nightly Action Scheduler (**ROLLUP**) plus explicit admin CLI backfill/**REBUILD**. Rows carry `rollup_version` (`ROLLUP_VERSION = 1` initially).
+- **UTC calendar days:** rollups are keyed by UTC day; the UI may convert presentation to merchant timezone; CLI rebuild operates in UTC.
+- **Immutability:** Historical rollups are immutable during normal operation. They change only through an explicit administrative rebuild.
+- **Metric families:** **Counters** (fulfillments, waves, scans, photos, notifications, documents, exception tallies) and **Durations** (stage Timeline hops + end-to-end) are separate. Duration percentiles (**p50/p90**) use a **deterministic nearest-rank** algorithm.
+- **REST:** read-only `/mpcf/v1/analytics/…` behind `mpcf_view_analytics`; **v1 changes remain additive** (no breaking response shapes inside v1).
+- **CSV:** UTF-8, deterministic columns, generated from the **same DTOs** as `AnalyticsService`; no XLSX / Excel-specific formatting.
+- **UI ownership:** Analytics owns historical and operational analytics; Mission Control / Dashboard owns immediate attention. No Mission Control redesign and no trend-card leakage into Mission Control in M9.
+- **Metrics roadmap:** M9 ships throughput, Stage Timeline, queue-ageing buckets (code constants), wave metrics, scan/photo/document/notification rates, and top failure-reason diagnostics. Packing-error depth beyond top-N reasons, employee productivity views beyond D17 opt-in, and warehouse-throughput forecasting are Analytics II (post-1.0).
 - **Privacy stance (EU reality):** per-operator analytics is **off by default** and separately toggleable with a capability of its own (`mpcf_view_operator_stats`) — per-employee performance monitoring has works-council/GDPR implications in the EU; the plugin makes it a deliberate, documented choice, and the docs say so plainly. Aggregate metrics never require it.
+- **Out of scope for M9:** inventory, receiving, purchasing, supplier, or stock analytics (ADR-0007); Site Health / `wp mpcf doctor` / privacy exporter (M10).
 
 ---
 
@@ -758,7 +770,7 @@ Each milestone is a usable release, tagged, installable. Detailed execution plan
 | **M6** | 0.6.0 | Package photography | Capture slots, protected store + streamer, SHA-256 audit fingerprints, photo-required workflow guard, retention purge job | media |
 | **M7** | 0.7.0 | Barcode & scan mode | Scan sink → pick/pack by SKU/EAN scan; scannable queue (slip barcode opens workspace); mismatch handling; kbd/scan-first workspace mode | — |
 | **M8** | 0.8.0 | Wave & batch picking | Wave aggregate (`mpcf_waves` / `mpcf_wave_members`); combined walk document; Wave Scan Mode (extends M7); wave → per-order packing handoff at `picked` | waves, wave_members |
-| **M9** | 0.9.0 | Analytics I | Daily rollups (Action Scheduler + backfill CLI); Analytics screen (throughput, durations p50/p90, carrier mix, exception rates); dashboard trends; operator stats behind D17 | stats_daily |
+| **M9** | 0.9.0 | Operational Analytics & Insights (Analytics I) | `mpcf_analytics_daily` (UTC day × warehouse, `rollup_version`); AnalyticsEngine LIVE/ROLLUP/REBUILD; Analytics Dashboard (throughput, Stage Timeline avg+p50/p90 nearest-rank, queue-ageing buckets); Reports + CSV (same DTOs); operational diagnostics (top failure reasons); REST `/mpcf/v1/analytics/…` additive; operator stats behind D17; no Mission Control trend teasers | analytics_daily |
 | **M10** | 0.9.x → RC | Hardening & operational maturity | i18n complete, Site Health tests, `wp mpcf doctor`/`audit verify`, privacy exporter/eraser, performance baselines at 50k fulfillments, security review doc, `ARCHITECTURE_FREEZE.md`, compatibility matrix | — |
 | **1.0** | 1.0.0 | Commercial release | Freeze public surface (hooks, REST v1, schema semantics, template contract) | — |
 | M11 | 1.1.0 | Returns & RMA | Return aggregate + workflow, return slip doc, customer-initiated intake hook, refund handoff to WC | returns, return_items |
@@ -800,7 +812,7 @@ These are documented for architectural guidance only. They are **not** in the mi
 | R2 | Packing Workspace complexity outgrows no-build JS | M | M | ADR-0003 escape hatch: REST unchanged ⇒ frontend swap is contained; watch `assets/` size/complexity at each milestone review | Milestone reviews |
 | R3 | Order edited/refunded after intake → fulfillment desync | H | M | Refund/edit observers flag `problem` with diff payload; workspace always reads live order via `OrderSource`; snapshots are display-only | Integration tests simulating post-intake edits |
 | R4 | Another fulfillment/status plugin fights the bridge (auto-complete plugins, custom statuses) | M | M | Bridge is configurable to passive; re-entrancy guard; Diagnostics-style passive conflict detection is a post-1.0 candidate | Conflict integration fixtures |
-| R5 | `mpcf_events` growth degrades queue/timeline | M | M | Events never join queue queries; timeline paginates; rollups at M8; archival guidance | Performance baselines (M9) at 50k/500k rows |
+| R5 | `mpcf_events` growth degrades queue/timeline | M | M | Events never join queue queries; timeline paginates; rollups at M9; archival guidance | Performance baselines (M10) at 50k/500k rows |
 | R6 | Queue slow on large stores | M | H | Indexed-only access paths designed up front (§7.1); seeded perf tests from M1, baseline doc like UMC's `PERFORMANCE_BASELINES.md` | `--group performance` CI leg |
 | R7 | Photo storage growth / server disk exhaustion | M | M | Server-side re-encode + size caps + retention purge + Site Health disk warning | M5 tests; Site Health (M9) |
 | R8 | MPDS vendoring drift or sync-script namespace-rewrite bugs | L | M | Manifest hash guard in every consumer; rewrite is deterministic and tested in the MPDS repo itself | `MpdsVendorGuardTest` |
@@ -1937,8 +1949,10 @@ Stated explicitly so scope gravity (R12) has nothing to grab.
 - **M6:** scan **semantics** — decoding, pick/pack by SKU/EAN, mismatch and over-scan handling,
   scannable-slip → workspace, SVG barcode rendering, scan-first workspace mode.
 - **M7:** batch picking, `BatchBuilder`, batch tables, print queue.
-- **M8:** all analytics, rollups, trends, operator stats.
-- **M9:** Site Health, `wp mpcf doctor`, privacy exporter/eraser, 50k-row baselines,
+- **M8:** Wave & batch picking (closed at `v0.8.0` — Part X).
+- **M9:** Operational Analytics & Insights — all analytics UI, rollups (`mpcf_analytics_daily`),
+  trends, Stage Timeline, diagnostics, operator stats behind D17 (Part XI).
+- **M10:** Site Health, `wp mpcf doctor`, privacy exporter/eraser, 50k-row baselines,
   `ARCHITECTURE_FREEZE.md`, security review document.
 - **Post-1.0:** returns; the location hierarchy and location-sorted picking; `CarrierPort` label
   purchase and live tracking sync; webhooks and automation rules; scoped API keys; the tablet PWA;
@@ -3118,4 +3132,300 @@ another agent dirties the tree; schema needs location master tables.
 
 Waves emit structured audit events and completion timestamps suitable for
 later throughput analytics (orders picked per wave, walk duration). M8 does
-**not** build Analytics UI or `mpcf_stats_daily` (M9).
+**not** build Analytics UI or `mpcf_analytics_daily` (M9 — Part XI).
+
+## X.19 Milestone closed
+
+**Status:** M8 **closed** — merged to `main`, tagged and published as `v0.8.0`
+(evidence: `docs/M8_RELEASE_REPORT.md`). Schema: settings **9**, migrator
+target **7**. ADR-0007 unchanged. Production not deployed as part of M8.
+**M9 planning** continues in Part XI; **M9 runtime must not start** until
+Part XI is PO-approved for implementation (planning approved 2026-08-07;
+runtime still gated on an explicit implementation GO).
+
+---
+
+# Part XI — M9 Operational Analytics & Insights (definitive execution plan)
+
+**Milestone purpose:** Give the warehouse **operational observability** over
+data already produced by M0–M8 — so leads can measure throughput, stage
+durations, queue ageing, wave effectiveness, and failure reasons — without
+changing pick/pack/ship/wave workflow and without becoming a generic BI
+platform.
+
+**Project progression context:**
+
+| Range | Role |
+|---|---|
+| M0–M3 | Execution engine |
+| M4–M5 | Operational outputs (documents, notifications) |
+| M6–M8 | Warehouse execution (photos, scanning, waves) |
+| **M9** | **Observability** |
+| M10+ | Operational platform |
+
+**Baseline:** green `main` @ `v0.8.0` (settings schema **9**, migrator target
+**7**). Target release: `v0.9.0`. Expected schema: migrator target **8**
+(`mpcf_analytics_daily`); settings bump only if new toggles beyond existing
+D17 / `mpcf_view_operator_stats`.
+
+**ADR-0007 remains authoritative.** No inventory, receiving, purchasing,
+supplier, or stock analytics. No reads of `wc-inventory-overview` tables.
+
+**Numbering:** §20 row “M9 — Analytics I” is this milestone, product-named
+**Operational Analytics & Insights**. Historical prose that placed analytics
+at M8 (pre–wave renumber) is obsolete — §15, §20, ROADMAP, and this Part are
+authoritative. Table name is **`mpcf_analytics_daily`** (never
+`mpcf_stats_daily`).
+
+**Product Owner decisions (binding — approved 2026-08-07):**
+
+| # | Decision | Choice |
+|---|---|---|
+| 1 | Scope | Fulfillment-specific operational observability — **not** a generic Analytics Framework / BI platform |
+| 2 | Layering | `AnalyticsService` → `AnalyticsEngine` → Calculators → Repositories |
+| 3 | Engine modes | Exactly three: **`LIVE`**, **`ROLLUP`**, **`REBUILD`** |
+| 4 | Source of truth | Existing `mpcf_events` + fulfillment/wave/shipment/package/document/photo/scan/notification aggregates — **no duplicate business state** |
+| 5 | Rollup table | **`mpcf_analytics_daily`** with column **`rollup_version`**; initial **`ROLLUP_VERSION = 1`** |
+| 6 | Calendar | Rollups keyed by **UTC calendar day**; UI may present merchant timezone; CLI rebuild operates in **UTC** |
+| 7 | Immutability | Historical rollups are immutable during normal operation. They change only through an explicit administrative rebuild. Current UTC day is **LIVE** and mutable |
+| 8 | Metric families | **Counters** and **Durations** are separate (implement/test independently) |
+| 9 | Percentiles | **p50/p90 use a deterministic nearest-rank algorithm** |
+| 10 | Queue ageing | Buckets **0–1h / 1–4h / 4–24h / 1–3d / >3d** as **code constants**, not merchant settings |
+| 11 | REST | Read-only **`/mpcf/v1/analytics/…`**; **v1 additive only** — no breaking response changes inside v1 |
+| 12 | CSV | UTF-8, deterministic columns, **same DTOs as AnalyticsService**, no XLSX / Excel formatting |
+| 13 | Mission Control | Analytics owns analytics; Mission Control owns attention-now; **no redesign**; **no trend teaser cards** |
+| 14 | Capabilities | Aggregate analytics behind `mpcf_view_analytics`; operator stats default **off** behind `mpcf_view_operator_stats` (D17) |
+| 15 | Diagnostics vs M10 | M9 = operational diagnostics; Site Health / `wp mpcf doctor` / privacy exporter = **M10** |
+
+## XI.1 Goals and non-goals
+
+### Goals
+
+1. Measure warehouse performance from M0–M8 operational data.
+2. Live view of today (UTC) without always-on heavy historical scans.
+3. Durable daily rollups for closed UTC days with versioned rows.
+4. First-class **Stage Timeline** (avg + nearest-rank p50/p90 per hop).
+5. First-class **queue ageing** buckets (code constants).
+6. Wave, scan, photo, document, and notification operational rates.
+7. Top failure-reason diagnostics (rejection / guard / scan / notification).
+8. Read-only REST + UTF-8 CSV from shared DTOs.
+9. Stay outbound-only (ADR-0007); zero workflow mutation.
+
+### Explicit non-goals (M9)
+
+BI platform; AI forecasting; inventory / receiving / purchasing / supplier /
+stock analytics; financial / ERP analytics; warehouse optimization AI;
+Mission Control redesign or trend-card leakage; Excel/XLSX exports;
+merchant-configurable ageing thresholds; Site Health / doctor / privacy
+exporter (M10); duplicate business-state tables; breaking REST v1 shapes.
+
+## XI.2 Layering and AnalyticsEngine modes
+
+```
+AnalyticsService  (façade: caps, ranges, DTO shaping, CSV headers)
+    → AnalyticsEngine  (sole orchestrator — selects mode)
+        → Calculators  (Engine\Analytics\* — pure; counters vs durations separate)
+            → Repositories  (events/aggregates + mpcf_analytics_daily)
+```
+
+| Mode | When | Behavior |
+|---|---|---|
+| **LIVE** | Current UTC day / small windows / diagnostics lists | Indexed queries over events/aggregates; **never writes** rollup rows |
+| **ROLLUP** | Nightly Action Scheduler for closed UTC days | Materializes/updates rollup rows for days due under current `ROLLUP_VERSION` policy; **not** triggered by dashboard traffic |
+| **REBUILD** | Explicit admin CLI (`wp mpcf analytics rebuild` / backfill) | May rewrite historical rows; aligns `rollup_version`; detects obsolete rows where `rollup_version < ROLLUP_VERSION` |
+
+Every calculation path — UI, REST, CSV, nightly job, CLI — goes through one
+of these three modes. The engine enforces normal-op immutability (refuse
+silent rewrite of closed days outside REBUILD).
+
+## XI.3 Schema (`mpcf_analytics_daily`)
+
+Migrator step → target **8** (indicative; exact step number confirmed at
+implementation against current migrator):
+
+- Key: **`(utc_date, warehouse_id)`** unique
+- `rollup_version` INT NOT NULL (constant `ROLLUP_VERSION = 1` at first ship)
+- **Counters** group (typed columns and/or JSON object — implementation
+  chooses concrete layout in M9-A, documented in `PERSISTED_DATA.md`):
+  fulfillments created / packed / shipped; exceptions; waves completed /
+  abandoned; scans; photos; notifications sent/failed/suppressed; documents
+  rendered/reprinted; top-N reason tallies as needed
+- **Durations** group: per stage-hop sample stats (count, sum, nearest-rank
+  p50, p90) for:
+  - Queued → Picking
+  - Picking → Picked
+  - Picked → Packing
+  - Packing → Packed
+  - Packed → Shipped
+  - Queued → Shipped (end-to-end)
+- Metadata: `computed_at`, optional `source_event_max_id` / hash for rebuild
+  auditing
+
+**No** `mpcf_stats_daily`. Hourly or other grains, if ever needed, are sibling
+tables — not a rename of this one.
+
+Settings: reuse D17 / existing caps; bump settings schema only for new
+non-D17 toggles proven necessary in dogfood.
+
+## XI.4 UTC, immutability, and versioning
+
+- Rollup calendar day = **UTC** midnight boundaries.
+- UI converts display times/dates to the merchant timezone (WP timezone).
+- CLI rebuild/backfill arguments and storage keys are **UTC**.
+- Binding immutability wording: *Historical rollups are immutable during
+  normal operation. They change only through an explicit administrative
+  rebuild.*
+- When calculators or payload shape change, bump `ROLLUP_VERSION` and run
+  REBUILD; obsolete rows are detectable by version comparison.
+
+## XI.5 Metric families
+
+### Counters (family A)
+
+- Fulfillments: created / packed / shipped (today and by UTC day)
+- Waves: completed / abandoned; average size (members); items/lines per wave
+- Scans: scans per fulfillment; correction/undo rate
+- Photos: captured / purged
+- Documents: rendered / reprinted
+- Notifications: sent / failed / suppressed
+- Exceptions: open problem/waiting counts; top rejection / guard / scan /
+  notification failure reasons (top-N, not counts alone)
+
+### Durations (family B) — Stage Timeline Analytics
+
+First-class Analytics UI section — averages and **nearest-rank p50/p90**,
+not charts-first:
+
+- Queued → Picking
+- Picking → Picked
+- Picked → Packing
+- Packing → Packed
+- Packed → Shipped
+- Queued → Shipped
+
+**Percentiles use a deterministic nearest-rank algorithm.**
+
+### Queue ageing (code constants)
+
+Open-queue ageing buckets (not merchant settings):
+
+| Bucket |
+|---|
+| 0–1 h |
+| 1–4 h |
+| 4–24 h |
+| 1–3 d |
+| >3 d |
+
+Plus open count / exception count as secondary cards.
+
+### Wave duration metrics
+
+Average wave duration; average completion %; average abandoned-wave rate;
+average paused duration — derived from wave state timestamps + events.
+
+## XI.6 UI surfaces
+
+All under Analytics IA (MPDS). **No** Mission Control trend teasers.
+
+1. **Analytics Dashboard** — throughput cards; Stage Timeline; queue ageing;
+   wave summary; today’s LIVE vs historical rollup bands clearly labeled.
+2. **Reports** — daily / weekly / monthly / custom UTC ranges; CSV export
+   from the same service DTOs.
+3. **Diagnostics** — operational lists: stalled waves, slow fulfillments,
+   top failure reasons, time-in-`problem`/`waiting`.
+
+Operator identity columns only when `mpcf_view_operator_stats` is granted
+and the D17 setting is on.
+
+## XI.7 REST surface (read-only, additive v1)
+
+Namespace: **`/mpcf/v1/analytics/…`** (prefer `/analytics` over `/stats`).
+
+Indicative resources (exact routes finalized in M9-A; all additive within v1):
+
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/mpcf/v1/analytics/summary` | LIVE + rollup summary for range |
+| GET | `/mpcf/v1/analytics/timeline` | Stage Timeline metrics |
+| GET | `/mpcf/v1/analytics/ageing` | Queue ageing buckets |
+| GET | `/mpcf/v1/analytics/waves` | Wave operational metrics |
+| GET | `/mpcf/v1/analytics/exceptions` | Top failure reasons / diagnostics feed |
+| GET | `/mpcf/v1/analytics/export` | CSV (same DTOs; content-type text/csv; UTF-8) |
+
+Permission: `mpcf_view_analytics` (operator-stat fields additionally require
+`mpcf_view_operator_stats`). **No breaking response changes inside v1** —
+new fields/routes only.
+
+## XI.8 CSV export
+
+- UTF-8
+- Deterministic column order
+- Generated from the **same DTOs used by AnalyticsService**
+- No XLSX, no Excel styling, no BOM unless dogfood proves Windows Notepad
+  needs it (default: no BOM)
+
+## XI.9 Audit / observability of analytics itself
+
+Optional global event `analytics.rollup_completed` (warehouse, utc_date,
+rollup_version, duration_ms) — append-only if emitted. Rebuild CLI logs
+obsolete-row counts. Analytics must not mutate fulfillment/wave state.
+
+## XI.10 Milestone packages
+
+| Package | Delivers | Does not |
+|---|---|---|
+| **M9-A** | Part XI approved; domain DTOs; AnalyticsEngine LIVE/ROLLUP/REBUILD; migrator `mpcf_analytics_daily` + `ROLLUP_VERSION`; calculator stubs (counters + durations separate); REST skeleton; unit fixtures for nearest-rank | Rich UI, CSV polish |
+| **M9-B** | Analytics Dashboard (cards, Stage Timeline, ageing); LIVE today | Reports/CSV, diagnostics depth |
+| **M9-C** | Reports ranges + CSV from same DTOs; nightly ROLLUP job + CLI backfill | Mission Control changes |
+| **M9-D** | Diagnostics lists; top-N failure reasons; operator-stats gate | Site Health (M10) |
+| **M9-E** | Dogfood; rebuild obsolete-version detection; docs (`API`/`HOOKS`/`PERSISTED_DATA`); `0.9.0` RC ZIP/audit; PR | Production deploy without PO; M10 |
+
+## XI.11 Acceptance criteria (falsifiable)
+
+1. Today (UTC) metrics match LIVE indexed queries; closed yesterday appears
+   from `mpcf_analytics_daily` without re-scanning all events on each page load.
+2. Stage Timeline shows avg + nearest-rank p50/p90 for each defined hop.
+3. Queue ageing uses the five code-constant buckets only.
+4. Historical row does not change when an operator views Analytics; only
+   `wp mpcf analytics rebuild` (or equivalent) rewrites it.
+5. After bumping `ROLLUP_VERSION` in code, rebuild detects obsolete rows and
+   rewrites them to the new version.
+6. CSV columns match REST/DTO field set for the same report (parity test).
+7. REST `/mpcf/v1/analytics/…` is read-only and capability-gated; additive
+   schema only.
+8. No inventory/stock/receiving queries; no workflow mutations; no Mission
+   Control trend cards.
+9. PHPCS, unit, integration, browser smoke, POT, release-audit green;
+   version triad `0.9.0`.
+
+## XI.12 Validation & testing
+
+- Unit: counter calculators; duration/nearest-rank calculators (fixed
+  fixtures); ageing bucket assignment; UTC day keying.
+- Integration: LIVE vs ROLLUP paths; immutability (UI cannot rewrite);
+  REBUILD rewrites + version bump; REST caps; CSV↔DTO parity.
+- Browser: Analytics Dashboard smoke (cards + Timeline + ageing).
+- Structural: ADR-0007 / no inventory coupling in Analytics packages.
+- Performance smoke: rollup of a representative event volume on VPS-class
+  hardware stays within dogfood budget (record in release notes).
+
+## XI.13 Release strategy
+
+Branch `feature/m9-operational-analytics` from `v0.8.0` / `main`. One PR.
+Version `0.9.0`. Tag `v0.9.0` only after PO GO. No production deploy
+in-milestone unless separately ordered. **M10 must not start** until M9
+closes.
+
+## XI.14 Stop conditions (runtime)
+
+Stop and report if: inventory/receiving data required; workflow mutation
+required; BI/Excel platform required; Mission Control redesign required;
+Site Health / privacy exporter pulled into M9; another agent dirties the
+tree; silent rewrite of historical rollups is demanded by a dependency.
+
+## XI.15 Planning status
+
+**Planning approved by Product Owner 2026-08-07** (documentation checkpoint).
+**Runtime implementation not started.** Execution checklist:
+`docs/plans/M9_OPERATIONAL_ANALYTICS_IMPLEMENTATION.md`.
