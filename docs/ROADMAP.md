@@ -95,10 +95,12 @@ actual state before work starts.
     **P4** published immutable **`v1.0.0`**. **P5** pre-production acceptance on
     `dev.biopentra.eu` — **PASS WITH MINOR DEFECTS** (see
     `docs/certification/P5_ACCEPTANCE_REPORT.md`). Architecture Freeze remains
-    **ACTIVE**. **P6 READY TO START** — production deploy of the **exact**
-    published `v1.0.0` ZIP to `www.biopentra.eu` + hypercare; **not started**
+    **ACTIVE**. **Current phase: Pilot Stabilization** — **ACTIVE** (see
+    `docs/PILOT_STABILIZATION_POLICY.md`). Feature Freeze **ACTIVE**.
+    Development / certification / acceptance: **complete**. Production
+    (`www.biopentra.eu`): **pending successful Pilot** then Phase **P6**
     (requires explicit PO GO). This is **not M11** and **not** a feature
-    milestone.
+    milestone. Future feature work belongs to **`v1.1`+**.
 
 ## Future capabilities (not scheduled)
 

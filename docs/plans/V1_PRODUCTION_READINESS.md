@@ -1,14 +1,15 @@
 # v1.0 — Architecture Freeze & Production Readiness Program
 
-**Status:** Planning complete — **P1–P4 COMPLETE**. **P5 COMPLETE**. **P6 READY TO START** (not started).  
+**Status:** Planning complete — **P1–P5 COMPLETE**. **Pilot Stabilization ACTIVE**. **P6 READY TO START** (not started; PO GO required).  
 **Kind:** Certification / evidence program — **not M11**, **not a feature milestone**.  
 **Baseline:** Released **`v1.0.0`**. Pre-production acceptance on `dev.biopentra.eu` complete. Production (`www.biopentra.eu`) **not** deployed.  
 **Freeze inventory:** `docs/ARCHITECTURE_FREEZE.md` — **ACTIVE** (approved Phase P1, 2026-08-07).  
+**Feature Freeze / Pilot:** `docs/PILOT_STABILIZATION_POLICY.md` — **ACTIVE** (2026-08-07).  
 **P2 evidence:** `docs/certification/P2_REGRESSION_CERTIFICATION_REPORT.md` — verdict **PASS WITH DOCUMENTED NON-BLOCKING LIMITATIONS**.  
 **P3 evidence:** `docs/certification/P3_OPERATIONAL_CERTIFICATION_REPORT.md` — verdict **PASS WITH DOCUMENTED NON-BLOCKING LIMITATIONS**.  
 **P4 evidence:** `docs/V1_RELEASE_REPORT.md` — GitHub Release **`v1.0.0`** published.  
 **P5 evidence:** `docs/certification/P5_ACCEPTANCE_REPORT.md` — verdict **PASS WITH MINOR DEFECTS**.  
-**Target production deploy:** Phase **P6** using the **exact** published `v1.0.0` ZIP (PO GO required).
+**Target production deploy:** Phase **P6** using the **exact** published `v1.0.0` ZIP (or later approved `v1.0.x` Pilot maintenance release) after successful Pilot — PO GO required.
 
 This plan designs the final certification program before MPCF is declared production-ready and the architecture freeze becomes **ACTIVE**.
 
@@ -70,7 +71,8 @@ Re-verify these at the start of **each** phase.
 | **P3** | Operational Certification | **COMPLETE** | Perf / security / a11y / privacy / DR / monitoring evidence |
 | **P4** | v1.0 Release Candidate Approval & Release | **COMPLETE** | Tag **`v1.0.0`**; immutable GitHub Release ZIP |
 | **P5** | Pre-Production Acceptance Testing | **COMPLETE** | Released ZIP on `dev.biopentra.eu` |
-| **P6** | Production Deployment & Hypercare | **READY TO START** | Deploy published ZIP to `www.biopentra.eu`; hypercare |
+| **Pilot** | Pilot Stabilization | **ACTIVE** | Real ops on Pilot env; Feature Freeze; see `docs/PILOT_STABILIZATION_POLICY.md` |
+| **P6** | Production Deployment & Hypercare | **READY TO START** | Deploy published ZIP to `www.biopentra.eu`; hypercare — after Pilot **PASS** |
 
 **Binding order: P1 → P2 → P3 → P4 → P5 → P6.**
 
@@ -397,5 +399,6 @@ MPCF is **production-ready and program-complete** when:
 | **P3** | **COMPLETE** — operational certified (see P3 report) |
 | **P4** | **COMPLETE** — `v1.0.0` published (see `docs/V1_RELEASE_REPORT.md`) |
 | **P5** | **COMPLETE** — pre-production acceptance (see `docs/certification/P5_ACCEPTANCE_REPORT.md`) |
-| **P6** | **READY TO START** — not started |
-| Next action | PO GO to begin **P6 Production Deployment & Hypercare** on `www.biopentra.eu` |
+| **Pilot Stabilization** | **ACTIVE** — see `docs/PILOT_STABILIZATION_POLICY.md` |
+| **P6** | **READY TO START** — not started (requires Pilot **PASS** + PO GO) |
+| Next action | Operate Pilot on `dev.biopentra.eu`; triage findings per Pilot policy; PO decides PASS / PATCH REQUIRED / FAIL |
