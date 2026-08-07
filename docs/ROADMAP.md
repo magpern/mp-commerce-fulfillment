@@ -83,15 +83,15 @@ actual state before work starts.
    CSV, CLI backfill/rebuild, nightly rollup scheduler. Evidence:
    `docs/M9_RELEASE_REPORT.md`, Architecture Plan Part XI. Production not
    deployed as part of M9.
-10. **M10 — Operational Hardening & Production Readiness** — **in progress**
-    on branch `feature/m10-operational-hardening`, targeting **`v0.10.0`**
-    (Architecture Plan **Part XII** +
-    `docs/plans/M10_OPERATIONAL_HARDENING_IMPLEMENTATION.md`). Delivers Site
-    Health, `wp mpcf doctor`, validation/repair tools, privacy
-    exporter/eraser, `docs/ops/*` checklists, performance baseline
-    methodology, `docs/SECURITY_REVIEW.md`, and draft
-    `docs/ARCHITECTURE_FREEZE.md`. **Not released.** **1.0 / M11 must not
-    start** until M10 closes.
+10. **M10 — Operational Hardening & Production Readiness** — **released as
+    `v0.10.0`** (PR #8 merged, tag pushed, Release workflow green,
+    installable zip published). Site Health, `wp mpcf doctor`,
+    validation/repair tools, privacy exporter/eraser, `docs/ops/*`,
+    performance baseline methodology, `docs/SECURITY_REVIEW.md`, and draft
+    `docs/ARCHITECTURE_FREEZE.md` (remains DRAFT until v1.0 approval).
+    Migrator **TARGET remains 8**. Evidence: `docs/M10_RELEASE_REPORT.md`,
+    Architecture Plan Part XII. Production not deployed as part of M10.
+    **M10 closed.** **v1.0 rollout has not started.**
 11. **1.0 — Commercial release** — not started.
 
 ## Future capabilities (not scheduled)
