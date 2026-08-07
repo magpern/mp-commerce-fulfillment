@@ -550,7 +550,7 @@ final class Plugin {
 			$document_repo,
 			$settings
 		);
-		$wave_page      = new WavePage( $shell );
+		$wave_page      = new WavePage( $shell, $renderer );
 
 		( new Menu(
 			DashboardPage::SLUG,

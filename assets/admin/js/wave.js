@@ -104,6 +104,12 @@ import { api } from './api.js';
 		if (els.scanStatus) {
 			els.scanStatus.textContent = active ? 'Wave Scan Mode active — scan SKUs or MPCF item barcodes.' : '';
 		}
+		if (active) {
+			const sink = root.querySelector('[data-mpcf-scan-sink]');
+			if (sink) {
+				sink.focus();
+			}
+		}
 	}
 
 	root.querySelector('[data-mpcf-wave-enter-scan]')?.addEventListener('click', () => setScan(true));
@@ -119,11 +125,11 @@ import { api } from './api.js';
 		await load();
 	});
 
-	document.addEventListener('mpcf:scan', async (event) => {
+	document.addEventListener('data-mpcf-scan', async (event) => {
 		if (!scanActive || !wave) {
 			return;
 		}
-		const payload = event.detail && event.detail.payload;
+		const payload = event.detail && event.detail.value;
 		if (!payload) {
 			return;
 		}

@@ -11,6 +11,10 @@
  * `mpcf_*` error code from docs/API.md), `.status` (HTTP status), and
  * `.data` (the error body's `data` object — e.g. `{ guard: "..." }` for a
  * 422) — callers branch on `.code`, never on the human-readable message.
+ *
+ * Wave Workspace / Queue create-wave also call `api` as a function:
+ * `api( 'waves/1' )` or `api( 'waves', { method: 'POST', body: {...} } )`.
+ * Named methods remain available as `api.getFulfillment( … )` etc.
  */
 
 function config() {
@@ -60,202 +64,214 @@ function toApiError( response, data ) {
 	return error;
 }
 
-export var api = {
-	getFulfillment: function ( fulfillmentId ) {
-		return request( 'GET', 'fulfillments/' + fulfillmentId );
-	},
+/**
+ * @param {string} path Relative mpcf/v1 path.
+ * @param {{ method?: string, body?: * }=} options Fetch options.
+ * @return {Promise<*>}
+ */
+function api( path, options ) {
+	var opts = options || {};
+	var method = ( opts.method || 'GET' ).toUpperCase();
 
-	getTransitions: function ( fulfillmentId ) {
-		return request( 'GET', 'fulfillments/' + fulfillmentId + '/transitions' );
-	},
+	return request( method, path, opts.body );
+}
 
-	submitTransition: function ( fulfillmentId, target, version, reason ) {
-		return request( 'POST', 'fulfillments/' + fulfillmentId + '/transitions', {
-			target: target,
-			version: version,
-			reason: reason
+api.getFulfillment = function ( fulfillmentId ) {
+	return request( 'GET', 'fulfillments/' + fulfillmentId );
+};
+
+api.getTransitions = function ( fulfillmentId ) {
+	return request( 'GET', 'fulfillments/' + fulfillmentId + '/transitions' );
+};
+
+api.submitTransition = function ( fulfillmentId, target, version, reason ) {
+	return request( 'POST', 'fulfillments/' + fulfillmentId + '/transitions', {
+		target: target,
+		version: version,
+		reason: reason
+	} );
+};
+
+api.updateItems = function ( fulfillmentId, version, lines ) {
+	return request( 'PUT', 'fulfillments/' + fulfillmentId + '/items', {
+		version: version,
+		lines: lines
+	} );
+};
+
+api.listNotes = function ( fulfillmentId ) {
+	return request( 'GET', 'fulfillments/' + fulfillmentId + '/notes' );
+};
+
+api.addNote = function ( fulfillmentId, body, isPinned ) {
+	return request( 'POST', 'fulfillments/' + fulfillmentId + '/notes', {
+		body: body,
+		is_pinned: !! isPinned
+	} );
+};
+
+api.assign = function ( fulfillmentId, userId ) {
+	return request( 'PUT', 'fulfillments/' + fulfillmentId + '/assignment', { user_id: userId } );
+};
+
+api.unassign = function ( fulfillmentId ) {
+	return request( 'DELETE', 'fulfillments/' + fulfillmentId + '/assignment' );
+};
+
+api.listShipments = function ( fulfillmentId ) {
+	return request( 'GET', 'fulfillments/' + fulfillmentId + '/shipments' );
+};
+
+api.createShipment = function ( fulfillmentId ) {
+	return request( 'POST', 'fulfillments/' + fulfillmentId + '/shipments' );
+};
+
+api.updateShipment = function ( shipmentId, fields ) {
+	return request( 'PATCH', 'shipments/' + shipmentId, fields );
+};
+
+api.deleteShipment = function ( shipmentId ) {
+	return request( 'DELETE', 'shipments/' + shipmentId );
+};
+
+api.shipShipment = function ( shipmentId ) {
+	return request( 'POST', 'shipments/' + shipmentId + '/ship' );
+};
+
+api.notifyShipment = function ( shipmentId, force ) {
+	return request( 'POST', 'shipments/' + shipmentId + '/notify', {
+		force: false !== force
+	} );
+};
+
+api.notificationStatus = function ( shipmentId ) {
+	return request( 'GET', 'shipments/' + shipmentId + '/notification-status' );
+};
+
+api.addPackage = function ( shipmentId ) {
+	return request( 'POST', 'shipments/' + shipmentId + '/packages' );
+};
+
+api.updatePackage = function ( packageId, fields ) {
+	return request( 'PATCH', 'packages/' + packageId, fields );
+};
+
+api.removePackage = function ( packageId ) {
+	return request( 'DELETE', 'packages/' + packageId );
+};
+
+api.listCarriers = function () {
+	return request( 'GET', 'carriers' );
+};
+
+api.renderDocument = function ( fulfillmentId, docType ) {
+	return request( 'POST', 'fulfillments/' + fulfillmentId + '/documents/render', {
+		doc_type: docType || 'packing_slip'
+	} );
+};
+
+api.listPhotos = function ( fulfillmentId, filters ) {
+	var query = [];
+	var options = filters || {};
+
+	if ( options.package_id ) {
+		query.push( 'package_id=' + encodeURIComponent( String( options.package_id ) ) );
+	}
+
+	if ( options.kind ) {
+		query.push( 'kind=' + encodeURIComponent( String( options.kind ) ) );
+	}
+
+	return request(
+		'GET',
+		'fulfillments/' + fulfillmentId + '/photos' + ( query.length ? '?' + query.join( '&' ) : '' )
+	);
+};
+
+api.uploadPhoto = function ( fulfillmentId, fields ) {
+	var settings = config();
+	var form = new window.FormData();
+	var options = fields || {};
+
+	form.append( 'file', options.file );
+	form.append( 'package_id', String( options.package_id ) );
+	form.append( 'kind', String( options.kind ) );
+	form.append( 'version', String( options.version ) );
+
+	var headers = {};
+
+	if ( settings.nonce ) {
+		headers[ 'X-WP-Nonce' ] = settings.nonce;
+	}
+
+	return window
+		.fetch( ( settings.restUrl || '' ) + 'fulfillments/' + fulfillmentId + '/photos', {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: headers,
+			body: form
+		} )
+		.then( function ( response ) {
+			return response.json().then(
+				function ( data ) {
+					if ( ! response.ok ) {
+						throw toApiError( response, data );
+					}
+
+					return data;
+				},
+				function () {
+					throw toApiError( response, {} );
+				}
+			);
 		} );
-	},
+};
 
-	updateItems: function ( fulfillmentId, version, lines ) {
-		return request( 'PUT', 'fulfillments/' + fulfillmentId + '/items', {
-			version: version,
-			lines: lines
-		} );
-	},
+api.deletePhoto = function ( photoId, version ) {
+	return request( 'DELETE', 'photos/' + photoId, { version: version } );
+};
 
-	listNotes: function ( fulfillmentId ) {
-		return request( 'GET', 'fulfillments/' + fulfillmentId + '/notes' );
-	},
+api.scan = function ( fulfillmentId, body ) {
+	return request( 'POST', 'fulfillments/' + fulfillmentId + '/scan', body || {} );
+};
 
-	addNote: function ( fulfillmentId, body, isPinned ) {
-		return request( 'POST', 'fulfillments/' + fulfillmentId + '/notes', {
-			body: body,
-			is_pinned: !! isPinned
-		} );
-	},
+api.photoThumbUrl = function ( photoId ) {
+	return ( config().restUrl || '' ) + 'photos/' + photoId + '/thumb';
+};
 
-	assign: function ( fulfillmentId, userId ) {
-		return request( 'PUT', 'fulfillments/' + fulfillmentId + '/assignment', { user_id: userId } );
-	},
+api.photoContentUrl = function ( photoId ) {
+	return ( config().restUrl || '' ) + 'photos/' + photoId + '/content';
+};
 
-	unassign: function ( fulfillmentId ) {
-		return request( 'DELETE', 'fulfillments/' + fulfillmentId + '/assignment' );
-	},
+api.fetchPhotoBlob = function ( photoId, which ) {
+	var settings = config();
+	var path = which === 'content' ? api.photoContentUrl( photoId ) : api.photoThumbUrl( photoId );
+	var headers = {};
 
-	listShipments: function ( fulfillmentId ) {
-		return request( 'GET', 'fulfillments/' + fulfillmentId + '/shipments' );
-	},
+	if ( settings.nonce ) {
+		headers[ 'X-WP-Nonce' ] = settings.nonce;
+	}
 
-	createShipment: function ( fulfillmentId ) {
-		return request( 'POST', 'fulfillments/' + fulfillmentId + '/shipments' );
-	},
-
-	updateShipment: function ( shipmentId, fields ) {
-		return request( 'PATCH', 'shipments/' + shipmentId, fields );
-	},
-
-	deleteShipment: function ( shipmentId ) {
-		return request( 'DELETE', 'shipments/' + shipmentId );
-	},
-
-	shipShipment: function ( shipmentId ) {
-		return request( 'POST', 'shipments/' + shipmentId + '/ship' );
-	},
-
-	notifyShipment: function ( shipmentId, force ) {
-		return request( 'POST', 'shipments/' + shipmentId + '/notify', {
-			force: false !== force
-		} );
-	},
-
-	notificationStatus: function ( shipmentId ) {
-		return request( 'GET', 'shipments/' + shipmentId + '/notification-status' );
-	},
-
-	addPackage: function ( shipmentId ) {
-		return request( 'POST', 'shipments/' + shipmentId + '/packages' );
-	},
-
-	updatePackage: function ( packageId, fields ) {
-		return request( 'PATCH', 'packages/' + packageId, fields );
-	},
-
-	removePackage: function ( packageId ) {
-		return request( 'DELETE', 'packages/' + packageId );
-	},
-
-	listCarriers: function () {
-		return request( 'GET', 'carriers' );
-	},
-
-	renderDocument: function ( fulfillmentId, docType ) {
-		return request( 'POST', 'fulfillments/' + fulfillmentId + '/documents/render', {
-			doc_type: docType || 'packing_slip'
-		} );
-	},
-
-	listPhotos: function ( fulfillmentId, filters ) {
-		var query = [];
-		var options = filters || {};
-
-		if ( options.package_id ) {
-			query.push( 'package_id=' + encodeURIComponent( String( options.package_id ) ) );
-		}
-
-		if ( options.kind ) {
-			query.push( 'kind=' + encodeURIComponent( String( options.kind ) ) );
-		}
-
-		return request(
-			'GET',
-			'fulfillments/' + fulfillmentId + '/photos' + ( query.length ? '?' + query.join( '&' ) : '' )
-		);
-	},
-
-	uploadPhoto: function ( fulfillmentId, fields ) {
-		var settings = config();
-		var form = new window.FormData();
-		var options = fields || {};
-
-		form.append( 'file', options.file );
-		form.append( 'package_id', String( options.package_id ) );
-		form.append( 'kind', String( options.kind ) );
-		form.append( 'version', String( options.version ) );
-
-		var headers = {};
-
-		if ( settings.nonce ) {
-			headers[ 'X-WP-Nonce' ] = settings.nonce;
-		}
-
-		return window
-			.fetch( ( settings.restUrl || '' ) + 'fulfillments/' + fulfillmentId + '/photos', {
-				method: 'POST',
-				credentials: 'same-origin',
-				headers: headers,
-				body: form
-			} )
-			.then( function ( response ) {
+	return window
+		.fetch( path, {
+			method: 'GET',
+			credentials: 'same-origin',
+			headers: headers
+		} )
+		.then( function ( response ) {
+			if ( ! response.ok ) {
 				return response.json().then(
 					function ( data ) {
-						if ( ! response.ok ) {
-							throw toApiError( response, data );
-						}
-
-						return data;
+						throw toApiError( response, data );
 					},
 					function () {
 						throw toApiError( response, {} );
 					}
 				);
-			} );
-	},
+			}
 
-	deletePhoto: function ( photoId, version ) {
-		return request( 'DELETE', 'photos/' + photoId, { version: version } );
-	},
-
-	scan: function ( fulfillmentId, body ) {
-		return request( 'POST', 'fulfillments/' + fulfillmentId + '/scan', body || {} );
-	},
-
-	photoThumbUrl: function ( photoId ) {
-		return ( config().restUrl || '' ) + 'photos/' + photoId + '/thumb';
-	},
-
-	photoContentUrl: function ( photoId ) {
-		return ( config().restUrl || '' ) + 'photos/' + photoId + '/content';
-	},
-
-	fetchPhotoBlob: function ( photoId, which ) {
-		var settings = config();
-		var path = which === 'content' ? this.photoContentUrl( photoId ) : this.photoThumbUrl( photoId );
-		var headers = {};
-
-		if ( settings.nonce ) {
-			headers[ 'X-WP-Nonce' ] = settings.nonce;
-		}
-
-		return window
-			.fetch( path, {
-				method: 'GET',
-				credentials: 'same-origin',
-				headers: headers
-			} )
-			.then( function ( response ) {
-				if ( ! response.ok ) {
-					return response.json().then(
-						function ( data ) {
-							throw toApiError( response, data );
-						},
-						function () {
-							throw toApiError( response, {} );
-						}
-					);
-				}
-
-				return response.blob();
-			} );
-	}
+			return response.blob();
+		} );
 };
+
+export { api };

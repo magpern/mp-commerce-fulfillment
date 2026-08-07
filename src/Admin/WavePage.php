@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace MPCF\Admin;
 
 use MPCF\Capabilities;
+use MPCF\Vendor\Mpds\ComponentRenderer;
 use MPCF\Vendor\Mpds\PageShell\AdminPageShell;
 use MPCF\Vendor\Mpds\PageShell\Page;
 
@@ -32,12 +33,21 @@ final class WavePage implements Page {
 	private AdminPageShell $shell;
 
 	/**
+	 * MPDS component renderer (scan sink).
+	 *
+	 * @var ComponentRenderer
+	 */
+	private ComponentRenderer $renderer;
+
+	/**
 	 * Builds the page.
 	 *
-	 * @param AdminPageShell $shell Page shell.
+	 * @param AdminPageShell    $shell    Page shell.
+	 * @param ComponentRenderer $renderer MPDS component renderer.
 	 */
-	public function __construct( AdminPageShell $shell ) {
-		$this->shell = $shell;
+	public function __construct( AdminPageShell $shell, ComponentRenderer $renderer ) {
+		$this->shell    = $shell;
+		$this->renderer = $renderer;
 	}
 
 	/**
@@ -117,6 +127,8 @@ final class WavePage implements Page {
 		echo '<p data-mpcf-wave-scan-status></p>';
 		echo '<p data-mpcf-wave-scan-result></p>';
 		echo '<p data-mpcf-wave-scan-progress></p>';
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- ComponentRenderer::scan_input() returns escaped markup.
+		echo $this->renderer->scan_input( 'wave_scan', array( 'aria-label' => __( 'Wave barcode scanner input', 'mp-commerce-fulfillment' ) ) );
 		echo '<button type="button" class="button" data-mpcf-wave-scan-undo>' . esc_html__( 'Undo last scan', 'mp-commerce-fulfillment' ) . '</button> ';
 		echo '<button type="button" class="button" data-mpcf-wave-exit-scan>' . esc_html__( 'Exit Scan Mode', 'mp-commerce-fulfillment' ) . '</button>';
 		echo '</div>';
