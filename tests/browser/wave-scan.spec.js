@@ -42,9 +42,8 @@ async function rest( page, path, options = {} ) {
 async function typeScan( page, sku ) {
 	const sink = page.locator( '[data-mpcf-scan-sink]' );
 	await expect( sink ).toBeVisible();
-	await sink.click();
-	await sink.fill( '' );
-	await page.keyboard.type( sku, { delay: 8 } );
+	await sink.focus();
+	await page.keyboard.type( sku, { delay: 5 } );
 	await page.keyboard.press( 'Enter' );
 }
 
