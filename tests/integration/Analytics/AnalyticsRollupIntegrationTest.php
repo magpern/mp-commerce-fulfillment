@@ -56,7 +56,7 @@ final class AnalyticsRollupIntegrationTest extends WP_UnitTestCase {
 	}
 
 	public function test_service_overview_and_csv_dto_parity(): void {
-		$service = new AnalyticsService(
+		$service  = new AnalyticsService(
 			new AnalyticsEngine( new WpdbAnalyticsEventSource(), new WpdbAnalyticsDailyRepository() ),
 			new SystemClock(),
 			StandardWorkflow::definition(),
