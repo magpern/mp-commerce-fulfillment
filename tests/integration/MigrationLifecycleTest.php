@@ -99,7 +99,7 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 		self::assertSame( 1, $calls, 'maybe_migrate() must no-op once current_version() is already at target.' );
 	}
 
-	public function test_real_migrator_creates_every_table_and_reaches_target_seven(): void {
+	public function test_real_migrator_creates_every_table_and_reaches_target_eight(): void {
 		global $wpdb;
 
 		foreach ( Schema::all_tables() as $table ) {
@@ -109,8 +109,8 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 		$migrator = new Migrator();
 		$migrator->migrate();
 
-		self::assertSame( 7, $migrator->current_version() );
-		self::assertSame( 7, (int) get_option( Migrator::OPTION ) );
+		self::assertSame( 8, $migrator->current_version() );
+		self::assertSame( 8, (int) get_option( Migrator::OPTION ) );
 
 		foreach ( Schema::all_tables() as $table ) {
 			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
@@ -184,7 +184,7 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 		$again = new Migrator();
 		$again->migrate();
 
-		self::assertSame( 7, $again->current_version() );
+		self::assertSame( 8, $again->current_version() );
 	}
 
 	public function test_real_migrator_step_7_creates_the_wave_tables(): void {
@@ -198,5 +198,16 @@ final class MigrationLifecycleTest extends WP_UnitTestCase {
 			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
 			self::assertNotNull( $exists, "{$table} must exist after the real migrator runs." );
 		}
+	}
+
+	public function test_real_migrator_step_8_creates_analytics_daily(): void {
+		global $wpdb;
+
+		$migrator = new Migrator();
+		$migrator->migrate();
+
+		$table  = Schema::table( Schema::ANALYTICS_DAILY );
+		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
+		self::assertNotNull( $exists, "{$table} must exist after the real migrator runs." );
 	}
 }

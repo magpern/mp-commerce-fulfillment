@@ -32,14 +32,14 @@ final class ActivationTest extends WP_UnitTestCase {
 
 		Plugin::activate();
 
-		self::assertSame( 7, (int) get_option( Migrator::OPTION ), 'mpcf_db_version must reach target 7.' );
+		self::assertSame( 8, (int) get_option( Migrator::OPTION ), 'mpcf_db_version must reach target 8.' );
 
 		foreach ( Schema::all_tables() as $table ) {
 			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
 			self::assertNotNull( $exists, "{$table} must exist after activation." );
 		}
 
-		self::assertCount( 11, Schema::all_tables() );
+		self::assertCount( 12, Schema::all_tables() );
 	}
 
 	public function test_activation_grants_roles_and_capabilities(): void {
@@ -69,7 +69,7 @@ final class ActivationTest extends WP_UnitTestCase {
 		Plugin::activate();
 		Plugin::activate();
 
-		self::assertSame( 7, (int) get_option( Migrator::OPTION ) );
+		self::assertSame( 8, (int) get_option( Migrator::OPTION ) );
 		self::assertNotNull( get_role( Capabilities::ROLE_OPERATOR ) );
 	}
 }
