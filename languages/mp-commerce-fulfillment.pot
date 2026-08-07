@@ -986,7 +986,7 @@ msgid "Fulfillment sections"
 msgstr ""
 
 #: src/Admin/WavePage.php:71
-#: src/Admin/WavePage.php:99
+#: src/Admin/WavePage.php:102
 msgid "Wave Workspace"
 msgstr ""
 
@@ -998,53 +998,53 @@ msgstr ""
 msgid "You are not allowed to access this page."
 msgstr ""
 
-#: src/Admin/WavePage.php:102
+#: src/Admin/WavePage.php:105
 msgid "Open a wave from the Queue, or create one from selected fulfillments."
 msgstr ""
 
-#: src/Admin/WavePage.php:106
+#: src/Admin/WavePage.php:109
 #: src/Admin/WorkspacePage.php:461
 msgid "Back to Queue"
 msgstr ""
 
-#: src/Admin/WavePage.php:117
+#: src/Admin/WavePage.php:122
 msgid "Activate"
 msgstr ""
 
-#: src/Admin/WavePage.php:118
+#: src/Admin/WavePage.php:123
 msgid "Pause"
 msgstr ""
 
-#: src/Admin/WavePage.php:119
+#: src/Admin/WavePage.php:124
 msgid "Resume"
 msgstr ""
 
-#: src/Admin/WavePage.php:120
+#: src/Admin/WavePage.php:125
 msgid "Complete"
 msgstr ""
 
-#: src/Admin/WavePage.php:121
+#: src/Admin/WavePage.php:126
 msgid "Abandon"
 msgstr ""
 
-#: src/Admin/WavePage.php:122
+#: src/Admin/WavePage.php:127
 msgid "Print picking list"
 msgstr ""
 
-#: src/Admin/WavePage.php:123
+#: src/Admin/WavePage.php:128
 msgid "Enter Wave Scan Mode"
 msgstr ""
 
-#: src/Admin/WavePage.php:131
+#: src/Admin/WavePage.php:136
 msgid "Wave barcode scanner input"
 msgstr ""
 
-#: src/Admin/WavePage.php:132
+#: src/Admin/WavePage.php:137
 #: src/Admin/WorkspacePage.php:781
 msgid "Undo last scan"
 msgstr ""
 
-#: src/Admin/WavePage.php:133
+#: src/Admin/WavePage.php:138
 #: src/Admin/WorkspacePage.php:782
 msgid "Exit Scan Mode"
 msgstr ""

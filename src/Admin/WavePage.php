@@ -88,9 +88,12 @@ final class WavePage implements Page {
 
 		$wave_id = isset( $_GET['wave_id'] ) ? absint( wp_unslash( $_GET['wave_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only deep link.
 
+		$this->shell->open_wrap();
+		$this->shell->open();
 		$this->shell->render_header( ShellHeader::view_model( QueuePage::SLUG ) );
+		$this->shell->open_content( true );
 
-		echo '<div class="wrap mpcf-wave-workspace" data-mpcf-wave-workspace';
+		echo '<div class="mpcf-wave-workspace" data-mpcf-wave-workspace';
 		if ( $wave_id > 0 ) {
 			printf( ' data-mpcf-wave-id="%d"', (int) $wave_id );
 		}
@@ -106,7 +109,9 @@ final class WavePage implements Page {
 				esc_html__( 'Back to Queue', 'mp-commerce-fulfillment' )
 			);
 			echo '</div>';
-			$this->shell->render_footer();
+			$this->shell->close_content();
+			$this->shell->close();
+			$this->shell->close_wrap();
 
 			return;
 		}
@@ -138,6 +143,9 @@ final class WavePage implements Page {
 		echo '<div class="mpcf-wave-members" data-mpcf-wave-members></div>';
 
 		echo '</div>';
-		$this->shell->render_footer();
+
+		$this->shell->close_content();
+		$this->shell->close();
+		$this->shell->close_wrap();
 	}
 }
