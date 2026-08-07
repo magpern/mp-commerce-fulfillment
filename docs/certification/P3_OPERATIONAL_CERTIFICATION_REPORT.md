@@ -164,11 +164,9 @@ No unresolved blocker for proceeding to P4 administrative release.
 | Integration | **OK** — 275 tests, 971 assertions |
 | Browser (Chromium+Firefox, CI retries) | **OK** — 25 passed, 1 flaky (retry green) after reseed |
 | Accessibility (axe + keyboard subset) | **OK** — EXIT 0 |
-| PHPCS | **OK** — full suite green |
-| POT (`make-pot:check`) | **OK** |
-| Build ZIP + release-audit (`--no-dev`) | **OK** |
+| PHPCS / POT / build / release-audit / full CI | **OK** — CI run `31209994035` all green |
 | 50k performance cert | **OK** — 8 tests, 21 assertions |
-| Full GitHub Actions matrix | Required green on PR (do not merge until green) |
+| Full GitHub Actions matrix | **OK** — https://github.com/magpern/mp-commerce-fulfillment/actions/runs/31209994035 |
 
 ## Confirmation
 
@@ -181,6 +179,6 @@ No unresolved blocker for proceeding to P4 administrative release.
 
 | Field | Value |
 |---|---|
-| Final HEAD | `62c4bed` |
+| Final HEAD | `b1c9022753af15fa1f120b5f4377c6506bddb813` |
 | PR | https://github.com/magpern/mp-commerce-fulfillment/pull/10 |
-| CI run | *(pending — require full matrix green before merge)* |
+| CI run | https://github.com/magpern/mp-commerce-fulfillment/actions/runs/31209994035 (all jobs green) |
