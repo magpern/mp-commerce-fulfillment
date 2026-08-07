@@ -567,3 +567,20 @@ and scan actions (409 on conflict). Exclusive owner enforced server-side
 | `GET` | `/waves/{id}/walk` | Combined walk model |
 | `POST` | `/waves/{id}/scan` | Wave pick scan (`action=resolve\|pick\|undo`) |
 | `POST` | `/waves/{id}/documents` | Render `wave_picking_list` HTML |
+
+## Analytics — Milestone 9
+
+Read-only operational observability (Part XI). Capability:
+`mpcf_view_analytics`. Operator-identity fields additionally require
+`mpcf_view_operator_stats`. Responses are additive within v1. CSV is UTF-8
+from the same DTOs as the Analytics admin UI — no XLSX.
+
+| Method | Route | Purpose |
+|---|---|---|
+| `GET` | `/analytics/overview` | LIVE today cards, Stage Timeline, queue ageing |
+| `GET` | `/analytics/timeline` | Stage Timeline (`utc_date` optional) |
+| `GET` | `/analytics/queue-ageing` | Code-constant ageing buckets |
+| `GET` | `/analytics/waves` | Wave counters + derived averages for today |
+| `GET` | `/analytics/diagnostics` | Top reasons + slow fulfillments + stalled waves |
+| `GET` | `/analytics/reports` | Range report DTO (`preset=today\|daily\|weekly\|monthly\|custom`) |
+| `GET` | `/analytics/export` | CSV (`type=throughput\|durations\|waves\|notifications\|exceptions`) |
