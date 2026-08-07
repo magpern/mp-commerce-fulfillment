@@ -1,9 +1,10 @@
 # v1.0 — Architecture Freeze & Production Readiness Program
 
-**Status:** Planning complete — **P1 COMPLETE**. **P2 READY TO START** (not started).  
+**Status:** Planning complete — **P1 COMPLETE**. **P2 COMPLETE**. **P3 READY TO START** (not started).  
 **Kind:** Certification / evidence program — **not M11**, **not a feature milestone**.  
 **Baseline:** `main` / released **`v0.10.0`** (M0–M10 closed). Production **not** yet deployed.  
 **Freeze inventory:** `docs/ARCHITECTURE_FREEZE.md` — **ACTIVE** (approved Phase P1, 2026-08-07).  
+**P2 evidence:** `docs/certification/P2_REGRESSION_CERTIFICATION_REPORT.md` — verdict **PASS WITH DOCUMENTED NON-BLOCKING LIMITATIONS**.  
 **Target administrative release:** **`v1.0.0`** (no new functionality) at Phase P4.
 
 This plan designs the final certification program before MPCF is declared production-ready and the architecture freeze becomes **ACTIVE**.
@@ -62,8 +63,8 @@ Re-verify these at the start of **each** phase.
 | Phase | Name | Status | Outcome |
 |---|---|---|---|
 | **P1** | Architecture Freeze | **COMPLETE** | Freeze inventory **ACTIVE**; contracts classified & verified |
-| **P2** | Regression Certification | **READY TO START** | M0–M10 behavioral verification matrix (no features) |
-| **P3** | Operational Certification | Not started | Perf / security / a11y / privacy / DR / monitoring evidence |
+| **P2** | Regression Certification | **COMPLETE** | M0–M10 behavioral verification matrix (no features) |
+| **P3** | Operational Certification | **READY TO START** | Perf / security / a11y / privacy / DR / monitoring evidence |
 | **P4** | v1.0 Release Candidate Approval & Release | Not started | Tag **`v1.0.0`**; immutable GitHub Release ZIP |
 | **P5** | Production Deployment & Hypercare | Not started | Deploy published ZIP; hypercare; production complete |
 
@@ -122,7 +123,7 @@ Finalize and PO-approve `docs/ARCHITECTURE_FREEZE.md` so every public contract i
 ### 5.5 Artifacts
 
 - `docs/ARCHITECTURE_FREEZE.md` — **ACTIVE**
-- This plan: **P1 COMPLETE**, **P2 READY TO START**
+- This plan: **P1 COMPLETE**, **P2 COMPLETE**, **P3 READY TO START**
 
 ### 5.6 P1 completion note
 
@@ -166,6 +167,14 @@ Re-verify **M0–M10** shipped behavior on **`v0.10.0`** (and the eventual `v1.0
 - Regression matrix recorded with pass/fail + environment versions (WP/PHP/WC).
 - Zero release-blocking defects; any waivers explicitly PO-approved.
 - Confirmation: **no feature commits** landed during P2.
+
+### 6.5 P2 completion note (2026-08-07)
+
+- Branch: `certification/p2-regression` (from `114c8d8`).
+- Report: `docs/certification/P2_REGRESSION_CERTIFICATION_REPORT.md`.
+- Verdict: **PASS WITH DOCUMENTED NON-BLOCKING LIMITATIONS**.
+- Gates: unit 610, integration 275, browser 24 passed (+2 flaky/retry), PHPCS, POT, build ZIP, release-audit; install/upgrade/rollback on published ZIPs; freeze inventory test added.
+- No FROZEN-contract changes; no features; freeze remains **ACTIVE**; P3 not started; production not deployed.
 
 ### 6.5 Artifacts
 
@@ -362,6 +371,7 @@ MPCF is **production-ready and program-complete** when:
 |---|---|
 | Planning completed | 2026-08-07 |
 | **P1** | **COMPLETE** — freeze ACTIVE |
-| **P2** | **READY TO START** — runtime implementation **not** started |
-| P3–P5 | Not started |
-| Next action | PO GO to begin **P2 Regression Certification** |
+| **P2** | **COMPLETE** — regression certified (see P2 report) |
+| **P3** | **READY TO START** — not started |
+| P4–P5 | Not started |
+| Next action | PO GO to begin **P3 Operational Certification** |
