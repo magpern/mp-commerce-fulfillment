@@ -21,7 +21,7 @@ jobs:
   phpcs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         id: setup-php
         with:
@@ -39,7 +39,7 @@ jobs:
   pot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -62,7 +62,7 @@ jobs:
         # pure unit failures unique to a middle minor are rare.
         php: ['8.1', '8.4']
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         id: setup-php
         with:
@@ -132,7 +132,7 @@ jobs:
       WP_DB_USER: root
       WP_DB_PASS: root
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         id: setup-php
         with:
@@ -187,14 +187,14 @@ jobs:
       WP_DB_PASS: root
       MPCF_BASE_URL: http://127.0.0.1:8888
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         id: setup-php
         with:
           php-version: '8.3'
           extensions: mysqli
           coverage: none
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '20'
       - uses: actions/cache@v6
@@ -215,7 +215,7 @@ jobs:
             sleep 1
           done
       - run: npx playwright test
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
@@ -225,7 +225,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         id: setup-php
         with:
@@ -239,7 +239,7 @@ jobs:
             ${{ runner.os }}-composer-${{ steps.setup-php.outputs.php-version }}-
       - run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
       - run: bash bin/build-zip.sh
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: mp-commerce-fulfillment
           path: dist/mp-commerce-fulfillment-*.zip
@@ -247,7 +247,7 @@ jobs:
   release-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         id: setup-php
         with:
