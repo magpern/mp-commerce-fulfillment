@@ -35,6 +35,15 @@ if ( $existing_id ) {
 	$product->save();
 }
 
+// Shared storefront test-product fixture image (idempotent; no overwrite if set).
+$bp_img_helper = WP_PLUGIN_DIR . '/biopentra-storefront/scripts/includes/test-product-images.php';
+if ( is_readable( $bp_img_helper ) ) {
+	require_once $bp_img_helper;
+	if ( function_exists( 'biopentra_assign_test_product_image_if_missing' ) ) {
+		biopentra_assign_test_product_image_if_missing( $product );
+	}
+}
+
 $order_ids       = array();
 $fulfillment_ids = array();
 

@@ -48,6 +48,15 @@ $product->set_stock_quantity( 500 );
 $product->save();
 $product_id = (int) $product->get_id();
 
+// Shared storefront test-product fixture image (idempotent; no overwrite if set).
+$bp_img_helper = WP_PLUGIN_DIR . '/biopentra-storefront/scripts/includes/test-product-images.php';
+if ( is_readable( $bp_img_helper ) ) {
+	require_once $bp_img_helper;
+	if ( function_exists( 'biopentra_assign_test_product_image_if_missing' ) ) {
+		biopentra_assign_test_product_image_if_missing( $product );
+	}
+}
+
 global $wpdb;
 $table = $wpdb->prefix . 'mpcf_fulfillments';
 $fulfillment_ids = array();
