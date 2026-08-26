@@ -180,11 +180,13 @@ final class WorkflowServiceTest extends TestCase {
 		);
 
 		$previous_log = ini_get( 'error_log' );
+		// phpcs:ignore WordPress.PHP.IniSet.Risky -- Isolate listener-failure breadcrumb from PHPUnit output.
 		ini_set( 'error_log', '/dev/null' );
 
 		try {
 			$outcome = $this->service->transition( $id, 'picking', Actor::system() );
 		} finally {
+			// phpcs:ignore WordPress.PHP.IniSet.Risky -- Restore previous error_log target after isolation.
 			ini_set( 'error_log', false === $previous_log ? '' : (string) $previous_log );
 		}
 

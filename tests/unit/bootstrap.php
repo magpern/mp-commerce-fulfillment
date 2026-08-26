@@ -176,6 +176,7 @@ if ( ! function_exists( 'do_action' ) ) {
 	 * @param string $hook_name Hook name.
 	 * @param mixed  ...$args   Arguments passed to callbacks.
 	 */
+	// phpcs:ignore WooCommerce.Commenting.CommentHooks.MissingSinceComment -- Test stub of a WordPress core function, not a plugin hook.
 	function do_action( $hook_name, ...$args ) { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 		$hook = (string) $hook_name;
 

@@ -313,6 +313,8 @@ final class WorkflowService {
 			 * (save + internal audit/event recording). Integrators must catch
 			 * their own listener failures.
 			 *
+			 * @since 1.0.0
+			 *
 			 * @param array{
 			 *     fulfillment_id:int,
 			 *     order_id:int,
@@ -325,10 +327,8 @@ final class WorkflowService {
 			do_action( 'mpcf_fulfillment_state_changed', $payload );
 		} catch ( \Throwable $e ) {
 			$message = 'MPCF mpcf_fulfillment_state_changed listener failure: ' . substr( $e->getMessage(), 0, 160 );
-			if ( function_exists( 'wc_get_logger' ) ) {
-				wc_get_logger()->error( $message, array( 'source' => 'mpcf-lifecycle' ) );
-			} elseif ( function_exists( 'error_log' ) ) {
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Listener isolation breadcrumb when WC logger unavailable.
+			if ( function_exists( 'error_log' ) ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Listener isolation breadcrumb (Application layer stays Woo-free).
 				error_log( $message );
 			}
 		}
