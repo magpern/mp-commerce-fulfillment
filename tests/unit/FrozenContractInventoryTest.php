@@ -139,6 +139,7 @@ final class FrozenContractInventoryTest extends TestCase {
 			'mpcf_document_template',
 			'mpcf_document_model',
 			'mpcf_carriers',
+			'mpcf_fulfillment_state_changed',
 		);
 
 		$blob  = '';
