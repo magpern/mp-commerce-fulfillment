@@ -16,6 +16,7 @@ use MPCF\Domain\Clock;
 use MPCF\Domain\Event\Actor;
 use MPCF\Domain\Event\DomainEvent;
 use MPCF\Domain\Event\PayloadGuard;
+use MPCF\Domain\Fulfillment;
 use MPCF\Domain\Repository\EventRepository;
 use MPCF\Domain\Repository\FulfillmentRepository;
 use MPCF\Domain\Workflow\WorkflowDefinition;
@@ -198,6 +199,11 @@ final class WorkflowService {
 
 		$this->record_events( $fulfillment->id(), $result->events(), $actor, $now, $payload );
 
+		// Public lifecycle action: emit only after save + internal audit/events
+		// succeeded. Listener failures must not flip a durable success into a
+		// failed TransitionOutcome (host adapters catch their own errors too).
+		$this->emit_state_changed( $fulfillment, $previous_state, $now );
+
 		return TransitionOutcome::succeeded( $fulfillment );
 	}
 
@@ -276,6 +282,55 @@ final class WorkflowService {
 
 			$this->events->append( $event, $prev_hash );
 			$this->dispatcher->dispatch( $event );
+		}
+	}
+
+	/**
+	 * Emits the public WordPress lifecycle action after a fully successful
+	 * transition (save + record_events). Never throws out of this method.
+	 *
+	 * @param Fulfillment       $fulfillment    Persisted fulfillment.
+	 * @param string            $previous_state State before this transition.
+	 * @param DateTimeImmutable $now            Transition timestamp.
+	 */
+	private function emit_state_changed( Fulfillment $fulfillment, string $previous_state, DateTimeImmutable $now ): void {
+		if ( ! function_exists( 'do_action' ) ) {
+			return;
+		}
+
+		$payload = array(
+			'fulfillment_id' => (int) $fulfillment->id(),
+			'order_id'       => (int) $fulfillment->order_id(),
+			'from_state'     => $previous_state,
+			'to_state'       => (string) $fulfillment->state(),
+			'occurred_at'    => (int) $now->getTimestamp(),
+			'source'         => 'workflow',
+		);
+
+		try {
+			/**
+			 * Fires after a fulfillment state transition has been fully persisted
+			 * (save + internal audit/event recording). Integrators must catch
+			 * their own listener failures.
+			 *
+			 * @param array{
+			 *     fulfillment_id:int,
+			 *     order_id:int,
+			 *     from_state:string,
+			 *     to_state:string,
+			 *     occurred_at:int,
+			 *     source:string
+			 * } $payload Lifecycle payload.
+			 */
+			do_action( 'mpcf_fulfillment_state_changed', $payload );
+		} catch ( \Throwable $e ) {
+			$message = 'MPCF mpcf_fulfillment_state_changed listener failure: ' . substr( $e->getMessage(), 0, 160 );
+			if ( function_exists( 'wc_get_logger' ) ) {
+				wc_get_logger()->error( $message, array( 'source' => 'mpcf-lifecycle' ) );
+			} elseif ( function_exists( 'error_log' ) ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Listener isolation breadcrumb when WC logger unavailable.
+				error_log( $message );
+			}
 		}
 	}
 }

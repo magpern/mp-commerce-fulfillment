@@ -79,6 +79,8 @@ final class WorkflowServiceTest extends TestCase {
 	private WorkflowService $service;
 
 	protected function setUp(): void {
+		mpcf_tests_reset_wp_state();
+
 		$this->fulfillments = new InMemoryFulfillmentRepository();
 		$this->items        = new InMemoryFulfillmentItemRepository();
 		$this->shipments    = new InMemoryShipmentRepository();
@@ -119,6 +121,76 @@ final class WorkflowServiceTest extends TestCase {
 		self::assertTrue( $outcome->is_success() );
 		self::assertSame( 'picking', $outcome->fulfillment()->state() );
 		self::assertSame( 'picking', $this->fulfillments->find( $id )->state() );
+	}
+
+	public function test_successful_transition_emits_mpcf_fulfillment_state_changed_after_audit(): void {
+		$id      = $this->seed_fulfillment();
+		$payloads = array();
+
+		add_action(
+			'mpcf_fulfillment_state_changed',
+			static function ( $payload ) use ( &$payloads ): void {
+				$payloads[] = $payload;
+			}
+		);
+
+		$outcome = $this->service->transition( $id, 'picking', Actor::user( 7, 'Jane' ) );
+
+		self::assertTrue( $outcome->is_success() );
+		self::assertCount( 1, $payloads );
+		self::assertSame(
+			array(
+				'fulfillment_id' => $id,
+				'order_id'       => 1001,
+				'from_state'     => 'queued',
+				'to_state'       => 'picking',
+				'occurred_at'    => ( new DateTimeImmutable( '2026-08-02 10:00:00' ) )->getTimestamp(),
+				'source'         => 'workflow',
+			),
+			$payloads[0]
+		);
+		self::assertCount( 1, $this->events->timeline_for_fulfillment( $id ), 'Audit must be recorded before the public action.' );
+	}
+
+	public function test_rejected_transition_does_not_emit_lifecycle_action(): void {
+		$id      = $this->seed_fulfillment( 'picking' );
+		$payloads = array();
+
+		add_action(
+			'mpcf_fulfillment_state_changed',
+			static function ( $payload ) use ( &$payloads ): void {
+				$payloads[] = $payload;
+			}
+		);
+
+		$outcome = $this->service->transition( $id, 'packed', Actor::system() );
+
+		self::assertFalse( $outcome->is_success() );
+		self::assertSame( array(), $payloads );
+	}
+
+	public function test_throwing_lifecycle_listener_does_not_fail_successful_transition(): void {
+		$id = $this->seed_fulfillment();
+
+		add_action(
+			'mpcf_fulfillment_state_changed',
+			static function (): void {
+				throw new \RuntimeException( 'host adapter boom' );
+			}
+		);
+
+		$previous_log = ini_get( 'error_log' );
+		ini_set( 'error_log', '/dev/null' );
+
+		try {
+			$outcome = $this->service->transition( $id, 'picking', Actor::system() );
+		} finally {
+			ini_set( 'error_log', false === $previous_log ? '' : (string) $previous_log );
+		}
+
+		self::assertTrue( $outcome->is_success() );
+		self::assertSame( 'picking', $this->fulfillments->find( $id )->state() );
+		self::assertCount( 1, $this->events->timeline_for_fulfillment( $id ) );
 	}
 
 	public function test_a_successful_transition_increments_the_stored_version(): void {

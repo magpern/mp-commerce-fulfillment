@@ -170,6 +170,12 @@ All other v1.0 extension surfaces (`mpcf_workflows`, `mpcf_event` +
 per-type actions, `mpcf_intake_should_create`) remain documented in
 `docs/ARCHITECTURE_PLAN.md` §16.2 as future milestones.
 
+## Public extension points — fulfillment lifecycle
+
+| Hook | Type | File | Purpose |
+|---|---|---|---|
+| `mpcf_fulfillment_state_changed` | action | `src/Application/WorkflowService.php` | Fires **only after** a fully successful `WorkflowService::transition()`: engine approval, fulfillment save, and internal `record_events()` / audit persistence. Payload keys: `fulfillment_id`, `order_id`, `from_state`, `to_state`, `occurred_at` (unix), `source` (`workflow`). Never emits on validation failure, rejected transition, version conflict, or failed persist. Listener exceptions are caught/logged inside MPCF so they cannot flip a durable success into a failed `TransitionOutcome`. Integrators should still catch their own failures. UPR-unaware — no review/invite semantics. |
+
 ## M10 — Site Health, privacy, WC sympathy
 
 | Hook | Type | File | Purpose |

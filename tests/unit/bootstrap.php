@@ -116,6 +116,7 @@ function mpcf_tests_reset_wp_state(): void {
 	$GLOBALS['mpcf_test_options'] = array();
 	$GLOBALS['mpcf_test_roles']   = array();
 	$GLOBALS['mpcf_test_filters'] = array();
+	$GLOBALS['mpcf_test_actions'] = array();
 }
 
 if ( ! function_exists( 'get_option' ) ) {
@@ -148,9 +149,47 @@ if ( ! function_exists( 'is_admin' ) ) {
 	}
 }
 
+if ( ! isset( $GLOBALS['mpcf_test_actions'] ) ) {
+	$GLOBALS['mpcf_test_actions'] = array();
+}
+
 if ( ! function_exists( 'add_action' ) ) {
-	function add_action( ...$args ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
-		unset( $args );
+	/**
+	 * Minimal action registration for unit tests.
+	 *
+	 * @param string   $hook_name     Hook name.
+	 * @param callable $callback      Callback.
+	 * @param int      $priority      Priority.
+	 * @param int      $accepted_args Accepted args (unused).
+	 */
+	function add_action( $hook_name, $callback, $priority = 10, $accepted_args = 1 ) { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		$GLOBALS['mpcf_test_actions'][ (string) $hook_name ][ (int) $priority ][] = $callback;
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'do_action' ) ) {
+	/**
+	 * Dispatches registered test actions (mirrors WordPress do_action).
+	 *
+	 * @param string $hook_name Hook name.
+	 * @param mixed  ...$args   Arguments passed to callbacks.
+	 */
+	function do_action( $hook_name, ...$args ) { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+		$hook = (string) $hook_name;
+
+		if ( ! isset( $GLOBALS['mpcf_test_actions'][ $hook ] ) ) {
+			return;
+		}
+
+		ksort( $GLOBALS['mpcf_test_actions'][ $hook ] );
+
+		foreach ( $GLOBALS['mpcf_test_actions'][ $hook ] as $callbacks ) {
+			foreach ( $callbacks as $callback ) {
+				$callback( ...$args );
+			}
+		}
 	}
 }
 
