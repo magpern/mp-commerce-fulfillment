@@ -124,7 +124,7 @@ final class WorkflowServiceTest extends TestCase {
 	}
 
 	public function test_successful_transition_emits_mpcf_fulfillment_state_changed_after_audit(): void {
-		$id      = $this->seed_fulfillment();
+		$id       = $this->seed_fulfillment();
 		$payloads = array();
 
 		add_action(
@@ -153,7 +153,7 @@ final class WorkflowServiceTest extends TestCase {
 	}
 
 	public function test_rejected_transition_does_not_emit_lifecycle_action(): void {
-		$id      = $this->seed_fulfillment( 'picking' );
+		$id       = $this->seed_fulfillment( 'picking' );
 		$payloads = array();
 
 		add_action(
