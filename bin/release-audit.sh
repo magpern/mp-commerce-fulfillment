@@ -108,6 +108,7 @@ else
 			"mp-commerce-fulfillment/mp-commerce-fulfillment.php" \
 			"mp-commerce-fulfillment/uninstall.php" \
 			"mp-commerce-fulfillment/vendor/autoload.php" \
+			"mp-commerce-fulfillment/lib/plugin-update-checker/plugin-update-checker.php" \
 			"mp-commerce-fulfillment/templates/documents/packing-slip.php" \
 			"mp-commerce-fulfillment/templates/documents/picking-list.php" \
 			"mp-commerce-fulfillment/templates/documents/wave-picking-list.php"; do

@@ -4,7 +4,7 @@ Tags: woocommerce, fulfillment, warehouse, shipping, picking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,9 @@ Performance Order Storage (HPOS).
 3. WooCommerce 8.2+ must be installed and active.
 
 == Changelog ==
+
+= 1.0.1 =
+* Self-updates from a private update server via the bundled Plugin Update Checker v5 library (lib/plugin-update-checker/, not a Composer runtime dependency); base URL read from the PRIVATE_UPDATE_SERVER constant, inert when it is not defined. No fulfillment functionality change; architecture freeze unaffected.
 
 = 1.0.0 =
 * Admin: Architecture Freeze ACTIVE; v1.0 production-readiness certification complete (P1–P3).

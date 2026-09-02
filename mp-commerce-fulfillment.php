@@ -3,7 +3,7 @@
  * Plugin Name: Commerce Fulfillment
  * Plugin URI: https://github.com/magpern/mp-commerce-fulfillment
  * Description: Warehouse fulfillment platform for WooCommerce. WooCommerce remains the order source; Commerce Fulfillment owns everything from "paid" to "delivered" — picking, packing, shipping, tracking, documents and audit.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: magpern
  * License: GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -27,7 +27,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'MPCF_VERSION', '1.0.0' );
+define( 'MPCF_VERSION', '1.0.1' );
 define( 'MPCF_PLUGIN_FILE', __FILE__ );
 define( 'MPCF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -49,6 +49,22 @@ if ( version_compare( PHP_VERSION, '8.1', '<' ) ) {
 $mpcf_autoload = __DIR__ . '/vendor/autoload.php';
 if ( is_readable( $mpcf_autoload ) ) {
 	require_once $mpcf_autoload;
+}
+
+/**
+ * Automatic updates via the private update server. Define PRIVATE_UPDATE_SERVER
+ * (scheme + host, no trailing slash) in wp-config.php to enable; when it is not
+ * defined the plugin does not check for updates. The bundled library
+ * (lib/plugin-update-checker/) is not a Composer runtime dependency — the
+ * zero-dependency property (ADR-0006) is unaffected.
+ */
+if ( defined( 'PRIVATE_UPDATE_SERVER' ) && PRIVATE_UPDATE_SERVER ) {
+	require_once __DIR__ . '/lib/plugin-update-checker/plugin-update-checker.php';
+	\YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+		rtrim( (string) PRIVATE_UPDATE_SERVER, '/' ) . '/?action=get_metadata&slug=mp-commerce-fulfillment',
+		__FILE__,
+		'mp-commerce-fulfillment'
+	);
 }
 
 /*
