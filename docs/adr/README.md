@@ -21,3 +21,4 @@ Filenames: `NNNN-kebab-case-title.md`, zero-padded 4 digits.
 | [0005](0005-packages-under-shipments.md) | `Package` is first-class under `Shipment` from the start | M0 | Accepted |
 | [0006](0006-dev-only-browser-test-toolchain.md) | Dev-only browser test toolchain (Playwright) | M2 | Accepted |
 | [0007](0007-inbound-domain-belongs-to-inventory-plugin.md) | Inbound domain belongs to wc-inventory-overview | Boundary ratification (pre-M4) | Accepted |
+| [0008](0008-third-party-kit-parent-line-skip.md) | Skip third-party kit-parent order lines by persisted meta only | v1.1 (Feature Freeze exception) | Accepted |
