@@ -465,6 +465,7 @@ Indexes: `(state, warehouse_id)`, `(order_id)`, `(assignee_type, assignee_id, st
 **`mpcf_fulfillment_items`** (M1)
 `id, fulfillment_id (indexed), order_item_id, product_id, variation_id, sku_snapshot VARCHAR(191), name_snapshot VARCHAR(255), qty_ordered, qty_picked, qty_packed, location_snapshot VARCHAR(191) NULL`
 `location_snapshot` is an **immutable intake snapshot** of a pick-path hint copied at fulfillment creation (e.g. aisle/shelf label from an external source). It supports picking lists and display only; it is **not** inventory position authority and is **not** written by receiving. Inventory topology lives in `wc-inventory-overview` (ADR-0007). Nullable until a future integration supplies the hint. Other snapshots make picking lists and audit stable even if the product is later renamed/deleted.
+A row here is a **pickable order line**, not merely "every order line": `WooOrderSource::line_items()` excludes an order line that persisted meta identifies as a non-pickable container (e.g. a third-party bundle plugin's kit-parent line, ADR-0008) before intake ever reads it — real component lines beneath such a container are ingested and picked normally.
 
 **`mpcf_shipments`** (M2) — the consignment (one carrier handover).
 `id, fulfillment_id (indexed), carrier_id VARCHAR(64), service VARCHAR(128) NULL, tracking_number VARCHAR(191) (consignment-level), tracking_url TEXT NULL (explicit override; normally derived), status VARCHAR(32) DEFAULT 'pending', shipped_at NULL, delivered_at NULL, created_at`

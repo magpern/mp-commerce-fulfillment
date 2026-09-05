@@ -135,4 +135,115 @@ trait OrderFactoryTrait {
 
 		return $order;
 	}
+
+	/**
+	 * Adds a real order-item marked as a third-party bundle plugin's kit
+	 * parent line (ADR-0008) — a persisted `_ucb_kit` meta value only,
+	 * never a call into that plugin's own code (there is none installed in
+	 * this suite; that is the point).
+	 *
+	 * @param WC_Order $order        Order to add the line to.
+	 * @param string   $snapshot_json Raw JSON to store under `_ucb_kit`.
+	 * @return int The new line item's order_item_id.
+	 */
+	private function add_kit_parent_line( WC_Order $order, string $snapshot_json = '{"v":1,"kit_id":0,"kit_sku":"KIT-1","kit_qty":1,"components":[]}' ): int {
+		$item_id = $order->add_product( $this->create_product( 'Test Kit' ) );
+		$item    = $order->get_item( $item_id );
+		$item->add_meta_data( '_ucb_kit', $snapshot_json, true );
+		$item->save_meta_data();
+
+		return (int) $item_id;
+	}
+
+	/**
+	 * Adds a real order-item marked as one of that kit's component child
+	 * lines — persisted meta only, same rationale as
+	 * {@see add_kit_parent_line()}. Zero-priced, mirroring how the bundle
+	 * plugin actually leaves component order-item totals (it zero-prices in
+	 * the cart, before the order item ever exists).
+	 *
+	 * @param WC_Order $order           Order to add the line to.
+	 * @param int      $parent_item_id  The kit parent's order_item_id.
+	 * @param int      $position        0-based position within the kit.
+	 * @param string   $name            Component product name.
+	 * @param int      $quantity        Component quantity for this line.
+	 * @return int The new line item's order_item_id.
+	 */
+	private function add_kit_component_line( WC_Order $order, int $parent_item_id, int $position, string $name, int $quantity = 1 ): int {
+		$item_id = $order->add_product( $this->create_product( $name ), $quantity );
+		$item    = $order->get_item( $item_id );
+		$item->set_subtotal( 0 );
+		$item->set_total( 0 );
+		$item->add_meta_data( '_ucb_component', '1', true );
+		$item->add_meta_data( '_ucb_parent_item_id', (string) $parent_item_id, true );
+		$item->add_meta_data( '_ucb_snapshot_version', '1', true );
+		$item->add_meta_data( '_ucb_position', (string) $position, true );
+		$item->save_meta_data();
+
+		return (int) $item_id;
+	}
+
+	/**
+	 * Creates a paid order shaped exactly like a third-party bundle
+	 * plugin's Architecture B output: one priced kit-parent line plus N
+	 * real, zero-priced component child lines — built entirely from
+	 * persisted order-item meta, with no bundle-plugin code involved.
+	 *
+	 * Pass `$mark_paid = false` to leave the order `pending` — no
+	 * `woocommerce_payment_complete`/`woocommerce_order_status_processing`
+	 * fires, so the globally-wired `IntakeHooks` does not intake it
+	 * synchronously, leaving a test free to drive the Action Scheduler
+	 * fallback path directly and compare its result to the synchronous
+	 * path (AC7).
+	 *
+	 * @param array<int, string> $component_names Names for each component line.
+	 * @param bool               $mark_paid       Whether to call `payment_complete()`.
+	 * @return WC_Order
+	 */
+	private function create_paid_kit_order( array $component_names = array( 'Component A', 'Component B', 'Component C' ), bool $mark_paid = true ): WC_Order {
+		$order          = new WC_Order();
+		$parent_item_id = $this->add_kit_parent_line( $order );
+
+		foreach ( array_values( $component_names ) as $position => $name ) {
+			$this->add_kit_component_line( $order, $parent_item_id, $position, $name );
+		}
+
+		$order->set_billing_first_name( 'Jane' );
+		$order->set_billing_last_name( 'Doe' );
+		$order->set_status( 'pending' );
+		$order->calculate_totals();
+		$order->save();
+
+		if ( $mark_paid ) {
+			$order->payment_complete();
+		}
+
+		return $order;
+	}
+
+	/**
+	 * Creates one paid order containing two separate kits that both
+	 * declare a component with the same name — proving the two component
+	 * lines stay distinct order items with their own quantities rather
+	 * than being merged (AC2).
+	 */
+	private function create_paid_order_with_two_kits_sharing_a_component(): WC_Order {
+		$order = new WC_Order();
+
+		$kit_one_parent = $this->add_kit_parent_line( $order, '{"v":1,"kit_id":1,"kit_sku":"KIT-1","kit_qty":1,"components":[]}' );
+		$this->add_kit_component_line( $order, $kit_one_parent, 0, 'Shared Component', 2 );
+		$this->add_kit_component_line( $order, $kit_one_parent, 1, 'Kit One Only', 1 );
+
+		$kit_two_parent = $this->add_kit_parent_line( $order, '{"v":1,"kit_id":2,"kit_sku":"KIT-2","kit_qty":1,"components":[]}' );
+		$this->add_kit_component_line( $order, $kit_two_parent, 0, 'Shared Component', 5 );
+
+		$order->set_billing_first_name( 'Jane' );
+		$order->set_billing_last_name( 'Doe' );
+		$order->set_status( 'pending' );
+		$order->calculate_totals();
+		$order->save();
+		$order->payment_complete();
+
+		return $order;
+	}
 }

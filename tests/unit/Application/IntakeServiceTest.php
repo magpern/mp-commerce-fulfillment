@@ -112,6 +112,37 @@ final class IntakeServiceTest extends TestCase {
 		self::assertSame( 5, $items[1]->variation_id() );
 	}
 
+	/**
+	 * ADR-0008's kit-parent skip lives in `WooOrderSource::line_items()`,
+	 * upstream of this class — by the time an `OrderSnapshot` reaches
+	 * `IntakeService`, a kit parent is already excluded. This proves the
+	 * invariant that guard depends on: `item_count` and the persisted row
+	 * count always agree with whatever `OrderSnapshot::items()` actually
+	 * contains, filtered or not, since both are read from the exact same
+	 * list (`src/Application/IntakeService.php:154,184-197`).
+	 */
+	public function test_item_count_matches_the_persisted_row_count_for_an_already_filtered_order_snapshot(): void {
+		$this->orders->seed(
+			OrderSnapshot::create(
+				2001,
+				'woocommerce',
+				'#2001',
+				'Jane Doe',
+				'processing',
+				array(
+					OrderLineSnapshot::create( 601, 910, 0, 'SKU-A', 'Component A', 1 ),
+					OrderLineSnapshot::create( 602, 911, 0, 'SKU-B', 'Component B', 1 ),
+					OrderLineSnapshot::create( 603, 912, 0, 'SKU-C', 'Component C', 1 ),
+				)
+			)
+		);
+
+		$fulfillment = $this->service->intake( 2001 )->fulfillment();
+
+		self::assertSame( 3, $fulfillment->item_count() );
+		self::assertCount( 3, $this->items->find_for_fulfillment( $fulfillment->id() ) );
+	}
+
 	public function test_intake_appends_exactly_one_minimal_fulfillment_created_event(): void {
 		$this->seed_order();
 
