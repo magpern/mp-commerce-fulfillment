@@ -353,4 +353,69 @@ final class RefundObserverTest extends WP_UnitTestCase {
 		$reloaded = $this->fulfillments->find( $fulfillment->id() );
 		self::assertSame( 'queued', $reloaded->state(), 'While the re-entrancy guard is held, the inbound observer must not react.' );
 	}
+
+	/**
+	 * AC5 (ADR-0008): a kit order's fulfillment must never be spuriously
+	 * flagged `problem` by its own intake-time shape. Because the guard in
+	 * `WooOrderSource::line_items()` filters the kit-parent line out of
+	 * *both* `$stored` (the intake snapshot) and `$live` (this observer's
+	 * re-read of the order), an unchanged kit order produces an empty diff
+	 * exactly like an unchanged ordinary order does.
+	 */
+	public function test_an_unchanged_kit_fulfillment_is_not_flagged_problem_on_admin_save(): void {
+		$this->register_observer( new Settings() );
+
+		$order       = $this->create_paid_kit_order( array( 'Component A', 'Component B', 'Component C' ) );
+		$fulfillment = $this->fulfillments->find_by_order_id( $order->get_id() );
+		$this->advance_to_picking( $fulfillment->id() );
+
+		$before = count( $this->events->timeline_for_fulfillment( $fulfillment->id() ) );
+
+		do_action( 'woocommerce_saved_order_items', $order->get_id(), array() ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound, WooCommerce.Commenting.CommentHooks.HookCommentWrongStyle
+
+		$reloaded = $this->fulfillments->find( $fulfillment->id() );
+		self::assertSame( 'picking', $reloaded->state(), 'The kit parent line existing on the live order must not register as an "added" item.' );
+		self::assertCount( $before, $this->events->timeline_for_fulfillment( $fulfillment->id() ), 'No real change means no new audit event, kit order or not.' );
+	}
+
+	/**
+	 * AC6: cancellation on a kit order behaves identically to an ordinary
+	 * order — the kit-parent skip in the order source does not change
+	 * cancel/refund handling, which never reads items in the first place.
+	 */
+	public function test_cancellation_on_a_kit_order_behaves_like_an_ordinary_order(): void {
+		$this->register_observer( new Settings() );
+
+		$order       = $this->create_paid_kit_order( array( 'Component A', 'Component B' ) );
+		$fulfillment = $this->fulfillments->find_by_order_id( $order->get_id() );
+
+		$order->update_status( 'cancelled' );
+
+		$reloaded = $this->fulfillments->find( $fulfillment->id() );
+		self::assertSame( 'cancelled', $reloaded->state() );
+	}
+
+	/**
+	 * AC6: a partial refund on a kit order still unconditionally flags
+	 * `problem`, exactly as it does for an ordinary order — this path
+	 * never reads line items and so is entirely untouched by ADR-0008.
+	 */
+	public function test_a_partial_refund_on_a_kit_order_behaves_like_an_ordinary_order(): void {
+		$this->register_observer( new Settings( array( 'inbound_refund_behavior' => Settings::BRIDGE_BEHAVIOR_CANCEL ) ) );
+
+		$order       = $this->create_paid_kit_order( array( 'Component A', 'Component B' ) );
+		$fulfillment = $this->fulfillments->find_by_order_id( $order->get_id() );
+		$this->advance_to_picking( $fulfillment->id() );
+
+		wc_create_refund(
+			array(
+				'order_id' => $order->get_id(),
+				'amount'   => 1.00,
+				'reason'   => 'test partial refund on a kit order',
+			)
+		);
+
+		$reloaded = $this->fulfillments->find( $fulfillment->id() );
+		self::assertSame( 'problem', $reloaded->state() );
+	}
 }

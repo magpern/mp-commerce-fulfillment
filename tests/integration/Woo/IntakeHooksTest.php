@@ -85,4 +85,37 @@ final class IntakeHooksTest extends WP_UnitTestCase {
 	public function test_the_action_scheduler_fallback_hook_is_registered(): void {
 		self::assertNotFalse( has_action( IntakeHooks::RETRY_ACTION ), 'The Action Scheduler fallback action must have a registered handler.' ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 	}
+
+	/**
+	 * AC7 (ADR-0008): the Action Scheduler retry path shares
+	 * `IntakeService::intake()` — and therefore the same
+	 * `WooOrderSource::line_items()` — with the synchronous path, so a kit
+	 * order intaken only via the fallback hook must yield the identical
+	 * row set (parent skipped, every real component ingested) as an order
+	 * intaken synchronously. Enqueued and drained exactly as a real
+	 * cron/async-request worker would (same pattern as
+	 * {@see ActionSchedulerIntakeBurstTest}), not a direct `do_action()`.
+	 */
+	public function test_the_action_scheduler_retry_path_yields_the_same_row_set_as_synchronous_intake_for_a_kit_order(): void {
+		// Left `pending` — no woocommerce_payment_complete /
+		// woocommerce_order_status_processing fires, so nothing has been
+		// intaken yet when the fallback action below runs.
+		$order = $this->create_paid_kit_order( array( 'Component A', 'Component B', 'Component C' ), false );
+
+		self::assertNull( ( new WpdbFulfillmentRepository() )->find_by_order_id( $order->get_id() ), 'Test setup sanity: nothing should be intaken yet.' );
+
+		as_enqueue_async_action( IntakeHooks::RETRY_ACTION, array( 'order_id' => $order->get_id() ), 'mpcf' );
+
+		$runner = \ActionScheduler_QueueRunner::instance();
+		do {
+			$processed = $runner->run();
+		} while ( $processed > 0 );
+
+		$fulfillment = ( new WpdbFulfillmentRepository() )->find_by_order_id( $order->get_id() );
+		self::assertNotNull( $fulfillment, 'The Action Scheduler fallback must intake the order just like the synchronous path does.' );
+		self::assertSame( 3, $fulfillment->item_count() );
+
+		$rows = ( new WpdbFulfillmentItemRepository() )->find_for_fulfillment( $fulfillment->id() );
+		self::assertCount( 3, $rows, 'The kit parent must be excluded on the retry path exactly as it is on the synchronous path.' );
+	}
 }

@@ -37,6 +37,28 @@ storage (`wp_posts`/`wp_postmeta` for orders, `get_post()`/`get_post_meta()`
 on an order ID) is forbidden everywhere in this codebase, guard-tested by
 `LegacyOrderStorageGuardTest`.
 
+## Third-party bundle plugins
+
+A bundle/kit plugin implementing "Architecture B" — a priced kit-parent
+order line plus real, hidden, zero-priced component child order lines that
+WooCommerce core stocks, reserves, and reduces normally — is supported via
+one read-only external contract (ADR-0008):
+
+- **Marker:** order-item meta key `_ucb_kit`, non-empty on a kit-parent line
+  only. `WooOrderSource::line_items()` excludes any line carrying it.
+- **Nothing else is read.** No class, hook, constant, autoloader, or
+  activation check from that plugin — the literal meta key is hardcoded
+  here, so MPCF has no runtime dependency on it. A historical kit order is
+  handled correctly even with that plugin fully absent.
+- **No migration, no `RefundObserver` change.** See
+  `docs/plans/UCB_FULFILLMENT_INTEGRATION.md` for the evidence.
+
+**Rollout gate:** kit products must not be enabled for sale until the
+ADR-0008 implementation is deployed. `mpcf_fulfillment_items` rows are
+write-once at intake with no re-sync path, so a fulfillment created from a
+kit order before this guard exists keeps an unrepairable phantom
+kit-parent picking row.
+
 ## Bump ritual
 
 When the floor or tested-up-to versions change, update this file, the

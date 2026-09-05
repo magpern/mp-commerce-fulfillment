@@ -187,6 +187,17 @@ final class WooOrderSource implements OrderSource {
 	/**
 	 * Every line item on an order.
 	 *
+	 * A third-party bundle plugin (Architecture B, ADR-0008) may add a
+	 * priced kit-parent line alongside real, hidden, zero-priced component
+	 * child lines that WooCommerce core stocks and reduces normally. The
+	 * parent is a container, never a pickable thing, so it is excluded here
+	 * — the single reader behind intake, item_count, and the RefundObserver
+	 * diff (ADR-0008) — by the presence of persisted order-item meta only.
+	 * No class, hook, constant, autoloader, or activation state from that
+	 * plugin is referenced; the marker is read as a literal string so this
+	 * class has no runtime dependency on it, and component lines remain
+	 * fully eligible even when that plugin is inactive, removed, or absent.
+	 *
 	 * @param WC_Order $order Order to read line items from.
 	 * @return array<int, OrderLineSnapshot>
 	 */
@@ -195,6 +206,10 @@ final class WooOrderSource implements OrderSource {
 
 		foreach ( $order->get_items( 'line_item' ) as $item_id => $item ) {
 			if ( ! $item instanceof WC_Order_Item_Product ) {
+				continue;
+			}
+
+			if ( '' !== (string) $item->get_meta( '_ucb_kit', true ) ) {
 				continue;
 			}
 
